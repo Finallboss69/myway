@@ -3,7 +3,7 @@
 
 **Date:** 2026-03-21
 **Status:** Approved
-**Version:** 1.2 (accounting, ML recipes, employee management, admin-only menu)
+**Version:** 1.3 (kitchen/bar stock views, suppliers, purchase orders, expenses, waste log, reservations)
 
 ---
 
@@ -436,6 +436,92 @@ staff_shifts (
   duration_minutes INT,     -- calculado al cerrar turno
   notes
 )
+
+-- =====================
+-- PROVEEDORES Y COMPRAS
+-- =====================
+
+-- Suppliers (proveedores)
+suppliers (
+  id, venue_id, name, contact_name,
+  phone, email, notes, is_active, created_at
+)
+
+-- Supplier products (qué provee cada proveedor)
+supplier_products (
+  id, supplier_id, ingredient_id,
+  unit_cost DECIMAL, notes
+)
+
+-- Restock requests (solicitudes desde cocina/barra)
+restock_requests (
+  id, venue_id, ingredient_id,
+  requested_by REFERENCES staff(id),
+  quantity_requested DECIMAL,
+  status ENUM(pending|approved|rejected|purchased),
+  notes, resolved_by REFERENCES staff(id),
+  created_at, resolved_at
+)
+
+-- Purchase orders (órdenes de compra a proveedor)
+purchase_orders (
+  id, venue_id, supplier_id,
+  status ENUM(pending|received|cancelled),
+  total_cost DECIMAL,
+  ordered_by REFERENCES staff(id),
+  ordered_at, received_at, notes
+)
+
+-- Purchase order items
+purchase_order_items (
+  id, purchase_order_id, ingredient_id,
+  quantity_ordered DECIMAL, quantity_received DECIMAL,
+  unit_cost DECIMAL, total_cost DECIMAL
+)
+
+-- =====================
+-- GASTOS Y EGRESOS
+-- =====================
+
+-- Expense categories
+expense_categories (
+  id, venue_id, name, color, icon
+)
+
+-- Expenses (gastos del negocio)
+expenses (
+  id, venue_id, category_id,
+  description, amount DECIMAL,
+  date DATE, payment_method ENUM(cash|transfer|mp|card),
+  receipt_url,  -- foto del comprobante en Supabase Storage
+  registered_by REFERENCES staff(id),
+  created_at
+)
+
+-- Waste log (desperdicios)
+waste_log (
+  id, venue_id, ingredient_id, product_id,
+  quantity DECIMAL, unit,
+  reason ENUM(expired|accident|preparation_error|other),
+  notes, estimated_cost DECIMAL,
+  registered_by REFERENCES staff(id),
+  created_at
+)
+
+-- =====================
+-- RESERVAS
+-- =====================
+
+-- Reservations (reservas de mesas)
+reservations (
+  id, venue_id, table_id,
+  customer_name, customer_phone,
+  date DATE, time TIME,
+  party_size INT,
+  status ENUM(pending|confirmed|seated|cancelled|no_show),
+  notes, created_by REFERENCES staff(id),
+  created_at
+)
 ```
 
 ---
@@ -529,6 +615,7 @@ staff_shifts (
 
 ### 5.3 `app-kitchen` — Cocina (KDS)
 
+**Vista Pedidos (principal)**
 - Fichas de pedidos en tiempo real (solo `target=kitchen`)
 - Cada ficha: número de mesa, tipo (mesa/delivery), items, notas, modificadores, tiempo transcurrido
 - Estados: **Nuevo → En preparación → Listo**
@@ -540,16 +627,34 @@ staff_shifts (
 - Vista compacta para cocinas pequeñas
 - Sin acceso a información financiera
 
+**Vista Stock de Cocina**
+- Lista de ingredientes/insumos relevantes a cocina (filtrado por `station`)
+- Nivel actual de cada ingrediente con barra visual (verde/amarillo/rojo)
+- Botón "Marcar como bajo" o "Marcar como agotado" por ingrediente
+- **Solicitud de reposición**: el cocinero toca un ingrediente → escribe cantidad necesaria → envía solicitud
+- Solicitud aparece en `app-admin` como pedido pendiente al proveedor
+- Historial de solicitudes del día
+- No puede modificar precios ni datos del proveedor
+
 ---
 
 ### 5.4 `app-bar` — Barra de Bebidas
 
+**Vista Pedidos (principal)**
 - Igual que KDS pero solo `target=bar`
 - Fichas de bebidas por mesa
 - **Ficha de pool destacada** — muestra contador de fichas acumuladas por mesa con botón "Agregar ficha" en tamaño grande
 - Estados: **Nuevo → Preparando → Listo**
 - Alerta con nuevo pedido (sonido configurable)
 - Sin acceso a información financiera
+
+**Vista Stock de Barra**
+- Lista de ingredientes/insumos de barra (bebidas, licores, mixers, etc.)
+- Nivel actual con barra visual + litros/unidades restantes
+- Botón "Marcar como bajo" / "Agotado"
+- **Solicitud de reposición**: barman selecciona ingrediente + cantidad → envía a admin
+- Solicitudes aparecen en `app-admin` como restock pendiente
+- Historial de solicitudes del turno
 
 ---
 
@@ -656,6 +761,35 @@ staff_shifts (
 - Todos los pagos/adelantos requieren confirmación del `superadmin` o `admin`
 
 ---
+
+#### Gestión de Proveedores y Compras
+- **CRUD de proveedores**: nombre, contacto, teléfono, email, productos que proveen
+- **Solicitudes de reposición** llegadas desde cocina y barra: ver lista, aprobar/rechazar, convertir en orden de compra
+- **Órdenes de compra**: registrar compra a proveedor (proveedor, items, cantidades, precios, fecha)
+- Al confirmar recepción de compra → stock de ingredientes se actualiza automáticamente
+- **Historial de compras** por proveedor y por período
+- **Reporte de gastos en insumos** vs ingresos (margen real)
+
+#### Registro de Gastos y Egresos
+- Registrar gastos del negocio (alquiler, servicios, mantenimiento, sueldos, compras)
+- Categorías de egreso configurables
+- Balance real: ingresos (ventas) - egresos (gastos) = ganancia neta
+- Gráfico de distribución de costos
+- Exportar en PDF para contable/contador
+
+#### Registro de Desperdicios (Waste Log)
+- Registrar insumos/productos desperdiciados o vencidos
+- Motivo obligatorio: vencimiento / accidente / error de preparación / otro
+- Descuenta del stock automáticamente
+- Reporte de desperdicio por período (impacto económico)
+- Visible en contabilidad como egreso implícito
+
+#### Reservas de Mesas
+- Crear reserva: nombre del cliente, teléfono, fecha, hora, cantidad de personas, mesa preferida
+- Vista de reservas del día en el salón (mesas reservadas destacadas en el layout)
+- Recordatorio automático: notificación push al POS 15 min antes de la reserva
+- El POS puede convertir una reserva en table_session activa con un tap
+- Historial de reservas
 
 #### Gestión General
 - CRUD de staff y roles (con restricción de escalamiento de privilegios)
