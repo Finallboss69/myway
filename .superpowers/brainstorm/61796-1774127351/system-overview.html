@@ -1,0 +1,115 @@
+<h2>Sistema Bar/Pool — Mapa de Subsistemas</h2>
+<p class="subtitle">Este es un proyecto grande con múltiples apps independientes. Antes de diseñar, necesitamos entender el alcance completo.</p>
+
+<style>
+.system-map {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin: 24px 0;
+}
+.subsystem {
+  border: 2px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--card-bg, #f8fafc);
+  position: relative;
+}
+.subsystem .tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+.tag.customer { background: #dbeafe; color: #1e40af; }
+.tag.staff { background: #dcfce7; color: #166534; }
+.tag.admin { background: #fef9c3; color: #854d0e; }
+.tag.infra { background: #f3e8ff; color: #7e22ce; }
+.subsystem h3 { margin: 4px 0 6px; font-size: 15px; }
+.subsystem p { font-size: 12px; color: #64748b; margin: 0; line-height: 1.5; }
+.subsystem .icon { font-size: 28px; margin-bottom: 6px; display: block; }
+.priority-note {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 20px;
+  font-size: 13px;
+  color: #9a3412;
+}
+</style>
+
+<div class="system-map">
+
+  <div class="subsystem">
+    <span class="icon">📱</span>
+    <span class="tag customer">Cliente</span>
+    <h3>Web App de Pedidos</h3>
+    <p>El cliente escanea QR de la mesa y hace su pedido. Menú, carrito, pagos.</p>
+  </div>
+
+  <div class="subsystem">
+    <span class="icon">🖥️</span>
+    <span class="tag admin">Caja / Admin</span>
+    <h3>Panel de Administración</h3>
+    <p>Recibe pedidos en tiempo real, gestiona mesas, ve el estado del salón, cobros.</p>
+  </div>
+
+  <div class="subsystem">
+    <span class="icon">🍳</span>
+    <span class="tag staff">Cocina (KDS)</span>
+    <h3>Pantalla de Cocina</h3>
+    <p>Kitchen Display System. Fichas de pedidos con estado, temporizadores, prioridades.</p>
+  </div>
+
+  <div class="subsystem">
+    <span class="icon">🏃</span>
+    <span class="tag staff">Mesero / Runner</span>
+    <h3>App del Repartidor</h3>
+    <p>Mobile-first. Ve qué platos están listos y a qué mesa llevarlos.</p>
+  </div>
+
+  <div class="subsystem">
+    <span class="icon">🎱</span>
+    <span class="tag admin">Pool</span>
+    <h3>Gestión de Mesas de Pool</h3>
+    <p>Temporizadores por mesa, cobro por tiempo, historial de sesiones.</p>
+  </div>
+
+  <div class="subsystem">
+    <span class="icon">🗺️</span>
+    <span class="tag admin">Salón Interactivo</span>
+    <h3>Editor de Layout del Salón</h3>
+    <p>Drag &amp; drop de mesas, asignación de números, unir mesas, guardar configuraciones.</p>
+  </div>
+
+  <div class="subsystem">
+    <span class="icon">📷</span>
+    <span class="tag infra">QR</span>
+    <h3>Generador de QR por Mesa</h3>
+    <p>QR único por mesa, vinculado al número de mesa, imprimible.</p>
+  </div>
+
+  <div class="subsystem">
+    <span class="icon">📊</span>
+    <span class="tag admin">Reportes</span>
+    <h3>Analytics y Reportes</h3>
+    <p>Ventas por día, platos más pedidos, mesas más rentables, historial.</p>
+  </div>
+
+  <div class="subsystem">
+    <span class="icon">🔐</span>
+    <span class="tag infra">Auth</span>
+    <h3>Usuarios y Roles</h3>
+    <p>Admin, caja, cocina, mesero. Control de acceso por rol.</p>
+  </div>
+
+</div>
+
+<div class="priority-note">
+  ⚠️ <strong>Son 9 subsistemas independientes.</strong> Para diseñar bien cada uno hay que hacerlo por fases. La pregunta de abajo es en el terminal.
+</div>

@@ -1,0 +1,667 @@
+# My Way — Bar & Pool Management System
+## Master Design Specification
+
+**Date:** 2026-03-21
+**Status:** Approved
+**Version:** 1.0
+
+---
+
+## 1. Overview
+
+My Way is a full-stack bar and pool hall management platform for a single venue. It handles table ordering via QR, delivery ordering, kitchen and bar display systems, waiter operations including mobile payments, a drag-and-drop salon layout editor, and an owner analytics dashboard.
+
+The system operates in two modes simultaneously:
+- **Cloud mode** — customer-facing apps (QR ordering, delivery) hosted on Vercel + Supabase
+- **Local mode** — staff apps (POS, kitchen, bar, waiter) running on a local Node.js server inside the bar's WiFi network, with offline-first SQLite and 15-minute bidirectional sync to Supabase
+
+---
+
+## 2. Architecture
+
+### 2.1 Approach: Turborepo Monorepo
+
+A Turborepo monorepo with pnpm workspaces. Each app is independently deployable. Shared packages (UI, types, DB, sync engine, auth, config, utils) are consumed by all apps.
+
+**Why this approach:** With 7 apps and multiple shared concerns, a monorepo with isolated apps is the only architecture that scales without coupling. Changes to the kitchen display cannot break the POS. Each app deploys independently to Vercel.
+
+### 2.2 Repository Structure
+
+```
+myway/
+├── apps/
+│   ├── web-customer/        # Cliente: QR mesa + delivery
+│   ├── app-pos/             # Caja / POS
+│   ├── app-kitchen/         # Cocina (KDS)
+│   ├── app-bar/             # Barra de bebidas
+│   ├── app-waiter/          # App del mozo
+│   ├── app-admin/           # Panel dueños (analytics)
+│   └── local-server/        # Servidor Node.js en PC del bar
+│
+├── packages/
+│   ├── ui/                  # Componentes shadcn/ui customizados (tema oscuro)
+│   ├── types/               # TypeScript interfaces compartidas
+│   ├── db/                  # Prisma schema + cliente (cloud y local)
+│   ├── sync-engine/         # Lógica paridad local ↔ Supabase (15 min)
+│   ├── auth/                # Helpers NextAuth + Supabase Auth
+│   ├── config/              # Configs compartidas: tailwind, eslint, tsconfig
+│   └── utils/               # Funciones utilitarias compartidas
+│
+├── supabase/
+│   ├── migrations/          # Migraciones SQL versionadas
+│   ├── seed.sql             # Datos iniciales (menú, roles, mesas)
+│   └── config.toml
+│
+├── docs/
+│   └── superpowers/specs/   # Especificaciones del sistema
+│
+├── turbo.json
+├── pnpm-workspace.yaml
+└── package.json
+```
+
+### 2.3 Network Architecture
+
+```
+Internet (Vercel + Supabase)
+    ├── web-customer  → pedidos.myway.com
+    └── app-admin     → admin.myway.com
+
+Bar WiFi Network (local-server en PC del bar)
+    ├── app-pos       → http://192.168.x.x:3001  (también pos.myway.com)
+    ├── app-kitchen   → http://192.168.x.x:3001  (también kitchen.myway.com)
+    ├── app-bar       → http://192.168.x.x:3001  (también bar.myway.com)
+    └── app-waiter    → http://192.168.x.x:3001  (PWA en celular del mozo)
+
+QR inteligente:
+    ├── Cliente en WiFi del bar  → apunta a IP local (local-server)
+    └── Cliente en datos/otra red → apunta a Vercel (cloud)
+```
+
+---
+
+## 3. Tech Stack
+
+### Frontend
+| Tecnología | Versión | Uso |
+|---|---|---|
+| Next.js | 15 | Todas las web apps (App Router) |
+| React | 19 | UI framework |
+| TypeScript | 5.x | Todo el codebase |
+| Tailwind CSS | v4 | Estilos — tema oscuro premium |
+| shadcn/ui | latest | Componentes base customizados |
+| Zustand | 5.x | Estado global por app |
+| TanStack Query | 5.x | Fetching + cache de datos |
+| Socket.io client | 4.x | Tiempo real |
+| next-pwa | latest | PWA para apps del bar (offline) |
+| NextAuth.js | v5 | Google OAuth para clientes delivery |
+
+### Backend
+| Tecnología | Versión | Uso |
+|---|---|---|
+| Node.js | 22 LTS | Runtime |
+| Express | 5.x | API local-server |
+| Socket.io | 4.x | WebSocket server (tiempo real local) |
+| Prisma | 5.x | ORM (mismos schemas, local y cloud) |
+| BullMQ | 5.x | Cola de trabajos + sync scheduler |
+| node-cron | 3.x | Job de sync cada 15 min |
+
+### Base de Datos
+| Tecnología | Uso |
+|---|---|
+| Supabase (PostgreSQL) | Cloud — fuente de verdad |
+| Supabase Realtime | Eventos cloud → local-server |
+| Supabase Auth | Auth de staff y dueños |
+| Supabase Storage | Imágenes de productos y logos |
+| SQLite (better-sqlite3) | Local — offline-first en PC del bar |
+| Row Level Security (RLS) | Aislamiento de datos por rol |
+
+### Infraestructura
+| Tecnología | Uso |
+|---|---|
+| Vercel | Deploy de todas las apps cloud |
+| Turborepo | Monorepo + builds incrementales |
+| pnpm workspaces | Package manager |
+| MercadoPago SDK | Pagos online (delivery) + QR cobro en mesa |
+| QRCode.js | Generación de QR por mesa |
+| ESC/POS | Protocolo impresora térmica |
+
+---
+
+## 4. Database Schema
+
+### Core Entities
+
+```sql
+-- Venue (el bar)
+venues (id, name, address, logo_url, settings_json, created_at)
+
+-- Zones (Salón Principal / Afuera)
+zones (id, venue_id, name, order, created_at)
+
+-- Tables (mesas de bar y de pool)
+tables (
+  id, venue_id, zone_id, number, type ENUM(bar|pool),
+  x, y, width, height, rotation, seats,
+  status ENUM(available|occupied|reserved),
+  merged_into_id REFERENCES tables(id),
+  created_at, updated_at
+)
+
+-- Layout snapshots (versiones guardadas del salón)
+layout_snapshots (id, venue_id, name, snapshot_json, created_at)
+
+-- Table sessions (sesión activa de una mesa)
+table_sessions (
+  id, table_id, opened_by REFERENCES staff(id),
+  opened_at, closed_at, closed_by REFERENCES staff(id),
+  status ENUM(open|closed|paid),
+  notes
+)
+
+-- Orders (pedidos — mesa y delivery)
+orders (
+  id, venue_id, type ENUM(table|delivery),
+  status ENUM(pending|confirmed|preparing|ready|delivered|cancelled),
+  table_session_id REFERENCES table_sessions(id),
+  customer_id REFERENCES customers(id),
+  total, discount_amount, discount_reason,
+  created_by REFERENCES staff(id),
+  created_at, updated_at
+)
+
+-- Order items
+order_items (
+  id, order_id, product_id, quantity, unit_price,
+  notes, modifiers_json,
+  status ENUM(pending|preparing|ready|delivered|cancelled),
+  target ENUM(kitchen|bar),
+  created_at, updated_at
+)
+
+-- Products (menú)
+products (
+  id, venue_id, category_id, name, description, price,
+  image_url, is_available, is_pool_chip BOOLEAN DEFAULT false,
+  target ENUM(kitchen|bar), sort_order,
+  stock_count, stock_alert_threshold,
+  allergens_json, created_at, updated_at
+)
+
+-- Product modifiers (sin hielo, doble, etc.)
+product_modifiers (
+  id, product_id, name, options_json, is_required, max_selections
+)
+
+-- Product categories
+product_categories (
+  id, venue_id, name, color, icon, sort_order, is_active
+)
+
+-- Product combos
+product_combos (
+  id, venue_id, name, description, price, items_json, is_active
+)
+
+-- Happy hour
+happy_hours (
+  id, venue_id, name, start_time, end_time, days_of_week,
+  discount_type ENUM(percentage|fixed), discount_value, is_active
+)
+
+-- Staff (empleados)
+staff (
+  id, venue_id, name, email,
+  role ENUM(superadmin|admin|cashier|waiter|kitchen|bar),
+  pin_hash, is_active, created_at
+)
+
+-- Customers (usuarios delivery)
+customers (
+  id, google_id, email, name, avatar_url,
+  phone, loyalty_points, created_at
+)
+
+-- Delivery orders
+delivery_orders (
+  id, order_id, customer_id,
+  address, lat, lng,
+  delivery_zone_id,
+  payment_method ENUM(cash|mercadopago),
+  mp_payment_id, mp_preference_id,
+  delivery_status ENUM(pending|confirmed|preparing|on_the_way|delivered),
+  assigned_to REFERENCES staff(id),
+  estimated_minutes, delivered_at
+)
+
+-- Delivery zones
+delivery_zones (
+  id, venue_id, name, polygon_json,
+  delivery_fee, is_active
+)
+
+-- Payments
+payments (
+  id, table_session_id, order_id,
+  method ENUM(cash|mercadopago_qr|mercadopago_online|card|transfer),
+  amount, mp_payment_id, received_by REFERENCES staff(id),
+  created_at
+)
+
+-- QR codes (por mesa)
+qr_codes (
+  id, table_id, code, token_hash,
+  generated_at, generated_by REFERENCES staff(id),
+  image_url, is_active
+)
+
+-- Sync log
+sync_log (
+  id, started_at, finished_at,
+  status ENUM(success|partial|failed),
+  records_pushed, records_pulled, error_message
+)
+
+-- Cash register closes
+cash_register_closes (
+  id, venue_id, staff_id, opened_at, closed_at,
+  opening_amount, closing_amount, total_cash_sales,
+  total_mp_sales, total_sales, notes, created_at
+)
+```
+
+---
+
+## 5. Apps — Features Completos
+
+### 5.1 `web-customer` — App del Cliente
+
+**Vista Mesa (QR — anónimo)**
+- Menú con categorías, búsqueda, filtros
+- Detalle de producto con foto, descripción, alérgenos
+- Modificadores por item (sin sal, doble, término)
+- Carrito persistente (localStorage)
+- Notas por item
+- Botón "Llamar al mesero" (alerta al app-waiter)
+- Estado del pedido en tiempo real
+- Ficha de pool destacada con contador en mesas tipo pool
+- Sin login requerido
+
+**Vista Delivery (con login Google)**
+- Autenticación con Google (NextAuth.js v5)
+- Mismo menú que vista mesa
+- Dirección de entrega con Google Maps Autocomplete
+- Selección de zona → costo de envío automático
+- Tiempo estimado de entrega
+- Selección de pago: efectivo / MercadoPago
+- Checkout MercadoPago (redirect o modal)
+- Confirmación de pedido + tracking en tiempo real
+- Historial de pedidos anteriores
+- Opción "pedir de nuevo" desde historial
+- Programa de fidelización: puntos acumulados y canjeables
+
+---
+
+### 5.2 `app-pos` — Caja
+
+**Vista principal: Salón**
+- Layout interactivo en tiempo real
+- Mesas coloreadas por estado (verde=libre, rojo=ocupada, amarillo=con cuenta pendiente)
+- Tiempo de ocupación visible en cada mesa
+- Click en mesa → panel lateral con pedido activo
+- Indicador online/offline
+
+**Gestión de pedidos**
+- Ver todos los pedidos activos (mesa + delivery)
+- Agregar items a una mesa
+- Modificar/cancelar items con motivo
+- Ver estado por item (en preparación / listo)
+- Aplicar descuentos (% o fijo) con motivo
+- Anular pedido completo con motivo (log auditado)
+
+**Cobro**
+- Generar QR MercadoPago por el total
+- Registrar pago en efectivo
+- Múltiples métodos de pago (split: parte efectivo + parte MP)
+- División de cuenta entre N personas
+- Cierre de mesa con comprobante
+
+**Editor de Salón**
+- Canvas drag & drop con dos zonas (Salón Principal / Afuera)
+- Agregar mesas (bar o pool), asignar número
+- Redimensionar y rotar mesas
+- Unir 2+ mesas → nueva mesa compuesta con número nuevo
+- Separar mesas unidas → vuelven a estado original
+- Guardar snapshot con nombre
+- Cargar snapshot anterior
+- Vista live vs vista edición
+
+**Gestión de Menú**
+- CRUD de categorías, productos, modificadores, combos
+- Subir fotos de productos
+- Toggle disponibilidad por item
+- Gestión de happy hour
+- Control de stock por producto
+
+**Generador de QR**
+- Generar QR por mesa (token firmado HMAC)
+- Previsualizar e imprimir (PDF)
+- Regenerar QR (invalida el anterior)
+
+**Cierre de caja**
+- Resumen del día (ventas por método de pago)
+- Conteo de efectivo esperado vs contado
+- Exportar reporte PDF
+- Historial de cierres
+
+**Impresora térmica**
+- Imprimir ticket de pedido a cocina/barra
+- Imprimir cuenta para el cliente
+- Configuración de IP/puerto de impresora
+
+---
+
+### 5.3 `app-kitchen` — Cocina (KDS)
+
+- Fichas de pedidos en tiempo real (solo `target=kitchen`)
+- Cada ficha: número de mesa, tipo (mesa/delivery), items, notas, modificadores, tiempo transcurrido
+- Estados: **Nuevo → En preparación → Listo**
+- Temporizadores por ficha: amarillo a X min, rojo a Y min (configurable)
+- Alerta visual + sonido configurable al nuevo pedido
+- Filtro por estado
+- Vista por estación (parrilla / frío / postres)
+- Bump bar: un tap grande avanza el estado (optimizado para guantes)
+- Vista compacta para cocinas pequeñas
+- Sin acceso a información financiera
+
+---
+
+### 5.4 `app-bar` — Barra de Bebidas
+
+- Igual que KDS pero solo `target=bar`
+- Fichas de bebidas por mesa
+- **Ficha de pool destacada** — muestra contador de fichas acumuladas por mesa con botón "Agregar ficha" en tamaño grande
+- Estados: **Nuevo → Preparando → Listo**
+- Alerta con nuevo pedido (sonido configurable)
+- Sin acceso a información financiera
+
+---
+
+### 5.5 `app-waiter` — App del Mozo (PWA Mobile-first)
+
+**Gestión de mesas**
+- Vista del salón (mismo layout que POS)
+- Abrir mesa (inicia table_session asignada al mozo)
+- Agregar items a una mesa desde el celular
+- Ver estado de items de sus mesas
+- Recibir alerta cuando cocina/barra tienen algo listo
+- Confirmar entrega de items en mesa (tap por item)
+- Botón "llamar al mesero" → vibración en su celular + alerta en pantalla
+
+**Cobro**
+- Generar cuenta de una mesa
+- **Cobro con MercadoPago QR** → genera QR dinámico, cliente escanea, pago confirmado automáticamente
+- **Cobro en efectivo** → registra monto recibido, cierra mesa
+- Cierre de mesa (el mozo O la caja pueden hacerlo)
+- Si caja cierra su mesa → notificación al mozo en tiempo real
+
+**Delivery (modo repartidor)**
+- Ver pedidos delivery asignados
+- Marcar como "en camino" y "entregado"
+- Registrar cobro en efectivo delivery
+
+---
+
+### 5.6 `app-admin` — Panel Dueños
+
+**Dashboard**
+- KPIs del día: ventas totales, pedidos, ticket promedio, mesas atendidas
+- Comparativa vs día anterior / semana anterior
+- Mapa de calor del salón (mesas más activas)
+
+**Reportes y Analytics**
+- Gráficos de ventas por período (día/semana/mes/año)
+- Ranking de productos más vendidos
+- Ranking de mesas más rentables
+- Análisis de horarios pico
+- Reporte de descuentos y anulaciones (quién, cuándo, por qué)
+- Reporte de métodos de pago
+- Ticket promedio por mesa, por mozo, por hora
+- Exportar cualquier reporte en CSV o PDF
+
+**Gestión**
+- CRUD de staff y roles
+- Ver historial de cierres de caja
+- Control de inventario (stock actual, movimientos, alertas)
+- Gestión de repartidores (asignar, historial)
+- Configuración del venue (logo, nombre, horarios, colores del tema)
+- Gestión de zonas de delivery (polígonos en mapa)
+
+**Sistema**
+- Log de sincronizaciones (fecha, registros, errores)
+- Botón de backup manual (fuerza sync inmediato)
+- Notificaciones push al dueño (ventas bajas, muchas anulaciones, errores de sync)
+- Multi-idioma: español / inglés
+
+---
+
+### 5.7 `local-server` — Servidor Local del Bar
+
+- Node.js + Express
+- API REST completa para todas las apps del bar
+- Socket.io server (hub central de eventos en tiempo real)
+- SQLite con Prisma (mismo schema que cloud)
+- Sync engine: push/pull contra Supabase cada 15 min + inmediato al reconectar
+- Recibe pedidos de clientes QR (cloud) via Supabase Realtime WebSocket
+- Impresora térmica: endpoint ESC/POS por USB o red local
+- Health check endpoint (`/health`) para verificar estado
+- Script de instalación: `npm run setup` (configura .env, inicializa DB, crea admin)
+- Script de arranque: `npm start` (inicia servidor + scheduler de sync)
+
+---
+
+## 6. Tiempo Real — Eventos Socket.io
+
+| Canal | Emisor | Receptores | Payload |
+|---|---|---|---|
+| `new_order` | local-server | pos, kitchen, bar, waiter | { order } |
+| `order_updated` | pos/waiter | pos, kitchen, bar, waiter, customer | { orderId, status } |
+| `item_ready` | kitchen/bar | pos, waiter, customer | { itemId, tableId } |
+| `item_delivered` | waiter | pos, kitchen, bar | { itemId } |
+| `table_status` | pos/waiter | pos, waiter | { tableId, status } |
+| `table_paid` | pos/waiter | pos, waiter, kitchen, bar | { tableSessionId } |
+| `table_closed` | pos/waiter | pos, kitchen, bar, waiter | { tableId } |
+| `call_waiter` | customer | waiter, pos | { tableId } |
+| `delivery_new` | cloud→local | pos, kitchen | { deliveryOrder } |
+| `delivery_updated` | pos/waiter | customer | { deliveryId, status } |
+| `mp_payment_confirmed` | local-server | pos, waiter | { paymentId, amount } |
+| `sync_status` | sync-engine | pos | { status, lastSync } |
+| `stock_low` | sync-engine | pos, admin | { productId, stock } |
+
+---
+
+## 7. Sync Engine (Local ↔ Supabase)
+
+### Estrategia
+- **Frecuencia:** Cada 15 minutos + inmediato al reconectar internet
+- **Conflictos:** Last-write-wins por `updated_at`
+- **Tablas bidireccionales:** orders, order_items, tables, table_sessions, payments
+- **Pull only (cloud → local):** products, categories, customers, delivery_zones
+- **Push only (local → cloud):** sync_log, cash_register_closes
+- **Solo cloud:** staff (auth), analytics_snapshots
+
+### Flujo
+```
+1. PUSH: SELECT * WHERE updated_at > last_sync_at AND synced = false
+2. Upsert en Supabase (batch de 100 registros)
+3. Marcar como synced = true en SQLite
+4. PULL: SELECT * FROM supabase WHERE updated_at > last_sync_at
+5. Upsert en SQLite local
+6. Actualizar last_sync_at
+7. Emitir socket "sync_status" a apps del bar
+8. Escribir en sync_log
+```
+
+### Modo Offline
+- Todas las apps del bar operan normalmente contra SQLite
+- Pedidos delivery se pausan automáticamente (banner visible)
+- Al recuperar internet: sync inmediato antes de reanudar operaciones
+- QR del cliente apunta a IP local si está en la misma WiFi
+
+---
+
+## 8. Autenticación y Seguridad
+
+### Auth por tipo de usuario
+
+| Usuario | Método | Proveedor |
+|---|---|---|
+| Cliente delivery | Google OAuth | NextAuth.js v5 |
+| Cliente en mesa | Anónimo (token firmado) | Custom HMAC |
+| Staff (mozo, cocina, barra) | Email + PIN 4 dígitos | Supabase Auth |
+| Admin/Dueños | Email + contraseña + 2FA opcional | Supabase Auth |
+
+### Roles y permisos
+
+| Rol | Puede |
+|---|---|
+| `superadmin` | Todo |
+| `admin` | Todo menos configuración de venue |
+| `cashier` | POS completo, anulaciones, descuentos, cierre de caja |
+| `waiter` | Sus mesas, cobro MP QR, cobro efectivo, cierre de mesa |
+| `kitchen` | Ver y actualizar estado de items (target=kitchen) |
+| `bar` | Ver y actualizar estado de items (target=bar) |
+| `customer` | Solo su propio pedido |
+
+### Seguridad del QR
+- Token: `HMAC-SHA256({ table_id, venue_id, expires_at }, venue_secret)`
+- Expiración: 8 horas
+- Regenerable desde POS (invalida token anterior)
+
+### API Security
+- JWT en todas las rutas (excepto `/health` y `/qr/:token`)
+- Rate limiting: 100 req/min por IP en local-server
+- CORS estricto: solo dominios `*.myway.com`
+- Webhook MercadoPago: validación de firma `x-signature`
+- Supabase RLS activo en todas las tablas
+- Variables de entorno nunca expuestas al cliente
+
+---
+
+## 9. Integración MercadoPago
+
+### Delivery (pago online)
+1. Cliente elige MercadoPago en checkout
+2. API crea `preference` en MP → devuelve `init_point`
+3. Cliente es redirigido al checkout de MP
+4. MP notifica webhook en `/api/webhooks/mp`
+5. API valida firma, actualiza `delivery_order.status = confirmed`
+6. Supabase Realtime → local-server → socket `delivery_new` → pos + kitchen
+
+### Cobro en mesa con QR (mozo o caja)
+1. Staff toca "Cobrar con MP" → API crea `payment_intent` con monto exacto
+2. MP devuelve QR dinámico (imagen base64 o URL)
+3. QR aparece en pantalla del dispositivo del staff
+4. Cliente escanea con su app bancaria o MP
+5. MP notifica webhook → API confirma → socket `mp_payment_confirmed`
+6. Mesa queda lista para cerrar
+
+---
+
+## 10. Editor de Salón
+
+### Tecnología
+- Canvas con **Konva.js** (React-Konva) — renderer HTML5 Canvas optimizado para drag & drop
+- Estado guardado como JSON (`snapshot_json`) en `layout_snapshots`
+
+### Funciones
+- Dos zonas en pestañas: "Salón Principal" / "Afuera"
+- Agregar mesa (modal: tipo bar/pool, número, asientos)
+- Drag & drop libre sobre el canvas
+- Resize con handles en las esquinas
+- Rotación con handle superior
+- Selección múltiple (shift+click)
+- Unir mesas: seleccionar 2+, botón "Unir" → nueva mesa compuesta, asignar número nuevo
+- Separar mesa unida → vuelven las mesas originales
+- Guardar layout con nombre
+- Cargar snapshot anterior desde lista
+- Vista "Live" (solo lectura, actualización en tiempo real) vs "Edición"
+- Exportar layout como imagen PNG
+
+---
+
+## 11. Ficha de Pool
+
+Las mesas tipo `pool` son mesas normales con comportamiento especial:
+
+- En `app-bar`: el item `is_pool_chip = true` aparece como botón grande destacado: **"+ Ficha de Pool"**
+- Contador de fichas acumuladas en la sesión visible en la ficha de la mesa
+- En `web-customer` (vista mesa): la sección de pool chips aparece al tope del menú si la mesa es tipo pool
+- El precio de la ficha es configurable desde el menú como cualquier producto
+- En reportes: las fichas de pool tienen su propia línea en analytics
+
+---
+
+## 12. Plan de Implementación por Fases
+
+| Fase | Contenido | Meta |
+|---|---|---|
+| **0 — Fundaciones** | Monorepo, schemas, Supabase, Vercel, local-server base | Semana 1 |
+| **1 — Núcleo del bar** | app-pos básico, app-kitchen, app-bar, Socket.io, sync | Semana 3 |
+| **2 — Cliente QR** | web-customer mesa, generador QR, pedido en tiempo real | Semana 4 |
+| **3 — Cobros** | app-waiter completo, MP QR cobro, efectivo, split, impresora | Semana 5 |
+| **4 — Delivery** | web-customer delivery, Google OAuth, MP checkout, tracking | Semana 7 |
+| **5 — Editor salón** | Canvas editor, zonas, unir/separar mesas, snapshots | Semana 8 |
+| **6 — Admin** | app-admin, analytics, inventario, reportes, gestión staff | Semana 9 |
+| **7 — Polish** | Fidelización, happy hour, i18n, PWA completo, tests E2E | Semana 10 |
+
+---
+
+## 13. Variables de Entorno
+
+### Todas las apps (cloud)
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+NEXTAUTH_SECRET=
+NEXTAUTH_URL=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+MP_ACCESS_TOKEN=
+MP_WEBHOOK_SECRET=
+VENUE_QR_SECRET=
+```
+
+### local-server
+```env
+PORT=3001
+NODE_ENV=production
+DATABASE_URL=file:./myway.db
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+MP_ACCESS_TOKEN=
+VENUE_QR_SECRET=
+SYNC_INTERVAL_MINUTES=15
+PRINTER_HOST=
+PRINTER_PORT=9100
+ALLOWED_NETWORK=192.168.1.0/24
+```
+
+---
+
+## 14. URLs de Producción
+
+| App | URL |
+|---|---|
+| Cliente (QR + delivery) | `pedidos.myway.com` |
+| POS / Caja | `pos.myway.com` |
+| Cocina | `kitchen.myway.com` |
+| Barra | `bar.myway.com` |
+| Mozos | `waiter.myway.com` |
+| Admin / Dueños | `admin.myway.com` |
+| Local (red interna) | `http://192.168.x.x:3001` |
+
+---
+
+*Spec aprobado en sesión de brainstorming — 2026-03-21*

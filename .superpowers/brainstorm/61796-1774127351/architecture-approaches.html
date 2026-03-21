@@ -1,0 +1,149 @@
+<h2>My Way — Enfoques de Arquitectura</h2>
+<p class="subtitle">3 formas de estructurar el sistema. Cuál elegimos define todo lo demás.</p>
+
+<style>
+.arch-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin: 24px 0; }
+.arch-card {
+  border: 2px solid #2d2d2d;
+  border-radius: 14px;
+  padding: 20px;
+  background: #111;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+  position: relative;
+}
+.arch-card:hover { border-color: #f59e0b; transform: translateY(-2px); }
+.arch-card.recommended {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 1px #f59e0b40, 0 8px 32px #f59e0b20;
+}
+.rec-badge {
+  position: absolute;
+  top: -12px; right: 16px;
+  background: #f59e0b;
+  color: #000;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  padding: 3px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.arch-card h3 { font-size: 16px; margin: 0 0 4px; color: #fff; }
+.arch-card .tagline { font-size: 12px; color: #94a3b8; margin-bottom: 14px; }
+.layer-list { list-style: none; padding: 0; margin: 0 0 14px; }
+.layer-list li {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 12px; color: #cbd5e1; margin-bottom: 6px;
+  line-height: 1.4;
+}
+.layer-list li .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  flex-shrink: 0; margin-top: 5px;
+}
+.dot.green { background: #22c55e; }
+.dot.yellow { background: #f59e0b; }
+.dot.red { background: #ef4444; }
+.divider { border-top: 1px solid #2d2d2d; margin: 12px 0; }
+.pros-cons-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mini-pro, .mini-con {
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  line-height: 1.4;
+}
+.mini-pro { background: #052e16; color: #86efac; }
+.mini-con { background: #1c0a0a; color: #fca5a5; }
+.mini-pro strong, .mini-con strong { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; opacity: 0.7; }
+.complexity-bar {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: #64748b; margin-top: 12px;
+}
+.bar-track { flex: 1; height: 4px; background: #1e293b; border-radius: 2px; }
+.bar-fill { height: 4px; border-radius: 2px; }
+</style>
+
+<div class="arch-grid">
+
+  <!-- OPTION A -->
+  <div class="option arch-card" data-choice="a" onclick="toggleSelect(this)">
+    <h3>A — Monolito Next.js</h3>
+    <p class="tagline">Una sola app, múltiples roles por ruta</p>
+    <ul class="layer-list">
+      <li><span class="dot green"></span>Un solo repo Next.js en Vercel</li>
+      <li><span class="dot green"></span>Supabase como cloud DB + realtime</li>
+      <li><span class="dot yellow"></span>Server local: Node.js simple en la PC del bar</li>
+      <li><span class="dot yellow"></span>SQLite local con sync manual cada 15 min</li>
+      <li><span class="dot red"></span>Todas las vistas (caja, cocina, barra) en la misma app con guards de rol</li>
+    </ul>
+    <div class="divider"></div>
+    <div class="pros-cons-mini">
+      <div class="mini-pro"><strong>Pro</strong>Simple de deployar. Un solo proyecto.</div>
+      <div class="mini-con"><strong>Con</strong>Se vuelve grande. Difícil de mantener cuando escala.</div>
+      <div class="mini-pro"><strong>Pro</strong>Menos configuración inicial.</div>
+      <div class="mini-con"><strong>Con</strong>Cambiar cocina rompe caja. Alto acoplamiento.</div>
+    </div>
+    <div class="complexity-bar">
+      <span>Complejidad</span>
+      <div class="bar-track"><div class="bar-fill" style="width:30%;background:#22c55e"></div></div>
+      <span>Baja</span>
+    </div>
+  </div>
+
+  <!-- OPTION B — RECOMMENDED -->
+  <div class="option arch-card recommended" data-choice="b" onclick="toggleSelect(this)">
+    <div class="rec-badge">⭐ Recomendado</div>
+    <h3>B — Turborepo Monorepo</h3>
+    <p class="tagline">Apps separadas, código compartido</p>
+    <ul class="layer-list">
+      <li><span class="dot green"></span>Turborepo: apps independientes por rol</li>
+      <li><span class="dot green"></span>Paquetes compartidos: UI, tipos, utils, lógica de sync</li>
+      <li><span class="dot green"></span>Supabase cloud + realtime + auth</li>
+      <li><span class="dot green"></span>Local server: Node.js + SQLite, se sincroniza con Supabase</li>
+      <li><span class="dot green"></span>Cada app deployada independiente en Vercel</li>
+    </ul>
+    <div class="divider"></div>
+    <div class="pros-cons-mini">
+      <div class="mini-pro"><strong>Pro</strong>Cambiar KDS no afecta el POS. Aislamiento total.</div>
+      <div class="mini-con"><strong>Con</strong>Setup inicial más complejo.</div>
+      <div class="mini-pro"><strong>Pro</strong>Escala perfectamente. Nivel profesional.</div>
+      <div class="mini-con"><strong>Con</strong>Más archivos, más repos para entender.</div>
+    </div>
+    <div class="complexity-bar">
+      <span>Complejidad</span>
+      <div class="bar-track"><div class="bar-fill" style="width:65%;background:#f59e0b"></div></div>
+      <span>Media</span>
+    </div>
+  </div>
+
+  <!-- OPTION C -->
+  <div class="option arch-card" data-choice="c" onclick="toggleSelect(this)">
+    <h3>C — Next.js + Electron</h3>
+    <p class="tagline">App de escritorio embebida en el bar</p>
+    <ul class="layer-list">
+      <li><span class="dot green"></span>Electron app en la PC del bar = servidor local embebido</li>
+      <li><span class="dot green"></span>Sin depender de tener Node.js instalado manualmente</li>
+      <li><span class="dot yellow"></span>SQLite embebido en Electron</li>
+      <li><span class="dot yellow"></span>Supabase como cloud backup</li>
+      <li><span class="dot red"></span>Más complejo de actualizar (releases de app de escritorio)</li>
+    </ul>
+    <div class="divider"></div>
+    <div class="pros-cons-mini">
+      <div class="mini-pro"><strong>Pro</strong>El local server viene "empaquetado", más fácil para usuarios no técnicos.</div>
+      <div class="mini-con"><strong>Con</strong>Distribución de updates de Electron es un dolor.</div>
+      <div class="mini-pro"><strong>Pro</strong>Funciona offline sin configurar nada extra.</div>
+      <div class="mini-con"><strong>Con</strong>Mezcla desktop + web, dos paradigmas.</div>
+    </div>
+    <div class="complexity-bar">
+      <span>Complejidad</span>
+      <div class="bar-track"><div class="bar-fill" style="width:85%;background:#ef4444"></div></div>
+      <span>Alta</span>
+    </div>
+  </div>
+
+</div>
+
+<div style="background:#0f172a;border:1px solid #f59e0b33;border-radius:10px;padding:16px;font-size:13px;color:#94a3b8;line-height:1.6;">
+  <strong style="color:#f59e0b">¿Por qué B?</strong> Con 6 apps distintas (caja, cocina, barra, dueños, cliente QR, delivery), un monorepo con apps separadas es el único enfoque que te permite mantener el sistema a largo plazo sin que todo explote. El local server sigue siendo Node.js simple — no hace falta Electron. Se instala una vez en la PC del bar y listo.
+</div>
