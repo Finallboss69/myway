@@ -3,7 +3,7 @@
 
 **Date:** 2026-03-21
 **Status:** Approved
-**Version:** 1.0
+**Version:** 1.1 (post-review fixes)
 
 ---
 
@@ -74,8 +74,14 @@ Bar WiFi Network (local-server en PC del bar)
     └── app-waiter    → http://192.168.x.x:3001  (PWA en celular del mozo)
 
 QR inteligente:
-    ├── Cliente en WiFi del bar  → apunta a IP local (local-server)
-    └── Cliente en datos/otra red → apunta a Vercel (cloud)
+    ├── QR apunta siempre a pedidos.myway.com (Vercel)
+    ├── web-customer intenta fetch a http://myway.local:3001/health (timeout 800ms)
+    ├── Si responde → redirige a IP local (requests van al local-server)
+    └── Si no responde → opera contra Vercel/Supabase directamente
+
+Nota: la PC del bar debe tener IP estática (DHCP reservation) y hostname
+mDNS configurado como `myway.local` para que la detección de red local funcione.
+El script de instalación del local-server configura esto automáticamente.
 ```
 
 ---
@@ -145,6 +151,8 @@ tables (
   x, y, width, height, rotation, seats,
   status ENUM(available|occupied|reserved),
   merged_into_id REFERENCES tables(id),
+  synced BOOLEAN DEFAULT false,
+  synced_at TIMESTAMP,
   created_at, updated_at
 )
 
@@ -156,7 +164,9 @@ table_sessions (
   id, table_id, opened_by REFERENCES staff(id),
   opened_at, closed_at, closed_by REFERENCES staff(id),
   status ENUM(open|closed|paid),
-  notes
+  notes,
+  synced BOOLEAN DEFAULT false,
+  synced_at TIMESTAMP
 )
 
 -- Orders (pedidos — mesa y delivery)
@@ -167,8 +177,13 @@ orders (
   customer_id REFERENCES customers(id),
   total, discount_amount, discount_reason,
   created_by REFERENCES staff(id),
+  synced BOOLEAN DEFAULT false,
+  synced_at TIMESTAMP,
   created_at, updated_at
 )
+-- Regla de conflicto de status: el estado solo puede avanzar en la máquina de estados.
+-- pending→confirmed→preparing→ready→delivered|cancelled
+-- Si local tiene "preparing" y cloud tiene "confirmed", se mantiene "preparing" (local wins en avance).
 
 -- Order items
 order_items (
@@ -176,8 +191,14 @@ order_items (
   notes, modifiers_json,
   status ENUM(pending|preparing|ready|delivered|cancelled),
   target ENUM(kitchen|bar),
+  station VARCHAR,  -- sub-estación en cocina: grill|cold|desserts|default (nullable)
+  synced BOOLEAN DEFAULT false,
+  synced_at TIMESTAMP,
   created_at, updated_at
 )
+-- order_items es APPEND-ONLY en sync: nunca se sobreescriben filas existentes,
+-- solo se insertan filas nuevas. Conflicto de status: cloud puede solo avanzar
+-- el estado (pending→preparing→ready→delivered), nunca retrocederlo.
 
 -- Products (menú)
 products (
@@ -213,7 +234,11 @@ happy_hours (
 staff (
   id, venue_id, name, email,
   role ENUM(superadmin|admin|cashier|waiter|kitchen|bar),
-  pin_hash, is_active, created_at
+  pin_hash, is_active,
+  failed_pin_attempts INT DEFAULT 0,
+  locked_until TIMESTAMP,
+  last_login_at TIMESTAMP,
+  created_at
 )
 
 -- Customers (usuarios delivery)
@@ -221,6 +246,15 @@ customers (
   id, google_id, email, name, avatar_url,
   phone, loyalty_points, created_at
 )
+
+-- Loyalty transactions
+loyalty_transactions (
+  id, customer_id, order_id,
+  type ENUM(earn|redeem),
+  points, description, created_at
+)
+-- Reglas: 1 punto por cada $100 ARS gastados. Mínimo 100 puntos para canjear.
+-- 100 puntos = $50 ARS de descuento. Gestionable desde app-admin.
 
 -- Delivery orders
 delivery_orders (
@@ -231,7 +265,9 @@ delivery_orders (
   mp_payment_id, mp_preference_id,
   delivery_status ENUM(pending|confirmed|preparing|on_the_way|delivered),
   assigned_to REFERENCES staff(id),
-  estimated_minutes, delivered_at
+  estimated_minutes, delivered_at,
+  received_at_local TIMESTAMP  -- seteado cuando local-server procesa la fila por primera vez
+  -- Si NOW() - received_at_local > 10 min, POS/cocina muestra advertencia de pedido potencialmente desactualizado
 )
 
 -- Delivery zones
@@ -240,19 +276,31 @@ delivery_zones (
   delivery_fee, is_active
 )
 
--- Payments
+-- Payments (múltiples por sesión para split payments)
 payments (
   id, table_session_id, order_id,
   method ENUM(cash|mercadopago_qr|mercadopago_online|card|transfer),
   amount, mp_payment_id, received_by REFERENCES staff(id),
   created_at
 )
+-- El total pagado se computa sumando payments.amount para una table_session.
+-- La UI muestra: total de la cuenta - total pagado = saldo pendiente.
+-- La mesa se puede cerrar cuando saldo pendiente = 0.
+-- Si webhook MP llega tarde en split payment: el sistema acepta el pago
+-- y recalcula el saldo. La sesión no se cierra automáticamente hasta saldo = 0.
 
 -- QR codes (por mesa)
 qr_codes (
   id, table_id, code, token_hash,
   generated_at, generated_by REFERENCES staff(id),
   image_url, is_active
+)
+
+-- Sync state (singleton — registra último sync exitoso)
+sync_state (
+  id INT DEFAULT 1,  -- siempre una sola fila
+  last_sync_at TIMESTAMP,
+  last_successful_sync_at TIMESTAMP
 )
 
 -- Sync log
@@ -369,7 +417,7 @@ cash_register_closes (
 - Temporizadores por ficha: amarillo a X min, rojo a Y min (configurable)
 - Alerta visual + sonido configurable al nuevo pedido
 - Filtro por estado
-- Vista por estación (parrilla / frío / postres)
+- Vista por estación: filtro por `station` del producto (parrilla / frío / postres / default)
 - Bump bar: un tap grande avanza el estado (optimizado para guantes)
 - Vista compacta para cocinas pequeñas
 - Sin acceso a información financiera
@@ -472,6 +520,7 @@ cash_register_closes (
 | `table_paid` | pos/waiter | pos, waiter, kitchen, bar | { tableSessionId } |
 | `table_closed` | pos/waiter | pos, kitchen, bar, waiter | { tableId } |
 | `call_waiter` | customer | waiter, pos | { tableId } |
+| `call_waiter_ack` | waiter | customer | { tableId, waiterId } |
 | `delivery_new` | cloud→local | pos, kitchen | { deliveryOrder } |
 | `delivery_updated` | pos/waiter | customer | { deliveryId, status } |
 | `mp_payment_confirmed` | local-server | pos, waiter | { paymentId, amount } |
@@ -484,23 +533,38 @@ cash_register_closes (
 
 ### Estrategia
 - **Frecuencia:** Cada 15 minutos + inmediato al reconectar internet
-- **Conflictos:** Last-write-wins por `updated_at`
 - **Tablas bidireccionales:** orders, order_items, tables, table_sessions, payments
 - **Pull only (cloud → local):** products, categories, customers, delivery_zones
 - **Push only (local → cloud):** sync_log, cash_register_closes
 - **Solo cloud:** staff (auth), analytics_snapshots
 
+### Reglas de Conflicto por Entidad
+| Entidad | Estrategia |
+|---|---|
+| `order_items` | **Append-only**: nunca sobreescribir filas; solo insertar nuevas. Status solo avanza (state machine). |
+| `orders` | State machine: `pending→confirmed→preparing→ready→delivered\|cancelled`. El estado más avanzado gana. |
+| `tables` | Last-write-wins por `updated_at` (bajo conflicto, solo layout cambia). |
+| `table_sessions` | Local wins para `status` (el bar controla apertura/cierre). Cloud solo puede cerrar. |
+| `payments` | Append-only: solo inserciones, nunca modificaciones. |
+
 ### Flujo
 ```
-1. PUSH: SELECT * WHERE updated_at > last_sync_at AND synced = false
-2. Upsert en Supabase (batch de 100 registros)
-3. Marcar como synced = true en SQLite
-4. PULL: SELECT * FROM supabase WHERE updated_at > last_sync_at
-5. Upsert en SQLite local
-6. Actualizar last_sync_at
+1. PUSH: SELECT * FROM [tabla] WHERE synced = false
+2. Upsert en Supabase (batch de 100 registros) con reglas de conflicto por entidad
+3. Marcar synced = true, synced_at = NOW() en SQLite
+4. PULL: SELECT * FROM supabase WHERE updated_at > sync_state.last_sync_at
+5. Aplicar reglas de conflicto al hacer upsert en SQLite local
+6. UPDATE sync_state SET last_sync_at = NOW(), last_successful_sync_at = NOW()
 7. Emitir socket "sync_status" a apps del bar
 8. Escribir en sync_log
 ```
+
+### Migración de Schema en Local-Server
+- En cada arranque (`npm start`), el server ejecuta `prisma migrate deploy` contra SQLite local.
+- Si hay migraciones pendientes: se hace backup automático de `myway.db` → `myway.db.bak` antes de migrar.
+- Si local está más de 5 versiones atrás del schema cloud: startup bloqueado con mensaje de error
+  instructivo. El admin debe correr `npm run migrate:reset` que hace backup + re-sync completo desde cloud.
+- La versión del schema se almacena en la tabla `_prisma_migrations` (Prisma nativo).
 
 ### Modo Offline
 - Todas las apps del bar operan normalmente contra SQLite
@@ -526,7 +590,7 @@ cash_register_closes (
 | Rol | Puede |
 |---|---|
 | `superadmin` | Todo |
-| `admin` | Todo menos configuración de venue |
+| `admin` | Reportes, menú, layout, anulaciones, descuentos, gestión de staff con rol inferior al suyo |
 | `cashier` | POS completo, anulaciones, descuentos, cierre de caja |
 | `waiter` | Sus mesas, cobro MP QR, cobro efectivo, cierre de mesa |
 | `kitchen` | Ver y actualizar estado de items (target=kitchen) |
@@ -537,6 +601,23 @@ cash_register_closes (
 - Token: `HMAC-SHA256({ table_id, venue_id, expires_at }, venue_secret)`
 - Expiración: 8 horas
 - Regenerable desde POS (invalida token anterior)
+
+### Roles y Escalamiento de Privilegios
+- `admin` puede crear/editar/desactivar staff con roles inferiores al suyo (cashier, waiter, kitchen, bar).
+- `admin` **NO** puede crear ni modificar otros `admin` o `superadmin`. Solo `superadmin` puede hacerlo.
+- Un staff no puede auto-modificar su propio rol.
+
+### PIN Brute Force Protection
+- 5 intentos fallidos de PIN consecutivos → cuenta bloqueada por 15 minutos (`locked_until`).
+- `failed_pin_attempts` se resetea a 0 en login exitoso.
+- Rate limiting adicional: máx 10 intentos de login por IP por minuto.
+
+### Auth Offline (JWT sin internet)
+- El `local-server` cachea la JWKS (clave pública de Supabase) en disco al iniciar.
+- Refresca la JWKS cada hora cuando hay internet.
+- En modo offline: verifica JWTs contra la JWKS cacheada. Acepta tokens con hasta 48hs de antigüedad.
+- Al reconectar: refresca JWKS inmediatamente.
+- El PIN login genera un JWT firmado localmente (con `VENUE_QR_SECRET` como fallback secret) cuando Supabase Auth es inaccesible.
 
 ### API Security
 - JWT en todas las rutas (excepto `/health` y `/qr/:token`)
@@ -559,12 +640,17 @@ cash_register_closes (
 6. Supabase Realtime → local-server → socket `delivery_new` → pos + kitchen
 
 ### Cobro en mesa con QR (mozo o caja)
-1. Staff toca "Cobrar con MP" → API crea `payment_intent` con monto exacto
-2. MP devuelve QR dinámico (imagen base64 o URL)
+1. Staff toca "Cobrar con MP" → `local-server` llama a MP API: crea payment QR dinámico con monto exacto
+2. MP devuelve QR (imagen base64 o URL)
 3. QR aparece en pantalla del dispositivo del staff
 4. Cliente escanea con su app bancaria o MP
-5. MP notifica webhook → API confirma → socket `mp_payment_confirmed`
-6. Mesa queda lista para cerrar
+5. MP notifica webhook HTTPS → endpoint en **Vercel** (`/api/webhooks/mp`) — MP requiere URL pública
+6. Vercel valida firma `x-signature`, upserta fila en `payments` en Supabase con `mp_payment_id`
+7. Supabase Realtime → local-server recibe el evento de la nueva fila
+8. local-server verifica el `mp_payment_id`, emite socket `mp_payment_confirmed` a pos + waiter
+9. Mesa queda lista para cerrar (saldo pendiente = 0)
+10. Fallback: si Supabase Realtime no entrega el evento en 30s, local-server hace polling a MP API
+    cada 5s por el estado del payment_id hasta confirmar o timeout de 5 min.
 
 ---
 
@@ -604,33 +690,43 @@ Las mesas tipo `pool` son mesas normales con comportamiento especial:
 
 ## 12. Plan de Implementación por Fases
 
-| Fase | Contenido | Meta |
-|---|---|---|
-| **0 — Fundaciones** | Monorepo, schemas, Supabase, Vercel, local-server base | Semana 1 |
-| **1 — Núcleo del bar** | app-pos básico, app-kitchen, app-bar, Socket.io, sync | Semana 3 |
-| **2 — Cliente QR** | web-customer mesa, generador QR, pedido en tiempo real | Semana 4 |
-| **3 — Cobros** | app-waiter completo, MP QR cobro, efectivo, split, impresora | Semana 5 |
-| **4 — Delivery** | web-customer delivery, Google OAuth, MP checkout, tracking | Semana 7 |
-| **5 — Editor salón** | Canvas editor, zonas, unir/separar mesas, snapshots | Semana 8 |
-| **6 — Admin** | app-admin, analytics, inventario, reportes, gestión staff | Semana 9 |
-| **7 — Polish** | Fidelización, happy hour, i18n, PWA completo, tests E2E | Semana 10 |
+| Fase | Contenido | Depende de | Paralelizable con | Meta |
+|---|---|---|---|---|
+| **0 — Fundaciones** | Monorepo, schemas, Supabase, Vercel, local-server base | — | — | Semana 1 |
+| **1 — Núcleo del bar** | app-pos básico, app-kitchen, app-bar, Socket.io, sync | Fase 0 | Fase 4 (parcial) | Semana 3 |
+| **2 — Cliente QR** | web-customer mesa, generador QR, pedido en tiempo real | Fase 1 | — | Semana 4 |
+| **3 — Cobros** | app-waiter completo, MP QR cobro, efectivo, split, impresora | Fase 2 | — | Semana 5 |
+| **4 — Delivery** | web-customer delivery, Google OAuth, MP checkout, tracking | Fase 0 | Fases 1-3 | Semana 7 |
+| **5 — Editor salón** | Canvas editor, zonas, unir/separar mesas, snapshots | Fase 1 | Fase 4 | Semana 8 |
+| **6 — Admin** | app-admin, analytics, inventario, reportes, gestión staff | Fase 3 | Fase 5 | Semana 9 |
+| **7 — Polish** | Fidelización, happy hour, i18n, PWA completo, tests E2E | Fase 6 | — | Semana 10 |
+
+**Nota de paralelización:** Las Fases 1-3 (stack local, red interna) y la Fase 4 (delivery cloud)
+pueden desarrollarse en paralelo por dos workstreams independientes desde la Fase 0.
+La Fase 4 solo necesita Supabase + Vercel, sin depender del local-server.
 
 ---
 
 ## 13. Variables de Entorno
 
-### Todas las apps (cloud)
+### Apps cloud — Variables Públicas (expuestas al browser)
 ```env
+# Prefijo NEXT_PUBLIC_ = accesible en el cliente
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=   # necesario para el botón de Google en el cliente
+```
+
+### Apps cloud — Variables de Servidor (solo API routes / server components)
+```env
+# SIN prefijo NEXT_PUBLIC_ = nunca en el bundle del cliente
+SUPABASE_SERVICE_ROLE_KEY=      # admin total a Supabase, NUNCA al cliente
 NEXTAUTH_SECRET=
 NEXTAUTH_URL=
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-MP_ACCESS_TOKEN=
-MP_WEBHOOK_SECRET=
-VENUE_QR_SECRET=
+GOOGLE_CLIENT_SECRET=           # NUNCA al cliente
+MP_ACCESS_TOKEN=                # NUNCA al cliente
+MP_WEBHOOK_SECRET=              # validación de firma del webhook
+VENUE_QR_SECRET=                # firmado HMAC de tokens QR
 ```
 
 ### local-server
