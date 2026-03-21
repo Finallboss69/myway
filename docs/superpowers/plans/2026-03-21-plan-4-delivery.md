@@ -1350,14 +1350,14 @@ import { describe, it, expect } from 'vitest'
 import { validateMpSignature } from '../lib/mp-signature'
 
 describe('MP webhook signature validation', () => {
-  it('returns true for valid HMAC-SHA256 signature', () => {
+  it('returns true for valid HMAC-SHA256 signature', async () => {
     const secret = 'test-webhook-secret'
     const dataId = 'payment-123'
     const ts = '1710000000'
     // mp signature format: ts;data.id — signed with HMAC-SHA256
-    const crypto = await import('node:crypto')
+    const { createHmac } = await import('node:crypto')
     const msg = `id:${dataId};request-id:req-1;ts:${ts};`
-    const sig = crypto.createHmac('sha256', secret).update(msg).digest('hex')
+    const sig = createHmac('sha256', secret).update(msg).digest('hex')
     const xSignature = `ts=${ts},v1=${sig}`
 
     expect(validateMpSignature(xSignature, 'req-1', dataId, secret)).toBe(true)
@@ -1979,6 +1979,33 @@ export default async function DeliveryPage() {
 }
 ```
 
+- [ ] **11.2b** Create `apps/web-customer/src/components/menu/delivery-menu-client.tsx`
+  - Client component that receives `categories` and `products` as props
+  - Renders `CategoryTabs` and `ProductGrid` in a two-panel layout
+  - Imports `useDeliveryCart` Zustand store for add-to-cart actions
+  - Shows `DeliveryCartDrawer` (fixed bottom bar with item count + total)
+
+```typescript
+'use client'
+import type { ProductCategory, Product } from '@myway/types'
+import { CategoryTabs } from './category-tabs'
+import { ProductGrid } from './product-grid'
+
+interface DeliveryMenuClientProps {
+  categories: ProductCategory[]
+  products: Product[]
+}
+
+export function DeliveryMenuClient({ categories, products }: DeliveryMenuClientProps) {
+  return (
+    <div className="flex flex-col min-h-screen bg-surface-0">
+      <CategoryTabs categories={categories} />
+      <ProductGrid products={products} />
+    </div>
+  )
+}
+```
+
 - [ ] **11.3** Create `apps/web-customer/src/app/delivery/menu/page.tsx`
 
 ```typescript
@@ -2213,6 +2240,27 @@ export function createDeliveryRouter(io: SocketServer) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false } }
   )
+
+  // GET /delivery/assigned — waiter fetches active delivery orders assigned to them
+  router.get('/assigned', async (req, res) => {
+    const waiterId = (req as any).user?.sub  // from JWT middleware
+    const { data, error } = await supabase
+      .from('delivery_orders')
+      .select(`
+        id, delivery_status, address_json, total, payment_method,
+        received_at_local, delivered_at,
+        orders ( id, total, items:order_items(id, quantity, unit_price, notes, products(name)) )
+      `)
+      .eq('waiter_id', waiterId)
+      .in('delivery_status', ['confirmed', 'preparing', 'on_the_way'])
+      .order('received_at_local', { ascending: true })
+
+    if (error) {
+      res.status(500).json({ error: error.message })
+      return
+    }
+    res.json(data)
+  })
 
   // PATCH /delivery/:id/status — waiter updates delivery status
   router.patch('/:id/status', async (req, res) => {

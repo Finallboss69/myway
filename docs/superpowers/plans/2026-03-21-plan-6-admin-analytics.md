@@ -223,6 +223,7 @@ apps/app-admin/
     "recharts": "^2.14.0",
     "@react-pdf/renderer": "^4.1.0",
     "date-fns": "^4.1.0",
+    "zod": "^3.23.0",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -649,11 +650,41 @@ interface KpisResponse {
   - Columns: Rank, Waiter Name, Tables Served, Revenue Generated, Avg Ticket, Discounts, Cancellations
   - Color code: high cancellations → amber warning icon
 
-- [ ] **6.7** Create `apps/app-admin/src/app/(admin)/reports/discounts/page.tsx`
+- [ ] **6.7** Create `apps/app-admin/src/app/(admin)/reports/waiters/page.tsx`
+
+```typescript
+import { WaiterPerformanceTable } from '@/components/reports/WaiterPerformanceTable'
+import { PeriodSelector } from '@/components/shared/PeriodSelector'
+import { createAdminClient } from '@/lib/supabase-admin'
+
+export default async function WaiterReportPage({
+  searchParams,
+}: {
+  searchParams: { from?: string; to?: string }
+}) {
+  const from = searchParams.from ?? new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+  const to = searchParams.to ?? new Date().toISOString().slice(0, 10)
+
+  const supabase = createAdminClient()
+  const venueId = process.env.NEXT_PUBLIC_VENUE_ID!
+
+  const { data } = await supabase.rpc('get_waiter_performance', { p_venue_id: venueId, p_from: from, p_to: to })
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-6">Rendimiento por Mozo</h1>
+      <PeriodSelector from={from} to={to} />
+      <WaiterPerformanceTable data={data ?? []} />
+    </div>
+  )
+}
+```
+
+- [ ] **6.7b** Create `apps/app-admin/src/app/(admin)/reports/discounts/page.tsx`
   - `PeriodSelector` + `DiscountCancellationTable`
   - Summary cards: Total discounts applied / Total value of discounts / Total cancellations
 
-- [ ] **6.8** Add waiter performance section to `reports/page.tsx` — link card to waiter sub-report
+- [ ] **6.8** Add waiter performance section to `reports/page.tsx` — link card to waiter sub-report at `/reports/waiters`
 
 - [ ] **6.9** Run tests — verify PASS
 
@@ -1193,7 +1224,23 @@ const config: NextConfig = {
 export default config
 ```
 
-- [ ] **14.4** Commit: `chore(app-admin): add Prisma singleton and environment config`
+- [ ] **14.3b** Create `apps/app-admin/tsconfig.json`
+
+```json
+{
+  "extends": "@myway/config/tsconfig",
+  "compilerOptions": {
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+```
+
+- [ ] **14.4** Commit: `chore(app-admin): add Prisma singleton, tsconfig, and environment config`
 
 ---
 

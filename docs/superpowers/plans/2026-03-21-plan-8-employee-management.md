@@ -393,7 +393,10 @@ Each staff app (`app-waiter`, `app-pos`, `app-kitchen`, `app-bar`) needs two rou
 - Create: `apps/<app>/src/app/api/shifts/open/route.ts`
 - Create: `apps/<app>/src/app/api/shifts/close/route.ts`
 
-- [ ] **4.1** Write tests for `app-waiter` shift API: POST `/api/shifts/open` creates a `staff_shifts` row with `ended_at = null`; POST `/api/shifts/close` sets `ended_at` and computes `duration_minutes`
+- [ ] **4.1** Write tests for `app-waiter` shift API:
+  - POST `/api/shifts/open` creates a `staff_shifts` row with `ended_at = null`
+  - POST `/api/shifts/open` returns 409 if the staff member already has an open shift (`ended_at IS NULL`)
+  - POST `/api/shifts/close` sets `ended_at` and computes `duration_minutes`
 - [ ] **4.2** Run tests — verify FAIL
 - [ ] **4.3** Create `apps/app-waiter/src/app/api/shifts/open/route.ts`
 
@@ -411,6 +414,17 @@ export async function POST(req: NextRequest) {
   if (!staffId || !venueId) {
     return NextResponse.json({ error: 'staffId and venueId required' }, { status: 400 })
   }
+  // Guard: only one open shift per staff member
+  const { data: existing } = await supabase
+    .from('staff_shifts')
+    .select('id')
+    .eq('staff_id', staffId)
+    .is('ended_at', null)
+    .maybeSingle()
+  if (existing) {
+    return NextResponse.json({ error: 'Staff member already has an open shift', shiftId: existing.id }, { status: 409 })
+  }
+
   const { data: shift, error } = await supabase
     .from('staff_shifts')
     .insert({ staff_id: staffId, venue_id: venueId, started_at: new Date().toISOString() })
@@ -687,16 +701,24 @@ export async function resetPin(input: {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@myway/auth'
 
-export function useStaffList(venueId: string) {
+export function useStaffList(venueId: string, actorRole: string) {
   const supabase = createClient()
   return useQuery({
-    queryKey: ['staff', venueId],
+    queryKey: ['staff', venueId, actorRole],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('staff')
         .select('id, name, email, role, is_active, last_login_at, created_at')
         .eq('venue_id', venueId)
         .order('name')
+
+      // Admins must not see admin/superadmin accounts (privilege escalation guard)
+      // Only superadmins can see all roles
+      if (actorRole === 'admin') {
+        query = query.not('role', 'in', '("admin","superadmin")')
+      }
+
+      const { data, error } = await query
       if (error) throw error
       return data
     },
@@ -1294,7 +1316,15 @@ cd /workspace/myway
 pnpm --filter app-admin add @react-pdf/renderer
 ```
 
-- [ ] **14.2** Write test: `generateLiquidacionBlob` returns a Uint8Array with PDF magic bytes (`%PDF`)
+- [ ] **14.2** Write test: `generateLiquidacionBlob` returns a `Blob` with `type = 'application/pdf'` and size > 0
+  - Note: `@react-pdf/renderer`'s `pdf().toBlob()` returns a browser `Blob`, not a `Uint8Array`. Verify with:
+    ```typescript
+    const blob = await generateLiquidacionBlob(mockBalance, 'My Way')
+    expect(blob).toBeInstanceOf(Blob)
+    expect(blob.type).toBe('application/pdf')
+    expect(blob.size).toBeGreaterThan(0)
+    ```
+  - In Node/Vitest the global `Blob` is available from Node 18+. If the test environment doesn't support it, mock `pdf().toBlob()` to return `new Blob(['%PDF-1.4'], { type: 'application/pdf' })`
 - [ ] **14.3** Run test — verify FAIL
 - [ ] **14.4** Create `apps/app-admin/src/components/employees/LiquidacionPDF.tsx`
 
