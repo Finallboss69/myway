@@ -3,7 +3,7 @@
 
 **Date:** 2026-03-21
 **Status:** Approved
-**Version:** 1.1 (post-review fixes)
+**Version:** 1.2 (accounting, ML recipes, employee management, admin-only menu)
 
 ---
 
@@ -310,11 +310,131 @@ sync_log (
   records_pushed, records_pulled, error_message
 )
 
--- Cash register closes
+-- Cash register closes (cierre de caja diario)
 cash_register_closes (
   id, venue_id, staff_id, opened_at, closed_at,
-  opening_amount, closing_amount, total_cash_sales,
-  total_mp_sales, total_sales, notes, created_at
+  opening_amount, closing_amount,
+  total_cash_sales, total_mp_sales, total_card_sales, total_transfer_sales,
+  total_sales, total_discounts, total_cancellations,
+  notes, created_at
+)
+
+-- =====================
+-- RECETAS Y CONTROL DE ML
+-- =====================
+
+-- Ingredients (insumos: gin, vodka, tónica, limón, etc.)
+ingredients (
+  id, venue_id, name,
+  unit ENUM(ml|gr|units),   -- unidad de medida
+  stock_current DECIMAL,    -- stock actual
+  stock_alert_threshold DECIMAL,  -- alerta de stock bajo
+  cost_per_unit DECIMAL,    -- costo por ml/gr/unidad para calcular margen
+  created_at, updated_at
+)
+
+-- Recipes (receta de un producto)
+recipes (
+  id, product_id,           -- cada producto puede tener una receta
+  notes,                    -- instrucciones de preparación (opcional)
+  created_at, updated_at
+)
+
+-- Recipe items (ingredientes de una receta con cantidad)
+recipe_items (
+  id, recipe_id, ingredient_id,
+  quantity DECIMAL,         -- cantidad en la unidad del ingrediente (ej: 60 ml)
+  created_at
+)
+
+-- Ingredient stock movements (movimientos de stock)
+ingredient_stock_movements (
+  id, ingredient_id,
+  type ENUM(purchase|sale|waste|adjustment),
+  quantity DECIMAL,         -- positivo = entrada, negativo = salida
+  order_item_id REFERENCES order_items(id),  -- si viene de una venta
+  notes, created_by REFERENCES staff(id),
+  created_at
+)
+
+-- =====================
+-- CONTABILIDAD
+-- =====================
+
+-- Daily accounting snapshots (resumen diario generado automáticamente a medianoche)
+daily_accounting (
+  id, venue_id, date DATE,
+  -- Ingresos por categoría
+  revenue_food DECIMAL DEFAULT 0,
+  revenue_drinks DECIMAL DEFAULT 0,
+  revenue_cocktails DECIMAL DEFAULT 0,
+  revenue_pool_chips DECIMAL DEFAULT 0,
+  revenue_delivery DECIMAL DEFAULT 0,
+  revenue_other DECIMAL DEFAULT 0,
+  revenue_total DECIMAL DEFAULT 0,
+  -- Por método de pago
+  paid_cash DECIMAL DEFAULT 0,
+  paid_mp DECIMAL DEFAULT 0,
+  paid_card DECIMAL DEFAULT 0,
+  paid_transfer DECIMAL DEFAULT 0,
+  -- Descuentos y anulaciones
+  total_discounts DECIMAL DEFAULT 0,
+  total_cancellations DECIMAL DEFAULT 0,
+  -- Costos (basado en recetas)
+  cost_ingredients DECIMAL DEFAULT 0,
+  gross_margin DECIMAL DEFAULT 0,
+  -- Órdenes
+  orders_count INT DEFAULT 0,
+  delivery_orders_count INT DEFAULT 0,
+  average_ticket DECIMAL DEFAULT 0,
+  created_at
+)
+
+-- =====================
+-- EMPLEADOS — PAGOS Y ADELANTOS
+-- =====================
+
+-- Staff contracts (información laboral de cada empleado)
+staff_contracts (
+  id, staff_id,
+  salary_type ENUM(monthly|hourly),
+  salary_amount DECIMAL,    -- monto mensual o tarifa por hora
+  currency VARCHAR DEFAULT 'ARS',
+  effective_from DATE,
+  effective_to DATE,        -- null = contrato activo
+  created_by REFERENCES staff(id),
+  created_at
+)
+
+-- Staff advances (adelantos de sueldo)
+staff_advances (
+  id, staff_id, venue_id,
+  amount DECIMAL,
+  reason TEXT,
+  date DATE,
+  authorized_by REFERENCES staff(id),
+  created_at
+)
+
+-- Staff payments (pagos de sueldo)
+staff_payments (
+  id, staff_id, venue_id,
+  amount DECIMAL,
+  period_from DATE,
+  period_to DATE,
+  payment_method ENUM(cash|transfer|mp),
+  notes,
+  paid_by REFERENCES staff(id),
+  created_at
+)
+
+-- Staff shifts (registro de turnos — apertura y cierre)
+staff_shifts (
+  id, staff_id, venue_id,
+  started_at TIMESTAMP,
+  ended_at TIMESTAMP,
+  duration_minutes INT,     -- calculado al cerrar turno
+  notes
 )
 ```
 
@@ -384,12 +504,10 @@ cash_register_closes (
 - Cargar snapshot anterior
 - Vista live vs vista edición
 
-**Gestión de Menú**
-- CRUD de categorías, productos, modificadores, combos
-- Subir fotos de productos
-- Toggle disponibilidad por item
-- Gestión de happy hour
-- Control de stock por producto
+**Gestión de disponibilidad (tiempo real)**
+- Toggle rápido de disponibilidad por item (ej: "se acabó el pollo")
+- Ver stock actual por producto (solo lectura — el stock se gestiona en app-admin)
+- **No puede modificar precios, categorías, ni crear/eliminar productos** — eso es exclusivo de app-admin
 
 **Generador de QR**
 - Generar QR por mesa (token firmado HMAC)
@@ -462,33 +580,96 @@ cash_register_closes (
 
 ### 5.6 `app-admin` — Panel Dueños
 
-**Dashboard**
+> **Único lugar donde se gestiona el menú, precios, empleados y contabilidad.**
+> El app-pos y app-waiter no tienen acceso a estas funciones.
+
+---
+
+#### Dashboard General
 - KPIs del día: ventas totales, pedidos, ticket promedio, mesas atendidas
 - Comparativa vs día anterior / semana anterior
 - Mapa de calor del salón (mesas más activas)
+- Resumen de métodos de pago (efectivo / MP) del día
+- Alertas activas: stock bajo, errores de sync, anulaciones inusuales
 
-**Reportes y Analytics**
-- Gráficos de ventas por período (día/semana/mes/año)
-- Ranking de productos más vendidos
+---
+
+#### Gestión de Menú (exclusivo admin)
+- CRUD completo de categorías, productos, modificadores, combos
+- **Precios** — solo editables desde aquí. Historial de cambios de precio con fecha.
+- Subir fotos de productos (Supabase Storage)
+- Toggle disponibilidad por item
+- Gestión de happy hour (horario, días, descuento)
+- Gestión de recetas con ML (ver sección Recetas más abajo)
+- Publicar cambios al menú → se sincroniza a todos los dispositivos en segundos
+
+---
+
+#### Contabilidad Diaria
+- **Balance del día** — ingresos vs egresos, ganancia neta
+- **Desglose por categoría**: comidas, bebidas, tragos, fichas de pool, delivery
+- **Desglose por método de pago**: efectivo cobrado, pagos MP, tarjeta, transferencia
+- **Historial diario** — navegar por cualquier día anterior
+- **Balance semanal / mensual / anual** con gráficos
+- **Comparativa período vs período** (esta semana vs la semana pasada, etc.)
+- **Cierre del día** — resumen completo con todos los movimientos del día, exportable en PDF
+- **Libro de caja** — registro cronológico de todos los ingresos y egresos
+
+---
+
+#### Estadísticas de Ventas
+- Ranking de productos más vendidos (global, por categoría, por período)
+- Ventas por sección: comida / bebidas / tragos / fichas de pool / delivery — cada una con su propio gráfico
+- Horarios pico (qué horas generan más ventas)
 - Ranking de mesas más rentables
-- Análisis de horarios pico
-- Reporte de descuentos y anulaciones (quién, cuándo, por qué)
-- Reporte de métodos de pago
-- Ticket promedio por mesa, por mozo, por hora
-- Exportar cualquier reporte en CSV o PDF
+- Ticket promedio por mesa, por hora, por día de la semana
+- Evolución de ventas en el tiempo (líneas de tendencia)
+- Estadísticas de delivery: zonas más activas, tiempo promedio de entrega, tasa de cancelación
 
-**Gestión**
-- CRUD de staff y roles
-- Ver historial de cierres de caja
-- Control de inventario (stock actual, movimientos, alertas)
-- Gestión de repartidores (asignar, historial)
+---
+
+#### Recetas y Control de ML
+- **CRUD de recetas por producto** — cada trago/bebida tiene su receta con ingredientes y cantidad en ml
+- Por ej: "Gin Tónico" = Gin 60ml + Tónica 150ml + Lima 10ml
+- **Ingredientes/insumos** con stock en ml/gr/unidades según tipo
+- **Consumo automático**: al vender un producto con receta, se descuenta el stock de cada ingrediente
+- **Estadística de consumo**: cuántos ml/gr se usaron de cada ingrediente por día/semana/mes
+- **Alerta de stock bajo** por ingrediente (umbral configurable)
+- **Reporte de consumo** — para hacer pedidos de reposición: "necesitás X litros de gin para la semana"
+- **Costo de producción** por producto (suma del costo de cada ingrediente × cantidad) → margen de ganancia
+
+---
+
+#### Estadísticas de Empleados
+- **Perfil por empleado**: total de mesas atendidas, pedidos tomados, ventas generadas, promedio de ticket
+- **Ranking de empleados** por ventas, por mesas, por período
+- **Horario y asistencia**: registro de ingreso/egreso de turno (staff abre/cierra turno desde su app)
+- **Anulaciones y descuentos** por empleado (auditoría)
+
+#### Sistema de Pagos a Empleados
+- **Registro de sueldo** por empleado (monto mensual o por hora, configurable)
+- **Registro de adelantos**: fecha, monto, motivo, quién lo autorizó
+- **Registro de pagos de sueldo**: fecha, monto pagado, período cubierto
+- **Balance por empleado**: sueldo devengado - adelantos - pagos realizados = saldo pendiente
+- **Historial completo** de todos los movimientos de cada empleado
+- **Exportar liquidación** por empleado en PDF
+- Todos los pagos/adelantos requieren confirmación del `superadmin` o `admin`
+
+---
+
+#### Gestión General
+- CRUD de staff y roles (con restricción de escalamiento de privilegios)
 - Configuración del venue (logo, nombre, horarios, colores del tema)
-- Gestión de zonas de delivery (polígonos en mapa)
+- Gestión de zonas de delivery (polígonos en mapa, costo de envío)
+- Gestión de fidelización: ver puntos de clientes, ajustar manualmente, configurar reglas
+- Historial de cierres de caja (ver cualquier cierre anterior)
 
-**Sistema**
+---
+
+#### Sistema
 - Log de sincronizaciones (fecha, registros, errores)
 - Botón de backup manual (fuerza sync inmediato)
-- Notificaciones push al dueño (ventas bajas, muchas anulaciones, errores de sync)
+- Notificaciones push al dueño (ventas bajas, stock bajo, muchas anulaciones, errores de sync)
 - Multi-idioma: español / inglés
 
 ---
@@ -536,7 +717,9 @@ cash_register_closes (
 - **Tablas bidireccionales:** orders, order_items, tables, table_sessions, payments
 - **Pull only (cloud → local):** products, categories, customers, delivery_zones
 - **Push only (local → cloud):** sync_log, cash_register_closes
-- **Solo cloud:** staff (auth), analytics_snapshots
+- **Solo cloud:** staff (auth), daily_accounting (generado en cloud a medianoche)
+- **Pull only:** ingredients (admin los carga desde cloud), recipes, recipe_items
+- **Push only:** ingredient_stock_movements, staff_shifts, staff_advances, staff_payments
 
 ### Reglas de Conflicto por Entidad
 | Entidad | Estrategia |
@@ -587,15 +770,15 @@ cash_register_closes (
 
 ### Roles y permisos
 
-| Rol | Puede |
-|---|---|
-| `superadmin` | Todo |
-| `admin` | Reportes, menú, layout, anulaciones, descuentos, gestión de staff con rol inferior al suyo |
-| `cashier` | POS completo, anulaciones, descuentos, cierre de caja |
-| `waiter` | Sus mesas, cobro MP QR, cobro efectivo, cierre de mesa |
-| `kitchen` | Ver y actualizar estado de items (target=kitchen) |
-| `bar` | Ver y actualizar estado de items (target=bar) |
-| `customer` | Solo su propio pedido |
+| Rol | Puede | NO puede |
+|---|---|---|
+| `superadmin` | Todo | — |
+| `admin` | Reportes, **menú y precios**, contabilidad, empleados y pagos, layout, anulaciones, descuentos, gestión de staff inferior | Crear/modificar otros admin/superadmin |
+| `cashier` | POS completo, anulaciones, descuentos, cierre de caja, toggle disponibilidad de productos | Editar precios, crear productos, ver contabilidad, ver pagos a empleados |
+| `waiter` | Sus mesas, cobro MP QR, cobro efectivo, cierre de mesa, toggle disponibilidad | Anulaciones, descuentos, cualquier dato financiero |
+| `kitchen` | Ver y actualizar estado de items (target=kitchen) | Todo lo demás |
+| `bar` | Ver y actualizar estado de items (target=bar) | Todo lo demás |
+| `customer` | Solo su propio pedido | Todo lo demás |
 
 ### Seguridad del QR
 - Token: `HMAC-SHA256({ table_id, venue_id, expires_at }, venue_secret)`
@@ -676,7 +859,27 @@ cash_register_closes (
 
 ---
 
-## 11. Ficha de Pool
+## 11. Flujo de Consumo de Stock por ML
+
+Cuando un `order_item` pasa a estado `delivered`:
+```
+local-server detecta status = "delivered" en order_item
+  → busca recipe para ese product_id
+  → si tiene receta:
+      → por cada recipe_item: INSERT ingredient_stock_movement (type=sale, quantity=-X)
+      → UPDATE ingredients SET stock_current = stock_current - X
+      → si stock_current < stock_alert_threshold:
+          → emite socket "stock_low" → pos, admin
+          → si is_available y stock_current <= 0: SET is_available = false automáticamente
+  → si no tiene receta: no hace nada (producto sin ingredientes rastreados)
+```
+
+El `daily_accounting` se genera vía cron job en Supabase a las 23:59 de cada día,
+consolidando todos los `order_items` + `payments` + `ingredient_stock_movements` del día.
+
+---
+
+## 12. Ficha de Pool
 
 Las mesas tipo `pool` son mesas normales con comportamiento especial:
 
