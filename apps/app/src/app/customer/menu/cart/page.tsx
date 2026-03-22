@@ -200,6 +200,7 @@ function CartContent() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const tableId = searchParams.get("tableId") ?? "t2";
+	const tableNumber = searchParams.get("table") ?? tableId.replace("t", "");
 
 	const [cart, setCart] = useState<CartItem[]>([]);
 	const [notes, setNotes] = useState("");
@@ -324,7 +325,7 @@ function CartContent() {
 							Tu Pedido
 						</p>
 						<p className="font-body text-ink-tertiary text-[11px]">
-							Mesa {tableId.replace("t", "")}
+							Mesa {tableNumber}
 							{itemCount > 0 &&
 								` · ${itemCount} ${itemCount === 1 ? "ítem" : "ítems"}`}
 						</p>

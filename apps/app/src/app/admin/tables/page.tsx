@@ -34,8 +34,8 @@ interface Table {
 
 // ─── QR URL helper ────────────────────────────────────────────────────────────
 
-function qrUrl(tableId: string): string {
-	return `https://myway-pi.vercel.app/customer/menu?tableId=${tableId}`;
+function qrUrl(tableId: string, tableNumber: number): string {
+	return `https://myway-pi.vercel.app/customer/menu?tableId=${tableId}&table=${tableNumber}`;
 }
 
 // ─── Download single QR as PNG ────────────────────────────────────────────────
@@ -273,7 +273,7 @@ function TableCard({
 			>
 				<QRCodeSVG
 					id={`qr-${table.id}`}
-					value={qrUrl(table.id)}
+					value={qrUrl(table.id, table.number)}
 					size={100}
 					bgColor="white"
 					fgColor="#080808"
