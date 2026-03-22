@@ -7,11 +7,11 @@ import {
 	Package,
 	Search,
 	Plus,
+	Minus,
 	RefreshCw,
 	TrendingDown,
 	ChefHat,
 	ArrowRight,
-	Sliders,
 	UtensilsCrossed,
 	ChevronRight,
 } from "lucide-react";
@@ -29,21 +29,21 @@ interface Ingredient {
 	costPerUnit: number;
 }
 
+type IngStatus = "ok" | "low" | "critical";
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const MAX_MULTIPLIER = 4;
 
+function getStatus(ing: Ingredient): IngStatus {
+	if (ing.stockCurrent < ing.alertThreshold) return "critical";
+	if (ing.stockCurrent < ing.alertThreshold * 1.5) return "low";
+	return "ok";
+}
+
 function stockPct(ing: Ingredient): number {
 	const max = ing.alertThreshold * MAX_MULTIPLIER;
 	return Math.min(100, Math.round((ing.stockCurrent / max) * 100));
-}
-
-function isCritical(ing: Ingredient): boolean {
-	return ing.stockCurrent < ing.alertThreshold;
-}
-
-function isLow(ing: Ingredient): boolean {
-	return !isCritical(ing) && ing.stockCurrent < ing.alertThreshold * 1.5;
 }
 
 function formatUnit(value: number, unit: string): string {
@@ -138,22 +138,15 @@ function KitchenNav() {
 
 // ─── Stock progress bar ───────────────────────────────────────────────────────
 
-function StockBar({
-	pct,
-	critical,
-	low,
-}: {
-	pct: number;
-	critical: boolean;
-	low: boolean;
-}) {
-	const barColor = critical
-		? "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]"
-		: low
-			? "bg-amber-500"
-			: "bg-emerald-500";
+function StockBar({ pct, status }: { pct: number; status: IngStatus }) {
+	const barColor = {
+		ok: "bg-emerald-500",
+		low: "bg-amber-500",
+		critical: "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]",
+	}[status];
+
 	return (
-		<div className="w-full h-2 rounded-full bg-surface-3 overflow-hidden">
+		<div className="w-full h-2.5 rounded-full bg-surface-3 overflow-hidden">
 			<div
 				className={`h-full rounded-full transition-all duration-500 ${barColor}`}
 				style={{ width: `${pct}%` }}
@@ -162,53 +155,62 @@ function StockBar({
 	);
 }
 
-// ─── Ingredient card (replaces table row on mobile) ───────────────────────────
+// ─── Ingredient card ──────────────────────────────────────────────────────────
 
 function IngredientCard({
 	ingredient,
 	onAdjust,
+	onQuickAdjust,
 }: {
 	ingredient: Ingredient;
 	onAdjust: (ing: Ingredient) => void;
+	onQuickAdjust: (id: string, delta: number, current: number) => void;
 }) {
-	const critical = isCritical(ingredient);
-	const low = isLow(ingredient);
+	const status = getStatus(ingredient);
 	const pct = stockPct(ingredient);
+
+	const borderAccent = {
+		ok: "border-surface-3 hover:border-emerald-500/20",
+		low: "border-amber-500/25 hover:border-amber-500/40",
+		critical: "border-red-500/30 hover:border-red-500/50",
+	}[status];
+
+	const bgAccent = {
+		ok: "bg-surface-1",
+		low: "bg-amber-500/[0.03]",
+		critical: "bg-red-500/[0.04]",
+	}[status];
+
+	const dotCls = {
+		ok: "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]",
+		low: "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.5)]",
+		critical: "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.7)] animate-pulse",
+	}[status];
 
 	return (
 		<div
 			className={clsx(
-				"flex flex-col gap-3 p-4 rounded-2xl border transition-colors",
-				critical
-					? "bg-red-500/[0.04] border-red-500/25 hover:bg-red-500/[0.07]"
-					: low
-						? "bg-amber-500/[0.03] border-amber-500/20 hover:bg-amber-500/[0.06]"
-						: "bg-surface-1 border-surface-3 hover:bg-surface-2/50",
+				"flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-200",
+				bgAccent,
+				borderAccent,
 			)}
 		>
 			{/* Header: name + status badge */}
 			<div className="flex items-start justify-between gap-2">
 				<div className="flex items-center gap-2.5 min-w-0">
-					<div
-						className={clsx(
-							"w-2.5 h-2.5 rounded-full shrink-0 mt-0.5",
-							critical
-								? "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.7)] animate-pulse"
-								: low
-									? "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.5)]"
-									: "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.4)]",
-						)}
+					<span
+						className={clsx("w-2.5 h-2.5 rounded-full shrink-0 mt-0.5", dotCls)}
 					/>
-					<span className="font-display text-sm font-bold text-ink-primary truncate">
+					<span className="font-display text-sm font-bold text-ink-primary truncate uppercase tracking-wide">
 						{ingredient.name}
 					</span>
 				</div>
-				{critical ? (
+				{status === "critical" ? (
 					<span className="badge badge-cancelled shrink-0">
 						<span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
 						Crítico
 					</span>
-				) : low ? (
+				) : status === "low" ? (
 					<span className="badge badge-pending shrink-0">
 						<TrendingDown className="w-2.5 h-2.5" />
 						Bajo
@@ -221,30 +223,32 @@ function IngredientCard({
 				)}
 			</div>
 
-			{/* Stock value + bar */}
+			{/* Large KDS stock number */}
+			<div className="flex items-baseline gap-2">
+				<span
+					className={clsx(
+						"font-kds leading-none text-5xl",
+						status === "critical"
+							? "text-red-400"
+							: status === "low"
+								? "text-amber-400"
+								: "text-ink-primary",
+					)}
+				>
+					{formatUnit(ingredient.stockCurrent, ingredient.unit)}
+				</span>
+			</div>
+
+			{/* Progress bar + threshold */}
 			<div className="flex flex-col gap-1.5">
-				<div className="flex items-baseline justify-between">
-					<span
-						className={clsx(
-							"font-mono text-sm font-bold",
-							critical
-								? "text-red-400"
-								: low
-									? "text-amber-400"
-									: "text-ink-primary",
-						)}
-					>
-						{formatUnit(ingredient.stockCurrent, ingredient.unit)}
-					</span>
+				<StockBar pct={pct} status={status} />
+				<div className="flex items-center justify-between">
 					<span className="font-body text-xs text-ink-tertiary">
 						Umbral: {formatUnit(ingredient.alertThreshold, ingredient.unit)}
 					</span>
-				</div>
-				<StockBar pct={pct} critical={critical} low={low} />
-				<div className="flex items-center justify-between">
 					<span
 						className={clsx(
-							"font-kds text-xl leading-none",
+							"font-kds text-lg leading-none",
 							pct <= 25
 								? "text-red-400"
 								: pct <= 50
@@ -257,20 +261,36 @@ function IngredientCard({
 							%
 						</span>
 					</span>
-					<span className="font-body text-xs text-ink-tertiary">
-						{ingredient.unit}
-					</span>
 				</div>
 			</div>
 
-			{/* Action */}
-			<button
-				className="flex items-center justify-center gap-2 min-h-[44px] rounded-xl border border-surface-3 bg-surface-2 text-ink-secondary text-xs font-display font-bold uppercase tracking-wide hover:text-brand-500 hover:border-brand-500/30 transition-all active:scale-95"
-				onClick={() => onAdjust(ingredient)}
-			>
-				<Sliders className="w-3.5 h-3.5" />
-				Ajustar Stock
-			</button>
+			{/* Quick +/- controls */}
+			<div className="flex items-center gap-2">
+				<button
+					className="flex items-center justify-center w-10 h-10 rounded-xl bg-surface-3 border border-surface-4 text-ink-secondary hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all active:scale-95"
+					onClick={() =>
+						onQuickAdjust(ingredient.id, -1, ingredient.stockCurrent)
+					}
+					title="Restar 1"
+				>
+					<Minus className="w-4 h-4" />
+				</button>
+				<button
+					className="flex items-center justify-center flex-1 h-10 rounded-xl bg-surface-2 border border-surface-3 text-xs font-display font-bold uppercase tracking-wide text-ink-secondary hover:text-brand-500 hover:border-brand-500/30 transition-all active:scale-95"
+					onClick={() => onAdjust(ingredient)}
+				>
+					Ajustar
+				</button>
+				<button
+					className="flex items-center justify-center w-10 h-10 rounded-xl bg-surface-3 border border-surface-4 text-ink-secondary hover:text-emerald-400 hover:border-emerald-500/30 hover:bg-emerald-500/10 transition-all active:scale-95"
+					onClick={() =>
+						onQuickAdjust(ingredient.id, 1, ingredient.stockCurrent)
+					}
+					title="Sumar 1"
+				>
+					<Plus className="w-4 h-4" />
+				</button>
+			</div>
 		</div>
 	);
 }
@@ -298,6 +318,8 @@ function AdjustModal({
 		onClose();
 	}
 
+	const status = getStatus(ingredient);
+
 	return (
 		<div
 			className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in px-4"
@@ -309,9 +331,14 @@ function AdjustModal({
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="flex items-center justify-between">
-					<h3 className="font-display font-bold text-ink-primary text-sm uppercase tracking-wider">
-						Ajustar Stock
-					</h3>
+					<div className="flex items-center gap-3">
+						<div className="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
+							<ChefHat className="w-4 h-4 text-brand-500" />
+						</div>
+						<h3 className="font-display font-bold text-ink-primary text-sm uppercase tracking-wider">
+							Ajustar Stock
+						</h3>
+					</div>
 					<button
 						onClick={onClose}
 						className="text-ink-tertiary hover:text-ink-primary text-lg leading-none min-w-[32px] min-h-[32px] flex items-center justify-center"
@@ -319,17 +346,36 @@ function AdjustModal({
 						×
 					</button>
 				</div>
-				<div>
-					<p className="font-body text-sm text-ink-secondary mb-1">
+
+				<div className="p-3 rounded-xl bg-surface-2 border border-surface-3">
+					<p className="font-display text-sm font-bold text-ink-primary uppercase tracking-wide">
 						{ingredient.name}
 					</p>
-					<p className="font-body text-xs text-ink-tertiary">
-						Unidad: {ingredient.unit}
+					<div className="flex items-baseline gap-3 mt-2">
+						<span
+							className={clsx(
+								"font-kds text-4xl leading-none",
+								status === "critical"
+									? "text-red-400"
+									: status === "low"
+										? "text-amber-400"
+										: "text-ink-primary",
+							)}
+						>
+							{formatUnit(ingredient.stockCurrent, ingredient.unit)}
+						</span>
+						<span className="font-body text-xs text-ink-tertiary">actual</span>
+					</div>
+					<StockBar pct={stockPct(ingredient)} status={status} />
+					<p className="font-body text-xs text-ink-tertiary mt-1.5">
+						Umbral de alerta:{" "}
+						{formatUnit(ingredient.alertThreshold, ingredient.unit)}
 					</p>
 				</div>
+
 				<div>
 					<label className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary mb-1.5 block">
-						Stock actual
+						Nuevo stock ({ingredient.unit})
 					</label>
 					<input
 						type="number"
@@ -337,8 +383,10 @@ function AdjustModal({
 						value={value}
 						onChange={(e) => setValue(e.target.value)}
 						min={0}
+						autoFocus
 					/>
 				</div>
+
 				<div className="flex gap-2">
 					<button
 						onClick={onClose}
@@ -375,7 +423,7 @@ function CriticalCard({
 		<div className="p-5 flex flex-col gap-4 bg-red-500/[0.04] hover:bg-red-500/[0.07] transition-colors rounded-xl border border-red-500/20">
 			<div className="flex items-start justify-between">
 				<div>
-					<p className="font-display text-base font-bold text-ink-primary">
+					<p className="font-display text-base font-bold text-ink-primary uppercase tracking-wide">
 						{ingredient.name}
 					</p>
 					<p className="font-body text-xs text-ink-tertiary mt-0.5 uppercase tracking-wide">
@@ -393,11 +441,11 @@ function CriticalCard({
 					<span className="font-body text-xs text-ink-tertiary">
 						Stock actual
 					</span>
-					<span className="font-kds text-3xl leading-none text-red-400">
+					<span className="font-kds text-4xl leading-none text-red-400">
 						{formatUnit(ingredient.stockCurrent, ingredient.unit)}
 					</span>
 				</div>
-				<StockBar pct={pct} critical={true} low={false} />
+				<StockBar pct={pct} status="critical" />
 				<div className="flex justify-between text-xs">
 					<span className="font-body text-ink-tertiary">0</span>
 					<span className="font-body text-red-400/70">
@@ -467,10 +515,11 @@ export default function KitchenStockPage() {
 				i.name.toLowerCase().includes(query.toLowerCase()),
 			)
 		: ingredients;
-	const criticalItems = ingredients.filter(isCritical);
-	const lowItems = ingredients.filter(isLow);
-	const okItems = ingredients.filter((i) => !isCritical(i) && !isLow(i));
+	const criticalItems = ingredients.filter((i) => getStatus(i) === "critical");
+	const lowItems = ingredients.filter((i) => getStatus(i) === "low");
+	const okItems = ingredients.filter((i) => getStatus(i) === "ok");
 	const criticalCount = criticalItems.length;
+	const alertCount = criticalCount + lowItems.length;
 
 	async function handleAdjust(id: string, stockCurrent: number) {
 		const res = await fetch(`/api/ingredients/${id}`, {
@@ -488,34 +537,74 @@ export default function KitchenStockPage() {
 		}
 	}
 
+	async function handleQuickAdjust(id: string, delta: number, current: number) {
+		const next = Math.max(0, current + delta);
+		// Optimistic update
+		setIngredients((prev) =>
+			prev.map((ing) => (ing.id === id ? { ...ing, stockCurrent: next } : ing)),
+		);
+		const res = await fetch(`/api/ingredients/${id}`, {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ stockCurrent: next }),
+		});
+		if (!res.ok) {
+			// Revert on failure
+			setIngredients((prev) =>
+				prev.map((ing) =>
+					ing.id === id ? { ...ing, stockCurrent: current } : ing,
+				),
+			);
+		}
+	}
+
 	return (
-		<div className="flex min-h-screen bg-surface-0 flex-col lg:flex-row">
+		<div className="flex min-h-screen bg-surface-0 flex-col lg:flex-row noise-overlay">
 			<KitchenNav />
 
 			<div className="flex-1 flex flex-col min-w-0">
 				{/* ── Page header ── */}
-				<div className="sticky top-0 lg:top-0 z-20 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-surface-3 bg-surface-1/95 backdrop-blur-md">
+				<header className="relative sticky top-0 lg:top-0 z-20 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-surface-3 bg-surface-1/95 backdrop-blur-md top-accent">
 					<div>
-						<div className="flex items-center gap-2.5 mb-0.5">
-							<div className="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
-								<Package className="w-4 h-4 text-brand-500" />
+						<div className="flex items-center gap-3 mb-1">
+							<div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-brand-500/10 border border-brand-500/25 shrink-0">
+								<Package className="w-5 h-5 text-brand-500" />
 							</div>
-							<h1 className="font-display text-lg sm:text-xl font-bold text-ink-primary uppercase tracking-wide">
-								Stock de Cocina
-							</h1>
+							<div>
+								<h1 className="font-kds text-3xl leading-none text-brand-500 tracking-widest">
+									STOCK
+								</h1>
+								<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-[0.2em] mt-0.5">
+									Cocina · My Way
+								</p>
+							</div>
 						</div>
-						<p className="font-body text-sm text-ink-tertiary ml-11">
-							{loading ? "Cargando..." : `${ingredients.length} ingredientes`} ·{" "}
-							{criticalCount > 0 ? (
-								<span className="text-red-400 font-semibold">
-									{criticalCount} en stock crítico
-								</span>
-							) : (
-								<span className="text-emerald-400">Todo en orden</span>
-							)}
-						</p>
 					</div>
 
+					{/* Summary badges */}
+					<div className="flex items-center gap-2 flex-wrap">
+						<div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-2 border border-surface-3">
+							<span className="font-kds text-2xl leading-none text-ink-secondary">
+								{loading ? "…" : ingredients.length}
+							</span>
+							<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary">
+								ítems
+							</span>
+						</div>
+						{alertCount > 0 && (
+							<div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/25 animate-pulse">
+								<AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+								<span className="font-kds text-2xl leading-none text-red-400">
+									{alertCount}
+								</span>
+								<span className="font-display text-[10px] uppercase tracking-widest text-red-400/70">
+									alerta
+								</span>
+							</div>
+						)}
+					</div>
+
+					{/* Search + add */}
 					<div className="flex items-center gap-3 w-full sm:w-auto">
 						<div className="relative flex-1 sm:flex-none">
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-tertiary" />
@@ -532,12 +621,12 @@ export default function KitchenStockPage() {
 							Agregar
 						</button>
 					</div>
-				</div>
+				</header>
 
 				<div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
 					{/* ── Alert banner ── */}
 					{criticalCount > 0 && (
-						<div className="flex items-start sm:items-center gap-4 px-4 sm:px-5 py-4 rounded-2xl bg-amber-500/8 border border-amber-500/25">
+						<div className="flex items-start sm:items-center gap-4 px-4 sm:px-5 py-4 rounded-2xl bg-amber-500/[0.06] border border-amber-500/25">
 							<div className="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
 								<AlertTriangle className="w-5 h-5 text-amber-400" />
 							</div>
@@ -604,9 +693,12 @@ export default function KitchenStockPage() {
 					{/* ── Ingredient cards grid (mobile) / table (desktop) ── */}
 					<div className="card overflow-hidden">
 						<div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-surface-3 bg-surface-2/20">
-							<h2 className="font-display text-sm font-bold uppercase tracking-widest text-ink-secondary">
-								Todos los ingredientes
-							</h2>
+							<div className="flex items-center gap-2">
+								<Package className="w-4 h-4 text-brand-500" />
+								<h2 className="font-display text-sm font-bold uppercase tracking-widest text-ink-secondary">
+									Todos los ingredientes
+								</h2>
+							</div>
 							<button
 								className="btn-ghost text-xs flex items-center gap-1.5"
 								onClick={() => {
@@ -624,14 +716,22 @@ export default function KitchenStockPage() {
 							</button>
 						</div>
 
-						{/* Card grid on mobile/tablet, table on large screens */}
+						{/* Card grid on mobile/tablet */}
 						<div className="block lg:hidden p-4">
 							{filtered.length === 0 ? (
-								<p className="font-body text-sm text-ink-tertiary text-center py-8">
-									{loading
-										? "Cargando..."
-										: `No se encontraron ingredientes para "${query}"`}
-								</p>
+								<div className="flex flex-col items-center justify-center py-16 gap-4 text-ink-tertiary">
+									<div className="w-16 h-16 rounded-2xl bg-surface-2 border border-surface-3 flex items-center justify-center">
+										<Package className="w-7 h-7 opacity-30" />
+									</div>
+									<p className="font-kds text-xl tracking-wider opacity-40">
+										{loading ? "CARGANDO..." : "SIN INGREDIENTES"}
+									</p>
+									{!loading && query && (
+										<p className="font-body text-sm text-ink-tertiary">
+											No hay resultados para &ldquo;{query}&rdquo;
+										</p>
+									)}
+								</div>
 							) : (
 								<div
 									className="grid gap-3"
@@ -645,6 +745,7 @@ export default function KitchenStockPage() {
 											key={ingredient.id}
 											ingredient={ingredient}
 											onAdjust={setAdjusting}
+											onQuickAdjust={handleQuickAdjust}
 										/>
 									))}
 								</div>
@@ -665,42 +766,45 @@ export default function KitchenStockPage() {
 										<th className="px-5 py-3 text-left font-display text-[10px] font-bold uppercase tracking-widest text-ink-tertiary">
 											Alerta en
 										</th>
-										<th className="px-5 py-3 text-left font-display text-[10px] font-bold uppercase tracking-widest text-ink-tertiary">
+										<th className="px-5 py-3 text-center font-display text-[10px] font-bold uppercase tracking-widest text-ink-tertiary">
 											Estado
 										</th>
-										<th className="px-5 py-3 text-left font-display text-[10px] font-bold uppercase tracking-widest text-ink-tertiary">
+										<th className="px-5 py-3 text-center font-display text-[10px] font-bold uppercase tracking-widest text-ink-tertiary">
 											Nivel
 										</th>
-										<th className="px-5 py-3 text-left font-display text-[10px] font-bold uppercase tracking-widest text-ink-tertiary">
-											Acción
+										<th className="px-5 py-3 text-right font-display text-[10px] font-bold uppercase tracking-widest text-ink-tertiary">
+											Ajustar
 										</th>
 									</tr>
 								</thead>
 								<tbody>
 									{filtered.map((ingredient) => {
-										const critical = isCritical(ingredient);
-										const low = isLow(ingredient);
+										const status = getStatus(ingredient);
 										const pct = stockPct(ingredient);
+										const dotCls = {
+											ok: "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.4)]",
+											low: "bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)]",
+											critical:
+												"bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.7)] animate-pulse",
+										}[status];
 										return (
 											<tr
 												key={ingredient.id}
-												className={`border-b border-surface-3 transition-colors ${
-													critical
+												className={clsx(
+													"border-b border-surface-3 transition-colors",
+													status === "critical"
 														? "bg-red-500/5 hover:bg-red-500/8"
-														: "hover:bg-surface-2/50"
-												}`}
+														: "hover:bg-surface-2/50",
+												)}
 											>
 												{/* Name */}
 												<td className="px-5 py-4">
 													<div className="flex items-center gap-3">
-														<div
-															className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-																critical
-																	? "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.7)] animate-pulse"
-																	: low
-																		? "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.5)]"
-																		: "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.4)]"
-															}`}
+														<span
+															className={clsx(
+																"w-2.5 h-2.5 rounded-full shrink-0",
+																dotCls,
+															)}
 														/>
 														<span className="font-display text-sm font-semibold text-ink-primary">
 															{ingredient.name}
@@ -711,20 +815,21 @@ export default function KitchenStockPage() {
 												<td className="px-5 py-4 w-56">
 													<div className="flex flex-col gap-1.5">
 														<span
-															className={`font-mono text-sm font-bold ${
-																critical
+															className={clsx(
+																"font-kds text-3xl leading-none",
+																status === "critical"
 																	? "text-red-400"
-																	: low
+																	: status === "low"
 																		? "text-amber-400"
-																		: "text-ink-primary"
-															}`}
+																		: "text-ink-primary",
+															)}
 														>
 															{formatUnit(
 																ingredient.stockCurrent,
 																ingredient.unit,
 															)}
 														</span>
-														<StockBar pct={pct} critical={critical} low={low} />
+														<StockBar pct={pct} status={status} />
 													</div>
 												</td>
 												{/* Threshold */}
@@ -737,13 +842,13 @@ export default function KitchenStockPage() {
 													</span>
 												</td>
 												{/* Status badge */}
-												<td className="px-5 py-4">
-													{critical ? (
+												<td className="px-5 py-4 text-center">
+													{status === "critical" ? (
 														<span className="badge badge-cancelled">
 															<span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
 															Crítico
 														</span>
-													) : low ? (
+													) : status === "low" ? (
 														<span className="badge badge-pending">
 															<TrendingDown className="w-2.5 h-2.5" />
 															Bajo
@@ -756,15 +861,16 @@ export default function KitchenStockPage() {
 													)}
 												</td>
 												{/* % level */}
-												<td className="px-5 py-4">
+												<td className="px-5 py-4 text-center">
 													<span
-														className={`font-kds text-2xl leading-none ${
+														className={clsx(
+															"font-kds text-2xl leading-none",
 															pct <= 25
 																? "text-red-400"
 																: pct <= 50
 																	? "text-amber-400"
-																	: "text-emerald-400"
-														}`}
+																	: "text-emerald-400",
+														)}
 													>
 														{pct}
 														<span className="text-xs font-body text-ink-tertiary ml-0.5">
@@ -772,15 +878,40 @@ export default function KitchenStockPage() {
 														</span>
 													</span>
 												</td>
-												{/* Actions */}
+												{/* Quick adjust */}
 												<td className="px-5 py-4">
-													<button
-														className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5 hover:text-brand-500 hover:border-brand-500/30 border border-transparent rounded-lg"
-														onClick={() => setAdjusting(ingredient)}
-													>
-														<Sliders className="w-3.5 h-3.5" />
-														Ajustar
-													</button>
+													<div className="flex items-center justify-end gap-1.5">
+														<button
+															className="flex items-center justify-center w-8 h-8 rounded-lg bg-surface-3 border border-surface-4 text-ink-secondary hover:text-red-400 hover:border-red-500/30 transition-all active:scale-95"
+															onClick={() =>
+																handleQuickAdjust(
+																	ingredient.id,
+																	-1,
+																	ingredient.stockCurrent,
+																)
+															}
+														>
+															<Minus className="w-3.5 h-3.5" />
+														</button>
+														<button
+															className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5 hover:text-brand-500 hover:border-brand-500/30 border border-transparent rounded-lg"
+															onClick={() => setAdjusting(ingredient)}
+														>
+															Ajustar
+														</button>
+														<button
+															className="flex items-center justify-center w-8 h-8 rounded-lg bg-surface-3 border border-surface-4 text-ink-secondary hover:text-emerald-400 hover:border-emerald-500/30 transition-all active:scale-95"
+															onClick={() =>
+																handleQuickAdjust(
+																	ingredient.id,
+																	1,
+																	ingredient.stockCurrent,
+																)
+															}
+														>
+															<Plus className="w-3.5 h-3.5" />
+														</button>
+													</div>
 												</td>
 											</tr>
 										);
@@ -838,7 +969,9 @@ export default function KitchenStockPage() {
 				<div className="flex items-center justify-between px-4 sm:px-8 py-4 border-t border-surface-3 bg-surface-1/50 flex-wrap gap-2">
 					<div className="flex items-center gap-2 text-ink-tertiary">
 						<RefreshCw className="w-3.5 h-3.5" />
-						<span className="font-body text-xs">Última actualización: hoy</span>
+						<span className="font-body text-xs">
+							Sincronización automática cada 30 s
+						</span>
 					</div>
 					<div className="flex items-center gap-4 text-xs font-display uppercase tracking-widest text-ink-tertiary flex-wrap">
 						<span>

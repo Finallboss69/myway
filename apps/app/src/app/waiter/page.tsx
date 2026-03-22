@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Loader2 } from "lucide-react";
+import { User } from "lucide-react";
 import clsx from "clsx";
 
 interface StaffMember {
@@ -12,11 +12,40 @@ interface StaffMember {
 	avatar: string;
 }
 
+function useGreeting() {
+	const [greeting, setGreeting] = useState("BUENOS DÍAS");
+	useEffect(() => {
+		const hour = new Date().getHours();
+		if (hour >= 20 || hour < 6) {
+			setGreeting("BUENAS NOCHES");
+		} else if (hour >= 14) {
+			setGreeting("BUENAS TARDES");
+		} else {
+			setGreeting("BUENOS DÍAS");
+		}
+	}, []);
+	return greeting;
+}
+
+function SkeletonCard() {
+	return (
+		<div
+			className="flex flex-col items-center gap-3 rounded-2xl border border-surface-3 bg-surface-2 animate-pulse"
+			style={{ padding: "22px 16px 18px", minHeight: 150 }}
+		>
+			<div className="w-16 h-16 rounded-full bg-surface-4" />
+			<div className="w-20 h-3 rounded-full bg-surface-4" />
+			<div className="w-12 h-2 rounded-full bg-surface-3" />
+		</div>
+	);
+}
+
 export default function WaiterLoginPage() {
 	const router = useRouter();
 	const [staff, setStaff] = useState<StaffMember[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [selected, setSelected] = useState<string | null>(null);
+	const greeting = useGreeting();
 
 	useEffect(() => {
 		fetch("/api/staff")
@@ -39,14 +68,14 @@ export default function WaiterLoginPage() {
 			className="noise-overlay min-h-screen flex flex-col items-center justify-between overflow-hidden"
 			style={{ background: "var(--s0)", position: "relative" }}
 		>
-			{/* Background glow */}
+			{/* Background glows */}
 			<div
 				aria-hidden
 				style={{
 					position: "absolute",
 					inset: 0,
 					background:
-						"radial-gradient(ellipse 700px 500px at 50% 40%, rgba(245,158,11,0.09) 0%, rgba(245,158,11,0.02) 45%, transparent 70%)",
+						"radial-gradient(ellipse 700px 500px at 50% 35%, rgba(245,158,11,0.11) 0%, rgba(245,158,11,0.03) 45%, transparent 70%)",
 					pointerEvents: "none",
 				}}
 			/>
@@ -57,62 +86,79 @@ export default function WaiterLoginPage() {
 					bottom: 0,
 					left: 0,
 					right: 0,
-					height: "35%",
+					height: "40%",
 					background:
-						"radial-gradient(ellipse 500px 300px at 50% 100%, rgba(16,185,129,0.04) 0%, transparent 60%)",
+						"radial-gradient(ellipse 500px 300px at 50% 100%, rgba(16,185,129,0.05) 0%, transparent 60%)",
 					pointerEvents: "none",
 				}}
 			/>
-			{/* Top gold line */}
+			{/* Top gold accent line */}
 			<div
 				aria-hidden
-				style={{
-					position: "absolute",
-					top: 0,
-					left: 0,
-					right: 0,
-					height: "1px",
-					background:
-						"linear-gradient(90deg, transparent, rgba(245,158,11,0.5) 40%, rgba(245,158,11,0.5) 60%, transparent)",
-					pointerEvents: "none",
-				}}
+				className="top-accent"
+				style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1 }}
 			/>
 
 			<div className="flex-1" />
 
 			{/* Brand */}
-			<div className="flex flex-col items-center gap-2 animate-fade-in px-6">
+			<div className="flex flex-col items-center gap-3 animate-fade-in px-6">
 				<img
 					src="/logo.svg"
 					alt="My Way"
-					style={{ height: 28, width: 'auto', filter: 'invert(1)', display: 'block' }}
+					style={{
+						height: 32,
+						width: "auto",
+						filter: "invert(1)",
+						display: "block",
+					}}
 				/>
 				<div
+					className="font-kds tracking-[0.35em] text-center"
+					style={{
+						fontSize: 13,
+						color: "rgba(245,158,11,0.55)",
+						letterSpacing: "0.5em",
+					}}
+				>
+					{greeting}
+				</div>
+				<div
 					className="font-display text-ink-disabled uppercase tracking-widest"
-					style={{ fontSize: 11, letterSpacing: "0.45em" }}
+					style={{ fontSize: 10, letterSpacing: "0.4em" }}
 				>
 					Sistema de Mozos
 				</div>
 			</div>
 
-			<div style={{ height: 32 }} />
+			<div style={{ height: 36 }} />
 
 			{/* Staff picker */}
 			<div className="animate-slide-up w-full px-4" style={{ maxWidth: 560 }}>
 				<div
-					className="font-display text-ink-disabled uppercase text-center mb-4"
+					className="font-display text-ink-disabled uppercase text-center mb-5"
 					style={{ fontSize: 10, letterSpacing: "0.4em" }}
 				>
 					¿Quién sos?
 				</div>
 
 				{loading ? (
-					<div className="flex justify-center py-16">
-						<Loader2 className="w-7 h-7 text-brand-500 animate-spin" />
+					<div
+						className="waiter-staff-grid grid gap-3"
+						style={{ gridTemplateColumns: "repeat(2, 1fr)" }}
+					>
+						{[0, 1, 2, 3].map((i) => (
+							<SkeletonCard key={i} />
+						))}
 					</div>
 				) : staff.length === 0 ? (
 					<div className="flex flex-col items-center gap-3 py-12">
-						<User className="w-10 h-10 text-ink-disabled" />
+						<div
+							className="w-16 h-16 rounded-2xl flex items-center justify-center"
+							style={{ background: "var(--s2)", border: "1px solid var(--s3)" }}
+						>
+							<User className="w-8 h-8 text-ink-disabled" />
+						</div>
 						<p className="font-display text-sm text-ink-tertiary">
 							No hay mozos disponibles
 						</p>
@@ -137,31 +183,39 @@ export default function WaiterLoginPage() {
 											? "border-brand-500/70 bg-brand-500/12 shadow-gold-sm"
 											: "border-surface-3 bg-surface-2 hover:border-brand-500/40 hover:bg-surface-3",
 									)}
-									style={{ padding: "22px 16px 18px", minHeight: 130 }}
+									style={{
+										padding: "24px 16px 20px",
+										minHeight: 150,
+										boxShadow: isSelected
+											? "0 0 0 2px rgba(245,158,11,0.35), 0 0 32px rgba(245,158,11,0.12)"
+											: undefined,
+									}}
 								>
 									{/* Avatar circle */}
 									<div
 										className={clsx(
 											"flex items-center justify-center rounded-full transition-all shrink-0",
-											isSelected
-												? "shadow-gold-sm"
-												: "group-hover:shadow-gold-sm",
+											isSelected ? "" : "group-hover:scale-105",
 										)}
 										style={{
-											width: 64,
-											height: 64,
+											width: 72,
+											height: 72,
 											background: isSelected
-												? "#f59e0b"
-												: "rgba(245,158,11,0.15)",
+												? "var(--gold)"
+												: "rgba(245,158,11,0.14)",
 											border: isSelected
-												? "2px solid rgba(245,158,11,0.6)"
-												: "2px solid rgba(245,158,11,0.25)",
+												? "2px solid rgba(245,158,11,0.7)"
+												: "2px solid rgba(245,158,11,0.28)",
+											boxShadow: isSelected
+												? "0 0 24px rgba(245,158,11,0.35)"
+												: "none",
+											transition: "all 0.2s",
 										}}
 									>
 										<span
 											className="font-kds leading-none select-none"
 											style={{
-												fontSize: 28,
+												fontSize: 30,
 												color: isSelected ? "#080808" : "#f59e0b",
 											}}
 										>
@@ -169,8 +223,8 @@ export default function WaiterLoginPage() {
 										</span>
 									</div>
 
-									{/* Name */}
-									<div>
+									{/* Name + role */}
+									<div className="flex flex-col items-center gap-1">
 										<p
 											className={clsx(
 												"font-display font-semibold text-sm leading-tight transition-colors",
@@ -181,9 +235,15 @@ export default function WaiterLoginPage() {
 										>
 											{member.name}
 										</p>
-										<p className="font-display text-[10px] text-ink-disabled uppercase tracking-widest mt-0.5">
+										<span
+											className={clsx(
+												"badge",
+												isSelected ? "badge-occupied" : "badge-delivered",
+											)}
+											style={{ fontSize: 9 }}
+										>
 											Mozo
-										</p>
+										</span>
 									</div>
 								</button>
 							);

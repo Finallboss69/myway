@@ -1,8 +1,18 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import clsx from "clsx";
-import { Clock, CheckCircle2, ArrowRight, AlertCircle } from "lucide-react";
+import {
+	Clock,
+	CheckCircle2,
+	AlertCircle,
+	Flame,
+	Package,
+	Zap,
+	GlassWater,
+	Wine,
+	UtensilsCrossed,
+} from "lucide-react";
 import { elapsedMinutes } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -26,7 +36,7 @@ interface Order {
 }
 
 type ItemStatus = "pending" | "preparing" | "ready" | "delivered" | "cancelled";
-type ColumnType = "pending" | "preparing" | "ready";
+type FilterTab = "all" | "pending" | "preparing" | "ready";
 
 // ─── Polling hook ─────────────────────────────────────────────────────────────
 
@@ -52,6 +62,35 @@ function usePolling<T>(url: string, interval = 3000) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function elapsedColor(mins: number): string {
+	if (mins > 10) return "text-red-400";
+	if (mins > 5) return "text-amber-400";
+	return "text-emerald-400";
+}
+
+function urgencyTableColor(mins: number): string {
+	if (mins > 10) return "text-red-400";
+	if (mins > 5) return "text-amber-400";
+	return "text-blue-400";
+}
+
+function deriveOrderStatus(order: Order): "pending" | "preparing" | "ready" {
+	const items = order.items;
+	if (
+		items.every(
+			(i) =>
+				i.status === "ready" ||
+				i.status === "delivered" ||
+				i.status === "cancelled",
+		)
+	)
+		return "ready";
+	if (items.some((i) => i.status === "preparing")) return "preparing";
+	return "pending";
+}
+
+// ─── Live clock ───────────────────────────────────────────────────────────────
+
 function useLiveClock() {
 	const [time, setTime] = useState("--:--:--");
 	useEffect(() => {
@@ -68,323 +107,284 @@ function useLiveClock() {
 	return time;
 }
 
-function deriveItemStatus(order: Order): ColumnType {
-	const items = order.items;
-	if (
-		items.every(
-			(i) =>
-				i.status === "ready" ||
-				i.status === "delivered" ||
-				i.status === "cancelled",
-		)
-	)
-		return "ready";
-	if (items.some((i) => i.status === "preparing")) return "preparing";
-	return "pending";
-}
+// ─── Elapsed badge ────────────────────────────────────────────────────────────
 
-function elapsedColor(mins: number): string {
-	if (mins > 10) return "text-red-400";
-	if (mins > 5) return "text-amber-400";
-	return "text-emerald-400";
-}
+function ElapsedBadge({ createdAt }: { createdAt: string }) {
+	const [mins, setMins] = useState(() => elapsedMinutes(createdAt));
+	useEffect(() => {
+		const id = setInterval(() => setMins(elapsedMinutes(createdAt)), 10000);
+		return () => clearInterval(id);
+	}, [createdAt]);
 
-function elapsedBg(mins: number): string {
-	if (mins > 10) return "bg-red-500/20 text-red-400 border-red-500/30";
-	if (mins > 5) return "bg-amber-500/20 text-amber-400 border-amber-500/30";
-	return "bg-emerald-500/15 text-emerald-400 border-emerald-500/25";
-}
-
-// ─── Elapsed badge ─────────────────────────────────────────────────────────────
-
-function ElapsedBadge({ date }: { date: string }) {
-	const mins = elapsedMinutes(date);
 	return (
-		<span
+		<div
 			className={clsx(
-				"inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs font-kds font-bold",
-				elapsedBg(mins),
+				"flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-mono font-bold",
+				mins > 10
+					? "bg-red-500/10 border-red-500/30"
+					: mins > 5
+						? "bg-amber-500/10 border-amber-500/30"
+						: "bg-emerald-500/10 border-emerald-500/30",
 			)}
 		>
-			<Clock className={clsx("w-3 h-3", elapsedColor(mins))} />
-			{mins}
-			<span className="text-[10px] font-body font-normal">min</span>
+			<Clock className={clsx("w-3.5 h-3.5", elapsedColor(mins))} />
+			<span
+				className={clsx("font-kds text-2xl leading-none", elapsedColor(mins))}
+			>
+				{mins}
+				<span className="text-xs font-body ml-0.5 font-normal">min</span>
+			</span>
+		</div>
+	);
+}
+
+// ─── Item status chip ─────────────────────────────────────────────────────────
+
+function ItemStatusChip({ status }: { status: string }) {
+	const cls = clsx(
+		"inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-display font-bold uppercase tracking-wide border",
+		{
+			"bg-amber-500/15 text-amber-400 border-amber-500/30":
+				status === "pending",
+			"bg-blue-500/15 text-blue-400 border-blue-500/30": status === "preparing",
+			"bg-emerald-500/15 text-emerald-400 border-emerald-500/30":
+				status === "ready",
+			"bg-surface-3 text-ink-tertiary border-surface-4": status === "delivered",
+			"bg-red-500/10 text-red-400 border-red-500/20": status === "cancelled",
+		},
+	);
+	const labels: Record<string, string> = {
+		pending: "Pendiente",
+		preparing: "Preparando",
+		ready: "Listo",
+		delivered: "Entregado",
+		cancelled: "Cancelado",
+	};
+	return (
+		<span className={cls}>
+			<span
+				className={clsx("w-1.5 h-1.5 rounded-full", {
+					"bg-amber-400": status === "pending",
+					"bg-blue-400 animate-pulse": status === "preparing",
+					"bg-emerald-400": status === "ready",
+					"bg-surface-5": status === "delivered",
+					"bg-red-400": status === "cancelled",
+				})}
+			/>
+			{labels[status] ?? status}
 		</span>
 	);
 }
 
 // ─── Order card ───────────────────────────────────────────────────────────────
 
-function BarOrderCard({
+function OrderCard({
 	order,
-	column,
-	onAction,
+	onUpdateItem,
 }: {
 	order: Order;
-	column: ColumnType;
-	onAction: (orderId: string, itemIds: string[], next: ItemStatus) => void;
+	onUpdateItem: (orderId: string, itemId: string, next: ItemStatus) => void;
 }) {
+	const derived = deriveOrderStatus(order);
 	const mins = elapsedMinutes(order.createdAt);
-	const isUrgent = mins >= 8 && column !== "ready";
+	const isReady = derived === "ready";
+	const isUrgent = mins > 10;
+	const isWarning = mins > 5 && !isUrgent;
 
-	const borderAccent = {
-		pending: "border-l-amber-500",
-		preparing: "border-l-blue-500",
-		ready: "border-l-emerald-500",
-	}[column];
-
-	const actionConfig: Record<
-		ColumnType,
+	const cardCls = clsx(
+		"flex flex-col overflow-hidden rounded-2xl border-l-[5px] bg-surface-1 transition-all duration-300 animate-slide-up",
 		{
-			label: string;
-			icon: React.ReactNode;
-			next: ItemStatus;
-			cls: string;
-		}
-	> = {
-		pending: {
-			label: "PREPARANDO →",
-			icon: <ArrowRight size={16} />,
-			next: "preparing",
-			cls: "btn-blue text-sm min-h-[48px] rounded-xl w-full justify-center",
+			"border-l-amber-500": derived === "pending",
+			"border-l-blue-500": derived === "preparing",
+			"border-l-emerald-500": derived === "ready",
 		},
-		preparing: {
-			label: "LISTO ✓",
-			icon: <CheckCircle2 size={16} />,
-			next: "ready",
-			cls: "btn-green text-sm min-h-[48px] rounded-xl w-full justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)]",
-		},
-		ready: {
-			label: "ENTREGADO",
-			icon: <CheckCircle2 size={16} />,
-			next: "delivered",
-			cls: "flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-surface-3 text-ink-secondary border border-surface-4 font-display font-bold text-sm uppercase tracking-widest hover:bg-surface-4 transition-all w-full active:scale-95",
-		},
-	};
+		isReady && "ring-ok",
+		isUrgent && !isReady && "ring-urgent",
+		isWarning && !isReady && "ring-warning",
+	);
 
-	const action = actionConfig[column];
-	const itemIds = order.items.map((i) => i.id);
+	function handleItemToggle(itemId: string, currentStatus: string) {
+		const next: Record<string, ItemStatus> = {
+			pending: "preparing",
+			preparing: "ready",
+			ready: "delivered",
+			delivered: "delivered",
+		};
+		onUpdateItem(
+			order.id,
+			itemId,
+			next[currentStatus] ?? ("pending" as ItemStatus),
+		);
+	}
+
+	function handleAllStart() {
+		order.items
+			.filter((i) => i.status === "pending")
+			.forEach((i) => onUpdateItem(order.id, i.id, "preparing"));
+	}
+
+	function handleAllReady() {
+		order.items
+			.filter((i) => i.status === "preparing")
+			.forEach((i) => onUpdateItem(order.id, i.id, "ready"));
+	}
+
+	function handleAllDelivered() {
+		order.items
+			.filter((i) => i.status === "ready")
+			.forEach((i) => onUpdateItem(order.id, i.id, "delivered"));
+	}
 
 	return (
-		<div
-			className={clsx(
-				"card border-l-[4px] rounded-2xl p-4 flex flex-col gap-3 animate-slide-up transition-all duration-200",
-				borderAccent,
-				isUrgent && "ring-urgent",
-				column === "ready" && "ring-ok",
-			)}
-		>
-			{/* Table number + elapsed time */}
-			<div className="flex items-center justify-between">
-				<div className="flex items-baseline gap-2">
-					<span
-						className={clsx(
-							"font-kds leading-none tracking-wider",
-							"text-6xl sm:text-7xl",
-							isUrgent ? "text-red-400" : "text-ink-primary",
-						)}
-					>
-						{order.tableNumber}
-					</span>
-					<span className="text-ink-tertiary font-display text-[10px] uppercase tracking-widest mt-1">
-						Mesa
-					</span>
+		<div className={cardCls}>
+			{/* Card header */}
+			<div className="flex items-start justify-between px-4 pt-4 pb-3 border-b border-surface-3 bg-surface-2/40">
+				<div className="flex items-baseline gap-3">
+					<div className="flex flex-col items-start">
+						<span className="font-display text-[10px] uppercase tracking-[0.2em] text-ink-tertiary mb-0.5">
+							Mesa
+						</span>
+						<span
+							className={clsx(
+								"font-kds leading-none text-7xl",
+								urgencyTableColor(mins),
+							)}
+						>
+							{order.tableNumber}
+						</span>
+					</div>
+					<div className="flex flex-col gap-1.5 mt-auto pb-1">
+						<span
+							className={clsx(
+								"inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-display font-bold uppercase tracking-wider border",
+								derived === "pending"
+									? "bg-amber-500/10 text-amber-400 border-amber-500/25"
+									: derived === "preparing"
+										? "bg-blue-500/10 text-blue-400 border-blue-500/25"
+										: "bg-emerald-500/10 text-emerald-400 border-emerald-500/25",
+							)}
+						>
+							{derived === "pending" ? (
+								<Zap className="w-3 h-3" />
+							) : derived === "preparing" ? (
+								<Flame className="w-3 h-3" />
+							) : (
+								<CheckCircle2 className="w-3 h-3" />
+							)}
+							{derived === "pending"
+								? "Pendiente"
+								: derived === "preparing"
+									? "Preparando"
+									: "Listo"}
+						</span>
+						<span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-display font-bold uppercase tracking-wider border bg-surface-3 text-ink-secondary border-surface-4">
+							<GlassWater className="w-2.5 h-2.5" />
+							Bar
+						</span>
+					</div>
 				</div>
-				<ElapsedBadge date={order.createdAt} />
+				<div className="flex flex-col items-end gap-2">
+					<ElapsedBadge createdAt={order.createdAt} />
+					{isReady && (
+						<span className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-display font-bold uppercase tracking-widest animate-blink">
+							<span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+							Listo para servir
+						</span>
+					)}
+					{isUrgent && !isReady && (
+						<span className="flex items-center gap-1.5 text-[10px] text-red-400 font-display font-bold uppercase tracking-widest animate-blink">
+							<AlertCircle className="w-3 h-3" />
+							Urgente
+						</span>
+					)}
+				</div>
 			</div>
 
-			{/* Divider */}
-			<div className="divider" />
-
 			{/* Items list */}
-			<div className="flex flex-col gap-2.5">
+			<div className="flex flex-col divide-y divide-surface-3 flex-1">
 				{order.items.map((item) => (
 					<div
 						key={item.id}
-						className="flex items-center justify-between gap-2"
+						className={clsx(
+							"flex items-center gap-3 px-4 py-3 transition-colors",
+							item.status === "ready" && "bg-emerald-500/5",
+							item.status === "delivered" && "opacity-40",
+						)}
 					>
-						<div className="flex items-center gap-2.5 min-w-0">
-							{column === "ready" ? (
-								<CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
-							) : (
-								<span
-									className={clsx(
-										"w-2.5 h-2.5 rounded-full shrink-0",
-										item.status === "preparing"
-											? "bg-blue-400 animate-pulse"
-											: item.status === "pending"
-												? "bg-amber-400"
-												: "bg-emerald-400",
-									)}
-								/>
-							)}
-							<span className="font-display text-sm font-semibold text-ink-primary truncate uppercase tracking-wide">
-								{item.name}
-							</span>
-						</div>
-						{/* Qty badge — large for visibility */}
-						<span className="font-kds text-2xl sm:text-3xl text-brand-500 leading-none shrink-0 bg-brand-500/10 px-2 py-0.5 rounded-lg border border-brand-500/20">
-							×{item.qty}
+						{/* Qty */}
+						<span className="font-kds text-4xl leading-none text-blue-400 w-10 text-center shrink-0">
+							{item.qty}
 						</span>
+
+						{/* Name + status */}
+						<div className="flex-1 min-w-0">
+							<p className="font-display text-sm font-bold uppercase tracking-wide text-ink-primary truncate">
+								{item.name}
+							</p>
+							<div className="mt-1">
+								<ItemStatusChip status={item.status} />
+							</div>
+						</div>
+
+						{/* Toggle — large touch target on mobile */}
+						{item.status !== "delivered" && item.status !== "cancelled" && (
+							<button
+								onClick={() => handleItemToggle(item.id, item.status)}
+								className={clsx(
+									"shrink-0 min-h-[44px] px-3 py-2 rounded-xl text-xs font-display font-bold uppercase tracking-wide transition-all active:scale-95",
+									item.status === "ready"
+										? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30"
+										: item.status === "preparing"
+											? "btn-green text-xs px-3 rounded-xl shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+											: "btn-blue text-xs px-3 rounded-xl shadow-[0_0_12px_rgba(59,130,246,0.3)]",
+								)}
+							>
+								{item.status === "ready"
+									? "✓ Listo"
+									: item.status === "preparing"
+										? "LISTO ✓"
+										: "PREPARAR →"}
+							</button>
+						)}
 					</div>
 				))}
 			</div>
 
-			{/* Action button */}
-			<div className="divider" />
-			<button
-				onClick={() => onAction(order.id, itemIds, action.next)}
-				className={action.cls}
-			>
-				{action.icon}
-				{action.label}
-			</button>
-		</div>
-	);
-}
-
-// ─── Kanban column ────────────────────────────────────────────────────────────
-
-function KanbanColumn({
-	title,
-	orders,
-	column,
-	onAction,
-}: {
-	title: string;
-	orders: Order[];
-	column: ColumnType;
-	onAction: (orderId: string, itemIds: string[], next: ItemStatus) => void;
-}) {
-	const headerStyle = {
-		pending: {
-			badge:
-				"bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.15)]",
-			dot: "bg-amber-500 shadow-[0_0_8px_#f59e0b]",
-			title: "text-amber-400",
-		},
-		preparing: {
-			badge: "bg-blue-500/20 text-blue-400 border border-blue-500/30",
-			dot: "bg-blue-500 shadow-[0_0_8px_#3b82f6]",
-			title: "text-blue-400",
-		},
-		ready: {
-			badge: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
-			dot: "bg-emerald-500 shadow-[0_0_8px_#10b981]",
-			title: "text-emerald-400",
-		},
-	}[column];
-
-	return (
-		<div className="flex flex-col gap-3 min-w-0">
-			{/* Column header */}
-			<div className="flex items-center justify-between">
-				<div
-					className={clsx(
-						"flex items-center gap-2.5 px-4 py-2.5 rounded-2xl",
-						headerStyle.badge,
-					)}
-				>
-					<span className={clsx("w-2.5 h-2.5 rounded-full", headerStyle.dot)} />
-					<span
-						className={clsx(
-							"font-kds text-2xl tracking-widest",
-							headerStyle.title,
-						)}
+			{/* Card footer — full-width action button */}
+			<div className="flex gap-2 px-4 py-3 bg-surface-2/60 border-t border-surface-3">
+				{derived === "pending" && (
+					<button
+						onClick={handleAllStart}
+						className="btn-blue flex-1 justify-center min-h-[48px] text-sm rounded-xl"
 					>
-						{title}
-					</span>
-				</div>
-				<span
-					className={clsx(
-						"font-kds text-3xl leading-none px-3 py-1 rounded-xl",
-						headerStyle.badge,
-					)}
-				>
-					{orders.length}
-				</span>
-			</div>
-
-			{/* Cards — scrollable within the column */}
-			<div className="flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-260px)] pr-0.5">
-				{orders.length === 0 ? (
-					<div className="flex flex-col items-center justify-center py-14 gap-3 text-ink-tertiary card rounded-2xl">
-						<CheckCircle2 size={32} className="opacity-20" />
-						<span className="font-display text-xs uppercase tracking-widest opacity-40">
-							Sin pedidos
-						</span>
-					</div>
-				) : (
-					orders.map((order) => (
-						<BarOrderCard
-							key={order.id}
-							order={order}
-							column={column}
-							onAction={onAction}
-						/>
-					))
+						<Flame className="w-4 h-4" />
+						PREPARAR TODO
+					</button>
+				)}
+				{derived === "preparing" && (
+					<button
+						onClick={handleAllReady}
+						className="btn-green flex-1 justify-center min-h-[48px] text-sm rounded-xl shadow-[0_0_16px_rgba(16,185,129,0.2)]"
+					>
+						<CheckCircle2 className="w-4 h-4" />
+						TODO LISTO ✓
+					</button>
+				)}
+				{derived === "ready" && (
+					<button
+						onClick={handleAllDelivered}
+						className="flex-1 flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-surface-3 text-ink-secondary border border-surface-4 font-display font-bold text-sm uppercase tracking-widest hover:bg-surface-4 transition-all"
+					>
+						<UtensilsCrossed className="w-4 h-4" />
+						ENTREGADO
+					</button>
 				)}
 			</div>
 		</div>
 	);
 }
 
-// ─── Bottom ticker ────────────────────────────────────────────────────────────
-
-const TICKER_ITEMS = [
-	{ table: 8, text: "3× Pinta Quilmes + Copa de Malbec", time: "21:28" },
-	{ table: 4, text: "2× Aperol Spritz", time: "21:22" },
-	{ table: 11, text: "1× Negroni", time: "21:19" },
-	{ table: 2, text: "2× Fernet con Coca", time: "21:15" },
-	{ table: 7, text: "3× Mojito + Gin Tónico", time: "21:10" },
-	{ table: 5, text: "2× Pinta Andes + Agua s/gas", time: "21:06" },
-	{ table: 3, text: "3× Ficha de Pool entregada", time: "21:03" },
-];
-
-function TickerStrip() {
-	return (
-		<div className="fixed bottom-0 inset-x-0 z-30 bg-surface-1/95 backdrop-blur-md border-t border-surface-3 overflow-hidden h-10 flex items-center">
-			<div className="flex items-center gap-3 px-4 shrink-0 border-r border-surface-4 h-full">
-				<CheckCircle2 size={11} className="text-emerald-400" />
-				<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary whitespace-nowrap">
-					Entregados
-				</span>
-			</div>
-			<div className="overflow-hidden flex-1 relative">
-				<div
-					className="flex items-center gap-8 whitespace-nowrap"
-					style={{ animation: "ticker-scroll 40s linear infinite" }}
-				>
-					{[...TICKER_ITEMS, ...TICKER_ITEMS].map((entry, i) => (
-						<span
-							key={i}
-							className="flex items-center gap-2 text-xs font-body text-ink-secondary shrink-0"
-						>
-							<span className="font-kds text-base text-brand-500 leading-none">
-								{entry.table}
-							</span>
-							<span className="text-ink-tertiary">·</span>
-							<span>{entry.text}</span>
-							<span className="text-ink-tertiary font-mono text-[10px]">
-								{entry.time}
-							</span>
-						</span>
-					))}
-				</div>
-			</div>
-			<style>{`
-        @keyframes ticker-scroll {
-          from { transform: translateX(0); }
-          to { transform: translateX(-50%); }
-        }
-      `}</style>
-		</div>
-	);
-}
-
 // ─── Filter tabs ──────────────────────────────────────────────────────────────
-
-type FilterTab = "all" | ColumnType;
 
 const FILTER_TABS: { key: FilterTab; label: string }[] = [
 	{ key: "all", label: "Todos" },
@@ -395,7 +395,7 @@ const FILTER_TABS: { key: FilterTab; label: string }[] = [
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function BarDisplayPage() {
+export default function BarKDSPage() {
 	const { data: rawOrders } = usePolling<Order[]>("/api/orders", 3000);
 	const [optimisticOrders, setOptimisticOrders] = useState<Order[] | null>(
 		null,
@@ -403,10 +403,8 @@ export default function BarDisplayPage() {
 	const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
 	const currentTime = useLiveClock();
 
-	// Use optimistic state if available, otherwise use polled data
 	const orders = optimisticOrders ?? rawOrders ?? [];
 
-	// Sync optimistic state when new data arrives
 	useEffect(() => {
 		if (rawOrders) setOptimisticOrders(rawOrders);
 	}, [rawOrders]);
@@ -441,27 +439,43 @@ export default function BarDisplayPage() {
 		[orders],
 	);
 
-	// Derive column placement from item statuses
-	const ordersWithColumn = barOrders.map((o) => ({
+	const ordersWithStatus = barOrders.map((o) => ({
 		...o,
-		column: deriveItemStatus(o) as ColumnType,
+		derivedStatus: deriveOrderStatus(o),
 	}));
 
-	const pending = ordersWithColumn.filter((o) => o.column === "pending");
-	const preparing = ordersWithColumn.filter((o) => o.column === "preparing");
-	const ready = ordersWithColumn.filter((o) => o.column === "ready");
-	const pendingCount = pending.length;
-	const allOrders = ordersWithColumn;
+	const visibleOrders = ordersWithStatus.filter(
+		(o) => o.derivedStatus !== ("delivered" as string),
+	);
 
-	// For mobile single-column filtered view
 	const filteredOrders =
 		activeFilter === "all"
-			? allOrders
-			: allOrders.filter((o) => o.column === activeFilter);
+			? visibleOrders
+			: visibleOrders.filter((o) => o.derivedStatus === activeFilter);
 
-	async function handleAction(
+	const countByDerived = useCallback(
+		(status: string) =>
+			visibleOrders.filter((o) => o.derivedStatus === status).length,
+		[visibleOrders],
+	);
+
+	const pendingCount = countByDerived("pending");
+	const preparingCount = countByDerived("preparing");
+	const readyCount = countByDerived("ready");
+
+	const avgMins =
+		visibleOrders.length > 0
+			? Math.round(
+					visibleOrders.reduce(
+						(sum, o) => sum + elapsedMinutes(o.createdAt),
+						0,
+					) / visibleOrders.length,
+				)
+			: 0;
+
+	async function handleUpdateItem(
 		orderId: string,
-		itemIds: string[],
+		itemId: string,
 		next: ItemStatus,
 	) {
 		// Optimistic update
@@ -472,118 +486,104 @@ export default function BarDisplayPage() {
 				return {
 					...o,
 					items: o.items.map((item) =>
-						itemIds.includes(item.id) ? { ...item, status: next } : item,
+						item.id === itemId ? { ...item, status: next } : item,
 					),
 				};
 			});
 		});
 
-		// Fire API calls for each item
-		await Promise.all(
-			itemIds.map((itemId) =>
-				fetch(`/api/orders/${orderId}/items/${itemId}`, {
-					method: "PATCH",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ status: next }),
-				}),
-			),
-		);
+		await fetch(`/api/orders/${orderId}/items/${itemId}`, {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ status: next }),
+		});
 	}
 
 	return (
-		<div className="noise-overlay min-h-screen bg-surface-0 flex flex-col pb-10">
+		<div className="min-h-screen bg-surface-0 flex flex-col noise-overlay">
 			{/* ── Header ── */}
-			<header className="sticky top-0 z-10 bg-surface-1/95 backdrop-blur-md border-b border-surface-3 shadow-[0_1px_0_rgba(255,255,255,0.04)]">
-				<div className="flex items-center justify-between px-4 sm:px-6 py-3">
-					{/* Left: BAR brand */}
-					<div className="flex items-center gap-3">
-						<span className="font-kds text-4xl sm:text-5xl text-brand-500 leading-none tracking-widest">
-							BAR
-						</span>
+			<header className="sticky top-0 z-40 bg-surface-1/95 backdrop-blur-md border-b border-surface-3 shadow-[0_1px_0_rgba(255,255,255,0.04)]">
+				<div className="flex items-center px-4 sm:px-6 py-3 gap-3">
+					{/* Left: Brand */}
+					<div className="flex items-center gap-3 min-w-0 flex-1">
+						<div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-blue-500/10 border border-blue-500/25 shadow-[0_0_12px_rgba(59,130,246,0.15)] shrink-0">
+							<Wine className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
+						</div>
+						<div className="min-w-0">
+							<div className="flex items-baseline gap-2">
+								<span className="font-kds text-3xl sm:text-5xl leading-none text-blue-400 tracking-widest">
+									BAR
+								</span>
+							</div>
+							<p className="font-display text-[9px] sm:text-[10px] text-ink-tertiary uppercase tracking-[0.2em] mt-0.5 hidden sm:block">
+								My Way · Bar Display System
+							</p>
+						</div>
 					</div>
 
-					{/* Center: live clock — hidden on small phones */}
-					<div className="hidden sm:flex absolute left-1/2 -translate-x-1/2 flex-col items-center">
+					{/* Center: Live clock */}
+					<div className="hidden md:flex absolute left-1/2 -translate-x-1/2 flex-col items-center">
 						<span
-							className="font-kds text-3xl sm:text-4xl text-ink-secondary leading-none tracking-[0.1em]"
+							className="font-kds text-4xl leading-none text-ink-secondary tracking-[0.1em]"
 							suppressHydrationWarning
 						>
 							{currentTime}
 						</span>
-						<span className="font-display text-[9px] text-ink-tertiary uppercase tracking-[0.2em]">
+						<span className="font-display text-[9px] text-ink-tertiary uppercase tracking-[0.2em] mt-0.5">
 							En vivo
 						</span>
 					</div>
 
-					{/* Right: pending badge + staff */}
-					<div className="flex items-center gap-3">
-						{pendingCount > 0 && (
-							<div className="flex items-center gap-2">
-								<div className="relative">
-									<div className="w-10 h-10 rounded-2xl bg-red-500 flex items-center justify-center animate-pulse">
-										<span className="font-kds text-2xl leading-none text-white">
-											{pendingCount}
-										</span>
-									</div>
-								</div>
-								<span className="hidden md:block font-display text-xs text-red-400 uppercase tracking-widest animate-blink">
-									Pendientes
+					{/* Right: Badge + Staff */}
+					<div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end">
+						<div
+							className="flex items-center justify-center min-w-[44px] h-11 px-3 rounded-2xl bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.35)]"
+							title="Órdenes activas"
+						>
+							<span className="font-kds text-3xl leading-none text-white">
+								{visibleOrders.length}
+							</span>
+						</div>
+						<div className="flex items-center gap-2.5 px-3 py-2 bg-surface-2 border border-surface-3 rounded-2xl">
+							<div className="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+								<span className="font-display text-xs font-bold text-blue-400">
+									{barStaff?.avatar ?? "BR"}
 								</span>
 							</div>
-						)}
-
-						<span className="font-display text-xs text-ink-tertiary uppercase tracking-widest hidden sm:block">
-							MY WAY
-						</span>
-
-						{barStaff && (
-							<div className="flex items-center gap-2.5">
-								<div
-									className="w-10 h-10 rounded-2xl flex items-center justify-center font-display font-bold text-sm text-surface-0"
-									style={{
-										background:
-											"linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
-										boxShadow:
-											"0 0 0 2px rgba(245,158,11,0.3), 0 0 12px rgba(245,158,11,0.2)",
-									}}
-								>
-									{barStaff.avatar}
-								</div>
-								<div className="hidden md:flex flex-col">
-									<span className="text-ink-secondary font-display text-xs font-semibold leading-tight">
-										{barStaff.name}
-									</span>
-									<span className="text-brand-500 font-display text-[9px] uppercase tracking-widest leading-tight">
-										Bartender
-									</span>
-								</div>
+							<div className="hidden sm:flex flex-col">
+								<span className="font-display text-xs font-semibold text-ink-primary leading-tight">
+									{barStaff?.name ?? "Bar"}
+								</span>
+								<span className="font-display text-[9px] text-ink-tertiary uppercase tracking-wider leading-tight">
+									Bartender
+								</span>
 							</div>
-						)}
+						</div>
 					</div>
 				</div>
 
-				{/* Filter tabs — scrollable on mobile, aligned with kanban on desktop */}
-				<div className="flex items-center gap-2 px-4 sm:px-6 pb-3 border-t border-surface-3/50 bg-surface-2/20 pt-2 overflow-x-auto">
+				{/* Filter tabs — scrollable on mobile */}
+				<div className="flex items-center gap-2 px-4 sm:px-6 pb-3 pt-2 border-t border-surface-3/50 bg-surface-2/20 overflow-x-auto">
 					{FILTER_TABS.map((tab) => {
 						const count =
 							tab.key === "all"
-								? allOrders.length
+								? visibleOrders.length
 								: tab.key === "pending"
 									? pendingCount
 									: tab.key === "preparing"
-										? preparing.length
-										: ready.length;
+										? preparingCount
+										: readyCount;
 						const isActive = activeFilter === tab.key;
 						return (
 							<button
 								key={tab.key}
 								onClick={() => setActiveFilter(tab.key)}
 								className={clsx(
-									"flex items-center gap-2 px-4 rounded-xl font-display text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap shrink-0",
+									"relative flex items-center gap-2 px-4 sm:px-5 rounded-xl font-display text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap shrink-0",
 									"min-h-[44px]",
 									isActive
-										? "bg-brand-500 text-surface-0 shadow-gold-sm"
-										: "bg-surface-2 text-ink-secondary border border-surface-3 hover:border-brand-500/30 hover:text-ink-primary",
+										? "bg-blue-500 text-white shadow-[0_0_12px_rgba(59,130,246,0.35)]"
+										: "bg-surface-2 text-ink-secondary border border-surface-3 hover:border-blue-500/30 hover:text-ink-primary",
 								)}
 							>
 								{tab.label}
@@ -591,7 +591,7 @@ export default function BarDisplayPage() {
 									className={clsx(
 										"flex items-center justify-center w-5 h-5 rounded-md text-xs font-kds leading-none",
 										isActive
-											? "bg-surface-0/30 text-surface-0"
+											? "bg-white/20 text-white"
 											: "bg-surface-3 text-ink-tertiary",
 									)}
 								>
@@ -600,184 +600,110 @@ export default function BarDisplayPage() {
 							</button>
 						);
 					})}
-					{pendingCount > 0 && (
-						<div className="ml-auto flex items-center gap-1.5 text-xs font-display text-red-400 uppercase tracking-wider animate-blink shrink-0 pl-2">
-							<AlertCircle className="w-3.5 h-3.5" />
-							<span className="hidden sm:inline">
-								{pendingCount} orden{pendingCount !== 1 ? "es" : ""} esperando
-							</span>
-							<span className="sm:hidden">{pendingCount}</span>
-						</div>
-					)}
+					<div className="ml-auto flex items-center gap-1.5 text-xs text-ink-tertiary font-display shrink-0 pl-2">
+						<Package className="w-3.5 h-3.5" />
+						<span>
+							{filteredOrders.length} orden
+							{filteredOrders.length !== 1 ? "es" : ""}
+						</span>
+					</div>
 				</div>
 			</header>
 
-			{/* ── Main content ── */}
-			<main className="flex-1 px-3 sm:px-4 pt-4 sm:pt-5 pb-6">
-				{/*
-				  Mobile/tablet portrait: single column filtered view
-				  Tablet landscape / desktop: 3-column kanban
-				  We use CSS grid with breakpoints to switch layouts.
-				*/}
-
-				{/* Mobile filtered list (shown when a specific tab is active) */}
-				<div className="lg:hidden">
-					{activeFilter === "all" ? (
-						/* "All" on mobile: stack columns with headers */
-						<div className="flex flex-col gap-6">
-							{pending.length > 0 && (
-								<div className="flex flex-col gap-3">
-									<div className="flex items-center justify-between">
-										<span className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 font-kds text-xl tracking-widest">
-											<span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]" />
-											PENDIENTE
-										</span>
-										<span className="font-kds text-2xl leading-none px-3 py-1 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
-											{pending.length}
-										</span>
-									</div>
-									<div
-										className="grid gap-3"
-										style={{
-											gridTemplateColumns:
-												"repeat(auto-fill, minmax(min(100%, 280px), 1fr))",
-										}}
-									>
-										{pending.map((order) => (
-											<BarOrderCard
-												key={order.id}
-												order={order}
-												column="pending"
-												onAction={handleAction}
-											/>
-										))}
-									</div>
-								</div>
-							)}
-							{preparing.length > 0 && (
-								<div className="flex flex-col gap-3">
-									<div className="flex items-center justify-between">
-										<span className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30 font-kds text-xl tracking-widest">
-											<span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]" />
-											PREPARANDO
-										</span>
-										<span className="font-kds text-2xl leading-none px-3 py-1 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
-											{preparing.length}
-										</span>
-									</div>
-									<div
-										className="grid gap-3"
-										style={{
-											gridTemplateColumns:
-												"repeat(auto-fill, minmax(min(100%, 280px), 1fr))",
-										}}
-									>
-										{preparing.map((order) => (
-											<BarOrderCard
-												key={order.id}
-												order={order}
-												column="preparing"
-												onAction={handleAction}
-											/>
-										))}
-									</div>
-								</div>
-							)}
-							{ready.length > 0 && (
-								<div className="flex flex-col gap-3">
-									<div className="flex items-center justify-between">
-										<span className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-kds text-xl tracking-widest">
-											<span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-											LISTO
-										</span>
-										<span className="font-kds text-2xl leading-none px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-											{ready.length}
-										</span>
-									</div>
-									<div
-										className="grid gap-3"
-										style={{
-											gridTemplateColumns:
-												"repeat(auto-fill, minmax(min(100%, 280px), 1fr))",
-										}}
-									>
-										{ready.map((order) => (
-											<BarOrderCard
-												key={order.id}
-												order={order}
-												column="ready"
-												onAction={handleAction}
-											/>
-										))}
-									</div>
-								</div>
-							)}
-							{allOrders.length === 0 && (
-								<div className="flex flex-col items-center justify-center h-64 gap-4 text-ink-tertiary">
-									<CheckCircle2 size={40} className="opacity-20" />
-									<span className="font-display text-sm uppercase tracking-widest opacity-40">
-										Sin pedidos activos
-									</span>
-								</div>
-							)}
+			{/* ── Orders grid ── */}
+			<main className="flex-1 p-3 sm:p-4 pb-24">
+				{filteredOrders.length === 0 ? (
+					<div className="flex flex-col items-center justify-center h-64 gap-5">
+						<div className="w-20 h-20 rounded-3xl bg-surface-2 border border-surface-3 flex items-center justify-center">
+							<GlassWater className="w-9 h-9 text-ink-tertiary" />
 						</div>
-					) : (
-						/* Specific tab on mobile: single filtered grid */
-						<div>
-							{filteredOrders.length === 0 ? (
-								<div className="flex flex-col items-center justify-center h-64 gap-4 text-ink-tertiary">
-									<CheckCircle2 size={40} className="opacity-20" />
-									<span className="font-display text-sm uppercase tracking-widest opacity-40">
-										Sin pedidos
-									</span>
-								</div>
-							) : (
-								<div
-									className="grid gap-3"
-									style={{
-										gridTemplateColumns:
-											"repeat(auto-fill, minmax(min(100%, 280px), 1fr))",
-									}}
-								>
-									{filteredOrders.map((order) => (
-										<BarOrderCard
-											key={order.id}
-											order={order}
-											column={order.column}
-											onAction={handleAction}
-										/>
-									))}
-								</div>
-							)}
+						<div className="text-center">
+							<p className="font-kds text-3xl text-ink-secondary tracking-wider">
+								SIN ÓRDENES
+							</p>
+							<p className="font-body text-sm text-ink-tertiary mt-1">
+								No hay pedidos en esta categoría
+							</p>
 						</div>
-					)}
-				</div>
-
-				{/* Desktop: always 3-column kanban */}
-				<div className="hidden lg:grid lg:grid-cols-3 gap-4">
-					<KanbanColumn
-						title="PENDIENTE"
-						orders={pending}
-						column="pending"
-						onAction={handleAction}
-					/>
-					<KanbanColumn
-						title="PREPARANDO"
-						orders={preparing}
-						column="preparing"
-						onAction={handleAction}
-					/>
-					<KanbanColumn
-						title="LISTO"
-						orders={ready}
-						column="ready"
-						onAction={handleAction}
-					/>
-				</div>
+					</div>
+				) : (
+					<div
+						className="grid gap-3 sm:gap-4"
+						style={{
+							gridTemplateColumns:
+								"repeat(auto-fill, minmax(min(100%, 280px), 1fr))",
+						}}
+					>
+						{filteredOrders.map((order) => (
+							<OrderCard
+								key={order.id}
+								order={order}
+								onUpdateItem={handleUpdateItem}
+							/>
+						))}
+					</div>
+				)}
 			</main>
 
-			{/* ── Bottom ticker ── */}
-			<TickerStrip />
+			{/* ── Stats bar (fixed bottom) ── */}
+			<footer className="fixed bottom-0 inset-x-0 z-30 border-t border-surface-3 bg-surface-1/95 backdrop-blur-md px-4 sm:px-6 py-3">
+				<div className="flex items-center gap-3 sm:gap-5 overflow-x-auto">
+					<div className="flex items-center gap-2 shrink-0">
+						<span className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_6px_#f59e0b]" />
+						<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary hidden sm:block">
+							Pendientes
+						</span>
+						<span className="font-kds text-3xl leading-none text-amber-400 ml-1">
+							{pendingCount}
+						</span>
+					</div>
+
+					<div className="w-px h-5 bg-surface-3 shrink-0" />
+
+					<div className="flex items-center gap-2 shrink-0">
+						<span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_6px_#3b82f6]" />
+						<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary hidden sm:block">
+							Preparando
+						</span>
+						<span className="font-kds text-3xl leading-none text-blue-400 ml-1">
+							{preparingCount}
+						</span>
+					</div>
+
+					<div className="w-px h-5 bg-surface-3 shrink-0" />
+
+					<div className="flex items-center gap-2 shrink-0">
+						<span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]" />
+						<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary hidden sm:block">
+							Listos
+						</span>
+						<span className="font-kds text-3xl leading-none text-emerald-400 ml-1">
+							{readyCount}
+						</span>
+					</div>
+
+					<div className="w-px h-5 bg-surface-3 shrink-0" />
+
+					<div className="flex items-center gap-2 shrink-0">
+						<Clock className="w-3.5 h-3.5 text-ink-tertiary" />
+						<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary hidden sm:block">
+							Tiempo promedio
+						</span>
+						<span className="font-kds text-3xl leading-none text-blue-400 ml-1">
+							{avgMins}
+							<span className="text-xs font-body text-ink-tertiary ml-0.5">
+								min
+							</span>
+						</span>
+					</div>
+
+					<div className="ml-auto hidden sm:flex items-center gap-2 text-ink-tertiary shrink-0">
+						<span className="font-display text-[10px] uppercase tracking-widest">
+							KDS — My Way Bar &amp; Pool
+						</span>
+					</div>
+				</div>
+			</footer>
 		</div>
 	);
 }

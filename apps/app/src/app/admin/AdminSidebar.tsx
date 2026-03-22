@@ -13,6 +13,7 @@ import {
 	MapPin,
 	LogOut,
 	X,
+	QrCode,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -41,6 +42,13 @@ const NAV_ITEMS = [
 		href: "/admin/menu",
 		label: "Menú",
 		icon: UtensilsCrossed,
+		exact: false,
+		section: "GESTIÓN",
+	},
+	{
+		href: "/admin/tables",
+		label: "Mesas & QR",
+		icon: QrCode,
 		exact: false,
 		section: "GESTIÓN",
 	},

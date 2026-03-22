@@ -249,6 +249,8 @@ function PaymentContent() {
 		[orders],
 	);
 
+	const tableNumber = orders.length > 0 ? orders[0].tableNumber : null;
+
 	if (loadingOrders) {
 		return (
 			<div
@@ -262,35 +264,48 @@ function PaymentContent() {
 
 	return (
 		<div
-			className="min-h-screen flex flex-col"
+			className="noise-overlay min-h-screen flex flex-col"
 			style={{ background: "var(--s0)" }}
 		>
 			{/* Header */}
 			<header
-				className="sticky top-0 z-40 flex items-center gap-3 px-4 py-3"
+				className="sticky top-0 z-40 flex items-center gap-3 px-4 py-3 top-accent"
 				style={{
-					background: "rgba(10,10,10,0.92)",
-					backdropFilter: "blur(20px)",
+					background: "rgba(10,10,10,0.95)",
+					backdropFilter: "blur(24px)",
 					borderBottom: "1px solid var(--s3)",
+					position: "sticky",
 				}}
 			>
 				<Link
 					href={tableId ? `/waiter/table/${tableId}` : "/waiter/tables"}
-					className="btn-ghost p-2 rounded-xl shrink-0"
+					className="btn-ghost p-2 rounded-xl shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
 					aria-label="Volver"
 				>
 					<ArrowLeft className="w-5 h-5" />
 				</Link>
-				<div className="flex-1 min-w-0">
-					<h1 className="font-display text-sm font-semibold text-ink-primary leading-tight">
-						Solicitar cuenta
-					</h1>
-					{tableId && orders.length > 0 && (
-						<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
-							Mesa {orders[0].tableNumber}
-						</p>
+
+				<div className="flex items-center gap-3 flex-1 min-w-0">
+					{tableNumber !== null && (
+						<span
+							className="font-kds leading-none text-brand-500"
+							style={{ fontSize: 44 }}
+						>
+							{tableNumber}
+						</span>
 					)}
+					<div className="flex flex-col min-w-0">
+						<h1 className="font-kds text-2xl leading-none text-ink-primary tracking-widest">
+							CUENTA
+						</h1>
+						{tableNumber !== null && (
+							<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
+								Mesa {tableNumber}
+							</p>
+						)}
+					</div>
 				</div>
+
 				<CreditCard className="w-5 h-5 text-ink-tertiary shrink-0" />
 			</header>
 
@@ -314,8 +329,8 @@ function PaymentContent() {
 				) : (
 					<div className="p-4 flex flex-col gap-4">
 						{/* Order summary */}
-						<div className="card-sm overflow-hidden">
-							<div className="px-4 py-3 border-b border-surface-3 bg-surface-2/40">
+						<div className="card overflow-hidden">
+							<div className="px-4 py-3 border-b border-surface-3 bg-surface-2/50">
 								<span className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
 									Resumen del pedido
 								</span>
@@ -329,7 +344,7 @@ function PaymentContent() {
 												key={`${o.id}-${item.id}`}
 												className="flex items-center gap-3 px-4 py-3"
 											>
-												<span className="font-kds text-2xl leading-none text-brand-500 w-6 text-center shrink-0">
+												<span className="font-kds text-2xl leading-none text-brand-500 w-7 text-center shrink-0">
 													{item.qty}
 												</span>
 												<p className="flex-1 font-display text-sm text-ink-primary truncate">
@@ -343,7 +358,7 @@ function PaymentContent() {
 								)}
 							</div>
 							{/* Totals */}
-							<div className="px-4 py-4 border-t border-surface-3 bg-surface-2/40 flex flex-col gap-2">
+							<div className="px-4 py-4 border-t border-surface-3 bg-surface-2/50 flex flex-col gap-2">
 								<div className="flex justify-between">
 									<span className="font-display text-xs text-ink-tertiary">
 										Subtotal
@@ -360,26 +375,29 @@ function PaymentContent() {
 										{formatCurrency(iva)}
 									</span>
 								</div>
-								<div className="divider" />
-								<div className="flex justify-between items-baseline">
-									<span className="font-display text-sm font-bold text-ink-primary">
+								<div className="divider my-1" />
+								<div className="flex justify-between items-center">
+									<span className="font-display text-xs font-bold text-ink-secondary uppercase tracking-widest">
 										Total
 									</span>
-									<span className="font-kds text-3xl leading-none text-brand-500">
+									<span
+										className="font-kds leading-none text-brand-500"
+										style={{ fontSize: 36 }}
+									>
 										{formatCurrency(total)}
 									</span>
 								</div>
 							</div>
 						</div>
 
-						{/* Payment method */}
-						<div className="card-sm overflow-hidden">
-							<div className="px-4 py-3 border-b border-surface-3 bg-surface-2/40">
+						{/* Payment method — 3 large buttons */}
+						<div className="card overflow-hidden">
+							<div className="px-4 py-3 border-b border-surface-3 bg-surface-2/50">
 								<span className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
 									Método de pago
 								</span>
 							</div>
-							<div className="p-4 grid grid-cols-3 gap-2">
+							<div className="p-3 grid grid-cols-3 gap-2.5">
 								{(
 									[
 										{ key: "cash" as const, icon: Banknote, label: "Efectivo" },
@@ -390,33 +408,52 @@ function PaymentContent() {
 										},
 										{ key: "card" as const, icon: Terminal, label: "Tarjeta" },
 									] as const
-								).map(({ key, icon: Icon, label }) => (
-									<button
-										key={key}
-										onClick={() => setMethod(key)}
-										className={clsx(
-											"flex flex-col items-center gap-2.5 rounded-xl border transition-all active:scale-95",
-											method === key
-												? "border-brand-500/60 bg-brand-500/10"
-												: "border-surface-3 bg-surface-2 hover:border-brand-500/30",
-										)}
-									>
-										<Icon
+								).map(({ key, icon: Icon, label }) => {
+									const isActive = method === key;
+									return (
+										<button
+											key={key}
+											onClick={() => setMethod(key)}
 											className={clsx(
-												"w-5 h-5",
-												method === key ? "text-brand-500" : "text-ink-tertiary",
+												"flex flex-col items-center justify-center gap-2.5 rounded-2xl border transition-all active:scale-95",
+												isActive
+													? "border-brand-500/60 bg-brand-500/10"
+													: "border-surface-3 bg-surface-2 hover:border-brand-500/30",
 											)}
-										/>
-										<span
-											className={clsx(
-												"font-display font-bold uppercase tracking-wider",
-												method === key ? "text-brand-500" : "text-ink-tertiary",
-											)}
+											style={{
+												minHeight: 84,
+												padding: "14px 10px",
+												boxShadow: isActive
+													? "0 0 20px rgba(245,158,11,0.12)"
+													: undefined,
+											}}
 										>
-											{label}
-										</span>
-									</button>
-								))}
+											<div
+												className={clsx(
+													"w-10 h-10 rounded-xl flex items-center justify-center",
+													isActive
+														? "bg-brand-500/15 border border-brand-500/30"
+														: "bg-surface-3 border border-surface-4",
+												)}
+											>
+												<Icon
+													className={clsx(
+														"w-5 h-5",
+														isActive ? "text-brand-500" : "text-ink-tertiary",
+													)}
+												/>
+											</div>
+											<span
+												className={clsx(
+													"font-display font-bold text-[10px] uppercase tracking-wider text-center leading-tight",
+													isActive ? "text-brand-500" : "text-ink-tertiary",
+												)}
+											>
+												{label}
+											</span>
+										</button>
+									);
+								})}
 							</div>
 
 							{/* Cash: amount + change */}
@@ -434,25 +471,27 @@ function PaymentContent() {
 											value={cashReceived}
 											onChange={(e) => setCashReceived(e.target.value)}
 											className="input-base"
+											style={{ fontSize: 16 }}
 										/>
 									</label>
 									{cashReceivedNum > 0 && (
 										<div
 											className={clsx(
-												"flex justify-between items-baseline px-4 py-3 rounded-xl",
+												"flex justify-between items-center px-4 py-3.5 rounded-xl",
 												change >= 0
-													? "bg-pool-500/10 border border-pool-500/25"
+													? "bg-emerald-500/10 border border-emerald-500/25"
 													: "bg-red-500/10 border border-red-500/25",
 											)}
 										>
-											<span className="font-display text-xs text-ink-secondary">
+											<span className="font-display text-xs text-ink-secondary uppercase tracking-widest">
 												Vuelto
 											</span>
 											<span
 												className={clsx(
-													"font-kds text-2xl leading-none",
-													change >= 0 ? "text-pool-400" : "text-red-400",
+													"font-kds leading-none",
+													change >= 0 ? "text-emerald-400" : "text-red-400",
 												)}
+												style={{ fontSize: 28 }}
 											>
 												{formatCurrency(change)}
 											</span>
@@ -490,19 +529,26 @@ function PaymentContent() {
 							)}
 						</div>
 
-						{/* Confirm button */}
+						{/* Confirm button — full-width, large */}
 						<button
 							onClick={handleConfirm}
 							disabled={submitting || orders.length === 0}
 							className="btn-primary w-full justify-center"
-							style={{ paddingTop: 14, paddingBottom: 14, fontSize: 13 }}
+							style={{
+								paddingTop: 18,
+								paddingBottom: 18,
+								fontSize: 14,
+								borderRadius: 14,
+								boxShadow:
+									"0 0 28px rgba(245,158,11,0.25), 0 4px 16px rgba(0,0,0,0.4)",
+							}}
 						>
 							{submitting ? (
-								<Loader2 className="w-4 h-4 animate-spin" />
+								<Loader2 className="w-5 h-5 animate-spin" />
 							) : (
 								<>
-									<CheckCircle2 className="w-4 h-4" />
-									Confirmar pago · {formatCurrency(total)}
+									<CheckCircle2 className="w-5 h-5" />
+									COBRAR &nbsp;·&nbsp; {formatCurrency(total)}
 								</>
 							)}
 						</button>
@@ -543,18 +589,21 @@ function PaymentContent() {
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-0/85 backdrop-blur-md animate-fade-in overflow-hidden">
 					<ConfettiOverlay />
 					<div className="card-gold p-10 flex flex-col items-center gap-5 animate-scale-in relative z-10">
-						<div className="w-20 h-20 rounded-3xl bg-pool-500/15 border border-pool-500/30 flex items-center justify-center">
-							<CheckCircle2 className="w-10 h-10 text-pool-500" />
+						<div className="w-20 h-20 rounded-3xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+							<CheckCircle2 className="w-10 h-10 text-emerald-400" />
 						</div>
 						<div className="text-center">
-							<p className="font-kds text-3xl text-pool-500 tracking-wider">
+							<p className="font-kds text-3xl text-emerald-400 tracking-wider">
 								PAGO CONFIRMADO
 							</p>
 							<p className="font-display text-xs text-ink-tertiary uppercase tracking-widest mt-2">
 								Redirigiendo...
 							</p>
 						</div>
-						<p className="font-kds text-4xl text-brand-500 leading-none">
+						<p
+							className="font-kds leading-none text-brand-500"
+							style={{ fontSize: 44 }}
+						>
 							{formatCurrency(total)}
 						</p>
 					</div>

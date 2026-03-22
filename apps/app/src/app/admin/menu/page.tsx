@@ -18,7 +18,7 @@ function SectionHeader({
 	onAdd: () => void;
 }) {
 	return (
-		<div className="flex items-center justify-between mb-4">
+		<div className="flex items-center justify-between mb-5">
 			<div className="flex items-center gap-3">
 				<h2
 					className="font-display text-ink-primary uppercase"
@@ -26,20 +26,7 @@ function SectionHeader({
 				>
 					{title}
 				</h2>
-				<span
-					style={{
-						background: "rgba(245,158,11,0.12)",
-						color: "#f59e0b",
-						border: "1px solid rgba(245,158,11,0.2)",
-						fontFamily: "var(--font-syne)",
-						fontSize: 9,
-						fontWeight: 700,
-						borderRadius: "99px",
-						padding: "2px 8px",
-					}}
-				>
-					{count}
-				</span>
+				<span className="badge badge-occupied">{count}</span>
 			</div>
 			<button
 				className="btn-primary"
@@ -65,7 +52,7 @@ function Field({
 	return (
 		<div>
 			<label
-				className="font-display text-ink-disabled uppercase block mb-1"
+				className="font-display text-ink-disabled uppercase block mb-1.5"
 				style={{ fontSize: 9, letterSpacing: "0.2em" }}
 			>
 				{label}
@@ -115,10 +102,7 @@ function ProductForm({
 	editId: string | null;
 }) {
 	return (
-		<div
-			className="card-sm animate-slide-up"
-			style={{ padding: 20, marginBottom: 16 }}
-		>
+		<div className="card-gold animate-slide-up p-5 mb-5">
 			<div
 				className="font-display text-ink-disabled uppercase mb-4"
 				style={{ fontSize: 10, letterSpacing: "0.25em" }}
@@ -184,9 +168,9 @@ function ProductForm({
 						placeholder="Opcional"
 					/>
 				</Field>
-				<div className="flex flex-col gap-2" style={{ paddingTop: 20 }}>
+				<div className="flex flex-col gap-3" style={{ paddingTop: 20 }}>
 					<label
-						className="flex items-center gap-2 cursor-pointer"
+						className="flex items-center gap-2.5 cursor-pointer"
 						style={{ fontSize: 13, color: "#e5e5e5" }}
 					>
 						<input
@@ -200,7 +184,7 @@ function ProductForm({
 						Disponible
 					</label>
 					<label
-						className="flex items-center gap-2 cursor-pointer"
+						className="flex items-center gap-2.5 cursor-pointer"
 						style={{ fontSize: 13, color: "#e5e5e5" }}
 					>
 						<input
@@ -215,7 +199,7 @@ function ProductForm({
 					</label>
 				</div>
 			</div>
-			<div className="flex items-center gap-2 mt-4">
+			<div className="flex items-center gap-2 mt-5">
 				<button
 					className="btn-primary"
 					onClick={onSave}
@@ -267,10 +251,7 @@ function CategoryForm({
 	editId: string | null;
 }) {
 	return (
-		<div
-			className="card-sm animate-slide-up"
-			style={{ padding: 20, marginBottom: 16 }}
-		>
+		<div className="card-gold animate-slide-up p-5 mb-5">
 			<div
 				className="font-display text-ink-disabled uppercase mb-4"
 				style={{ fontSize: 10, letterSpacing: "0.25em" }}
@@ -307,7 +288,7 @@ function CategoryForm({
 					/>
 				</Field>
 			</div>
-			<div className="flex items-center gap-2 mt-4">
+			<div className="flex items-center gap-2 mt-5">
 				<button
 					className="btn-primary"
 					onClick={onSave}
@@ -509,37 +490,51 @@ export default function MenuPage() {
 		categories.find((c) => c.id === catId)?.name ?? "Sin cat.";
 
 	return (
-		<div className="p-5 md:p-7">
-			{/* Header */}
+		<div
+			className="min-h-screen p-5 md:p-7 pb-10"
+			style={{ background: "var(--s0)" }}
+		>
+			{/* ── Header ── */}
 			<div className="flex flex-wrap items-center justify-between gap-3 mb-7">
 				<div>
-					<h1
-						className="font-display text-ink-primary"
-						style={{ fontSize: 20, fontWeight: 700 }}
-					>
-						Gestión de Menú
-					</h1>
-					<div
-						className="font-body text-ink-disabled mt-1"
-						style={{ fontSize: 12 }}
-					>
+					<div className="flex items-center gap-2 mb-1">
+						<div
+							style={{
+								width: 3,
+								height: 20,
+								borderRadius: 3,
+								background: "var(--gold)",
+							}}
+						/>
+						<h1
+							className="font-display text-ink-primary"
+							style={{ fontSize: 22, fontWeight: 700 }}
+						>
+							Gestión de Menú
+						</h1>
+					</div>
+					<div className="font-body text-ink-disabled" style={{ fontSize: 12 }}>
 						Productos y categorías
 					</div>
 				</div>
 
 				{/* Tabs */}
-				<div className="flex items-center gap-1">
+				<div
+					className="flex items-center gap-1 p-1 rounded-xl"
+					style={{ background: "var(--s2)", border: "1px solid var(--s3)" }}
+				>
 					{(["products", "categories"] as const).map((tab) => (
 						<button
 							key={tab}
 							onClick={() => setActiveTab(tab)}
+							className="transition-all duration-150"
 							style={{
-								padding: "8px 20px",
+								padding: "7px 20px",
 								borderRadius: 10,
 								border:
 									activeTab === tab
 										? "1px solid rgba(245,158,11,0.3)"
-										: "1px solid var(--s3)",
+										: "1px solid transparent",
 								background:
 									activeTab === tab ? "rgba(245,158,11,0.1)" : "transparent",
 								color: activeTab === tab ? "#f59e0b" : "#666",
@@ -549,16 +544,19 @@ export default function MenuPage() {
 								letterSpacing: "0.15em",
 								textTransform: "uppercase",
 								cursor: "pointer",
-								transition: "all 0.15s",
 							}}
 						>
-							{tab === "products" ? "Productos" : "Categorías"}
+							{tab === "products"
+								? `Productos (${products.length})`
+								: `Categorías (${categories.length})`}
 						</button>
 					))}
 				</div>
 			</div>
 
-			{/* Products tab */}
+			<div className="divider-gold mb-7" />
+
+			{/* ── Products tab ── */}
 			{activeTab === "products" && (
 				<div>
 					<SectionHeader
@@ -567,55 +565,39 @@ export default function MenuPage() {
 						onAdd={openNewProduct}
 					/>
 
-					{/* Category filter */}
-					<div className="flex items-center gap-2 mb-4 flex-wrap">
-						<button
-							onClick={() => setCatFilter("all")}
-							style={{
-								padding: "5px 14px",
-								borderRadius: 8,
-								border:
-									catFilter === "all"
-										? "1px solid rgba(245,158,11,0.3)"
-										: "1px solid var(--s3)",
-								background:
-									catFilter === "all" ? "rgba(245,158,11,0.1)" : "transparent",
-								color: catFilter === "all" ? "#f59e0b" : "#555",
-								fontFamily: "var(--font-syne)",
-								fontWeight: 600,
-								fontSize: 10,
-								letterSpacing: "0.1em",
-								textTransform: "uppercase",
-								cursor: "pointer",
-							}}
-						>
-							Todos
-						</button>
-						{categories.map((c) => (
-							<button
-								key={c.id}
-								onClick={() => setCatFilter(c.id)}
-								style={{
-									padding: "5px 14px",
-									borderRadius: 8,
-									border:
-										catFilter === c.id
+					{/* Category filter pills */}
+					<div className="flex items-center gap-2 mb-5 flex-wrap">
+						{(["all", ...categories.map((c) => c.id)] as const).map((id) => {
+							const isAll = id === "all";
+							const cat = categories.find((c) => c.id === id);
+							const isActive = catFilter === id;
+							return (
+								<button
+									key={id}
+									onClick={() => setCatFilter(id)}
+									className="transition-all duration-150"
+									style={{
+										padding: "5px 14px",
+										borderRadius: 8,
+										border: isActive
 											? "1px solid rgba(245,158,11,0.3)"
 											: "1px solid var(--s3)",
-									background:
-										catFilter === c.id ? "rgba(245,158,11,0.1)" : "transparent",
-									color: catFilter === c.id ? "#f59e0b" : "#555",
-									fontFamily: "var(--font-syne)",
-									fontWeight: 600,
-									fontSize: 10,
-									letterSpacing: "0.1em",
-									textTransform: "uppercase",
-									cursor: "pointer",
-								}}
-							>
-								{c.icon} {c.name}
-							</button>
-						))}
+										background: isActive
+											? "rgba(245,158,11,0.1)"
+											: "transparent",
+										color: isActive ? "#f59e0b" : "#555",
+										fontFamily: "var(--font-syne)",
+										fontWeight: 600,
+										fontSize: 10,
+										letterSpacing: "0.1em",
+										textTransform: "uppercase",
+										cursor: "pointer",
+									}}
+								>
+									{isAll ? "Todos" : `${cat?.icon ?? ""} ${cat?.name ?? ""}`}
+								</button>
+							);
+						})}
 					</div>
 
 					{showProductForm && (
@@ -633,7 +615,7 @@ export default function MenuPage() {
 						/>
 					)}
 
-					<div className="card" style={{ padding: 0, overflow: "hidden" }}>
+					<div className="card overflow-hidden">
 						{filteredProducts.length === 0 ? (
 							<div
 								className="text-center py-12 text-ink-disabled font-body"
@@ -645,9 +627,8 @@ export default function MenuPage() {
 							filteredProducts.map((p, idx) => (
 								<div
 									key={p.id}
-									className="flex items-center gap-4"
+									className="flex items-center gap-4 px-5 py-3 hover:bg-[var(--s2)] transition-all duration-150"
 									style={{
-										padding: "12px 20px",
 										borderBottom:
 											idx < filteredProducts.length - 1
 												? "1px solid var(--s3)"
@@ -657,10 +638,11 @@ export default function MenuPage() {
 									{/* Available toggle */}
 									<button
 										onClick={() => toggleAvailable(p)}
+										className="transition-all duration-150"
 										style={{
-											width: 18,
-											height: 18,
-											borderRadius: 5,
+											width: 20,
+											height: 20,
+											borderRadius: 6,
 											border: `2px solid ${p.isAvailable ? "#10b981" : "var(--s4)"}`,
 											background: p.isAvailable
 												? "rgba(16,185,129,0.2)"
@@ -670,12 +652,11 @@ export default function MenuPage() {
 											alignItems: "center",
 											justifyContent: "center",
 											flexShrink: 0,
-											transition: "all 0.15s",
 										}}
 										title={p.isAvailable ? "Marcar no disponible" : "Activar"}
 									>
 										{p.isAvailable && (
-											<Check size={10} style={{ color: "#10b981" }} />
+											<Check size={11} style={{ color: "#10b981" }} />
 										)}
 									</button>
 
@@ -709,19 +690,19 @@ export default function MenuPage() {
 										)}
 									</div>
 
-									{/* Category */}
+									{/* Category badge */}
 									<span
-										className="font-display text-ink-disabled uppercase"
+										className="font-display text-ink-disabled uppercase hidden md:block"
 										style={{ fontSize: 10, letterSpacing: "0.1em" }}
 									>
 										{getCategoryName(p.categoryId)}
 									</span>
 
-									{/* Target */}
+									{/* Target badge */}
 									<span
 										style={{
 											fontSize: 9,
-											padding: "2px 8px",
+											padding: "3px 9px",
 											borderRadius: 99,
 											fontFamily: "var(--font-syne)",
 											fontWeight: 600,
@@ -747,20 +728,22 @@ export default function MenuPage() {
 									</span>
 
 									{/* Actions */}
-									<button
-										className="btn-ghost"
-										style={{ padding: "6px 10px" }}
-										onClick={() => openEditProduct(p)}
-									>
-										<Pencil size={13} />
-									</button>
-									<button
-										className="btn-ghost"
-										style={{ padding: "6px 10px", color: "#ef4444" }}
-										onClick={() => deleteProduct(p.id)}
-									>
-										<Trash2 size={13} />
-									</button>
+									<div className="flex items-center gap-1">
+										<button
+											className="btn-ghost transition-all duration-150"
+											style={{ padding: "6px 10px" }}
+											onClick={() => openEditProduct(p)}
+										>
+											<Pencil size={13} />
+										</button>
+										<button
+											className="btn-ghost transition-all duration-150"
+											style={{ padding: "6px 10px", color: "#ef4444" }}
+											onClick={() => deleteProduct(p.id)}
+										>
+											<Trash2 size={13} />
+										</button>
+									</div>
 								</div>
 							))
 						)}
@@ -768,7 +751,7 @@ export default function MenuPage() {
 				</div>
 			)}
 
-			{/* Categories tab */}
+			{/* ── Categories tab ── */}
 			{activeTab === "categories" && (
 				<div>
 					<SectionHeader
@@ -791,10 +774,10 @@ export default function MenuPage() {
 						/>
 					)}
 
-					<div className="card" style={{ padding: 0, overflow: "hidden" }}>
+					<div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
 						{categories.length === 0 ? (
 							<div
-								className="text-center py-12 text-ink-disabled font-body"
+								className="text-center py-12 text-ink-disabled font-body col-span-3"
 								style={{ fontSize: 13 }}
 							>
 								No hay categorías
@@ -803,50 +786,72 @@ export default function MenuPage() {
 							categories
 								.slice()
 								.sort((a, b) => a.order - b.order)
-								.map((c, idx) => (
-									<div
-										key={c.id}
-										className="flex items-center gap-4"
-										style={{
-											padding: "14px 20px",
-											borderBottom:
-												idx < categories.length - 1
-													? "1px solid var(--s3)"
-													: "none",
-										}}
-									>
-										<span style={{ fontSize: 24 }}>{c.icon}</span>
-										<div style={{ flex: 1 }}>
+								.map((c) => {
+									const productCount = products.filter(
+										(p) => p.categoryId === c.id,
+									).length;
+									return (
+										<div
+											key={c.id}
+											className="card p-4 flex items-center gap-4 hover:border-[rgba(245,158,11,0.3)] transition-all duration-150"
+										>
+											{/* Icon circle */}
 											<div
-												className="font-body text-ink-primary"
-												style={{ fontSize: 14, fontWeight: 500 }}
+												style={{
+													width: 48,
+													height: 48,
+													borderRadius: 14,
+													background: "var(--s3)",
+													border: "1px solid var(--s4)",
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+													flexShrink: 0,
+													fontSize: 22,
+												}}
 											>
-												{c.name}
+												{c.icon}
 											</div>
-											<div
-												className="font-body text-ink-disabled"
-												style={{ fontSize: 11, marginTop: 1 }}
-											>
-												{products.filter((p) => p.categoryId === c.id).length}{" "}
-												productos · orden {c.order}
+
+											<div style={{ flex: 1, minWidth: 0 }}>
+												<div
+													className="font-body text-ink-primary"
+													style={{ fontSize: 14, fontWeight: 600 }}
+												>
+													{c.name}
+												</div>
+												<div className="flex items-center gap-2 mt-1">
+													<span className="badge badge-occupied">
+														{productCount} productos
+													</span>
+													<span
+														className="font-display text-ink-disabled uppercase"
+														style={{ fontSize: 9, letterSpacing: "0.1em" }}
+													>
+														orden {c.order}
+													</span>
+												</div>
+											</div>
+
+											<div className="flex items-center gap-1">
+												<button
+													className="btn-ghost transition-all duration-150"
+													style={{ padding: "6px 10px" }}
+													onClick={() => openEditCat(c)}
+												>
+													<Pencil size={13} />
+												</button>
+												<button
+													className="btn-ghost transition-all duration-150"
+													style={{ padding: "6px 10px", color: "#ef4444" }}
+													onClick={() => deleteCat(c.id)}
+												>
+													<Trash2 size={13} />
+												</button>
 											</div>
 										</div>
-										<button
-											className="btn-ghost"
-											style={{ padding: "6px 10px" }}
-											onClick={() => openEditCat(c)}
-										>
-											<Pencil size={13} />
-										</button>
-										<button
-											className="btn-ghost"
-											style={{ padding: "6px 10px", color: "#ef4444" }}
-											onClick={() => deleteCat(c.id)}
-										>
-											<Trash2 size={13} />
-										</button>
-									</div>
-								))
+									);
+								})
 						)}
 					</div>
 				</div>

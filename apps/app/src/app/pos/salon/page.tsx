@@ -20,21 +20,29 @@ import { apiFetch } from "@/lib/api";
 
 function POSSidebar({ activePath }: { activePath: string }) {
 	return (
-		<nav className="sidebar" style={{ width: 220 }}>
+		<nav
+			className="sidebar top-accent"
+			style={{ width: 240, position: "relative" }}
+		>
 			<div
 				style={{
-					padding: "22px 20px 18px",
+					padding: "24px 20px 18px",
 					borderBottom: "1px solid var(--s3)",
 				}}
 			>
 				<img
 					src="/logo.svg"
 					alt="My Way"
-					style={{ height: 22, width: 'auto', filter: 'invert(1)', display: 'block' }}
+					style={{
+						height: 22,
+						width: "auto",
+						filter: "invert(1)",
+						display: "block",
+					}}
 				/>
 				<div
 					className="font-display text-ink-disabled uppercase"
-					style={{ fontSize: 9, letterSpacing: "0.35em", marginTop: 3 }}
+					style={{ fontSize: 9, letterSpacing: "0.35em", marginTop: 5 }}
 				>
 					Punto de Venta
 				</div>
@@ -44,6 +52,11 @@ function POSSidebar({ activePath }: { activePath: string }) {
 				<Link
 					href="/pos/salon"
 					className={`sidebar-item ${activePath === "salon" ? "active" : ""}`}
+					style={
+						activePath === "salon"
+							? { borderLeft: "2px solid var(--gold)", paddingLeft: 14 }
+							: {}
+					}
 				>
 					<LayoutGrid size={15} />
 					Salón
@@ -51,44 +64,57 @@ function POSSidebar({ activePath }: { activePath: string }) {
 				<Link
 					href="/pos/orders"
 					className={`sidebar-item ${activePath === "orders" ? "active" : ""}`}
+					style={
+						activePath === "orders"
+							? { borderLeft: "2px solid var(--gold)", paddingLeft: 14 }
+							: {}
+					}
 				>
 					<ListOrdered size={15} />
 					Pedidos
 				</Link>
 			</div>
 
-			<div style={{ padding: "14px 16px", borderTop: "1px solid var(--s3)" }}>
-				<div className="flex items-center gap-2 mb-3">
+			<div
+				style={{ padding: "12px 12px 16px", borderTop: "1px solid var(--s3)" }}
+			>
+				<div
+					className="flex items-center gap-2.5 rounded-xl mb-2"
+					style={{
+						padding: "10px 12px",
+						background: "var(--s2)",
+						border: "1px solid var(--s3)",
+					}}
+				>
 					<div
+						className="flex items-center justify-center flex-shrink-0"
 						style={{
-							width: 32,
-							height: 32,
+							width: 34,
+							height: 34,
 							borderRadius: "50%",
-							background: "#f59e0b",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							fontFamily: "var(--font-syne)",
-							fontWeight: 700,
-							fontSize: 10,
-							color: "#080808",
-							flexShrink: 0,
+							background: "rgba(245,158,11,0.15)",
+							border: "1px solid rgba(245,158,11,0.3)",
 						}}
 					>
-						VP
-					</div>
-					<div>
-						<div
-							className="font-display text-ink-primary"
-							style={{ fontSize: 11, fontWeight: 600 }}
+						<span
+							className="font-kds text-brand-500"
+							style={{ fontSize: 13, lineHeight: 1 }}
 						>
-							Cajero
+							VP
+						</span>
+					</div>
+					<div className="flex-1 min-w-0">
+						<div
+							className="font-display text-ink-primary truncate"
+							style={{ fontSize: 12, fontWeight: 600 }}
+						>
+							Valentina Paz
 						</div>
 						<div
-							className="text-ink-disabled font-body"
-							style={{ fontSize: 10, textTransform: "capitalize" }}
+							className="font-body text-ink-tertiary"
+							style={{ fontSize: 10 }}
 						>
-							Turno activo
+							Cajera
 						</div>
 					</div>
 				</div>
@@ -277,12 +303,15 @@ export default function SalonPage() {
 		orders.find((o) => o.tableId === tableId && o.status !== "closed");
 
 	return (
-		<div className="min-h-screen bg-surface-0" style={{ display: "flex" }}>
+		<div
+			className="min-h-screen bg-surface-0 noise-overlay"
+			style={{ display: "flex" }}
+		>
 			<POSSidebar activePath="salon" />
 
 			<div
 				className="pos-main-content flex flex-col"
-				style={{ marginLeft: 220, flex: 1, minHeight: "100vh" }}
+				style={{ marginLeft: 240, flex: 1, minHeight: "100vh" }}
 			>
 				<style>{`
         @media (max-width: 900px) {

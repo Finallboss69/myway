@@ -23,6 +23,23 @@ export async function GET(
 	}
 }
 
+export async function DELETE(
+	_request: NextRequest,
+	{ params }: { params: Promise<{ id: string }> },
+) {
+	try {
+		const { id } = await params;
+		await db.table.delete({ where: { id } });
+		return NextResponse.json({ success: true });
+	} catch (error) {
+		console.error("[tables/[id] DELETE]", error);
+		return NextResponse.json(
+			{ error: "Failed to delete table" },
+			{ status: 500 },
+		);
+	}
+}
+
 export async function PATCH(
 	request: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },

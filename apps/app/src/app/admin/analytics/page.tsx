@@ -170,14 +170,14 @@ function KpiRow({
 			{kpis.map(({ label, value, delta, icon: Icon, accent }) => (
 				<div
 					key={label}
-					className="stat-card"
+					className="card p-5"
 					style={{
 						position: "relative",
 						overflow: "hidden",
 						...(accent
 							? {
 									borderColor: "rgba(245,158,11,0.25)",
-									boxShadow: "0 0 16px rgba(245,158,11,0.08)",
+									boxShadow: "0 0 24px rgba(245,158,11,0.08)",
 								}
 							: {}),
 					}}
@@ -194,7 +194,7 @@ function KpiRow({
 						/>
 					)}
 					<div
-						className="flex items-center justify-between mb-3"
+						className="flex items-center justify-between mb-4"
 						style={{ position: "relative", zIndex: 1 }}
 					>
 						<span
@@ -205,27 +205,29 @@ function KpiRow({
 						</span>
 						<div
 							style={{
-								width: 28,
-								height: 28,
-								borderRadius: 8,
+								width: 32,
+								height: 32,
+								borderRadius: 9,
 								background: accent ? "rgba(245,158,11,0.2)" : "var(--s3)",
-								border: accent ? "none" : "1px solid var(--s4)",
+								border: accent
+									? "1px solid rgba(245,158,11,0.3)"
+									: "1px solid var(--s4)",
 								display: "flex",
 								alignItems: "center",
 								justifyContent: "center",
 							}}
 						>
-							<Icon size={13} style={{ color: accent ? "#f59e0b" : "#888" }} />
+							<Icon size={14} style={{ color: accent ? "#f59e0b" : "#888" }} />
 						</div>
 					</div>
 					<div style={{ position: "relative", zIndex: 1 }}>
 						<div
 							className="font-kds"
 							style={{
-								fontSize: accent ? 34 : 28,
+								fontSize: accent ? 36 : 30,
 								lineHeight: 1,
 								color: accent ? "#f59e0b" : "#e5e5e5",
-								marginBottom: 6,
+								marginBottom: 8,
 							}}
 						>
 							{value}
@@ -1022,20 +1024,30 @@ export default function AnalyticsPage() {
 	const data = getPeriodData(period, todayRevenue, todayOrderCount);
 
 	return (
-		<div style={{ minHeight: "100vh" }} className="p-5 md:p-7">
+		<div
+			className="min-h-screen p-5 md:p-7 pb-10"
+			style={{ background: "var(--s0)" }}
+		>
 			{/* Header with period tabs */}
 			<div className="flex flex-wrap items-center justify-between gap-3 mb-7">
 				<div>
-					<h1
-						className="font-display text-ink-primary"
-						style={{ fontSize: 20, fontWeight: 700 }}
-					>
-						Analíticas
-					</h1>
-					<div
-						className="font-body text-ink-disabled mt-1"
-						style={{ fontSize: 12 }}
-					>
+					<div className="flex items-center gap-2 mb-1">
+						<div
+							style={{
+								width: 3,
+								height: 20,
+								borderRadius: 3,
+								background: "var(--gold)",
+							}}
+						/>
+						<h1
+							className="font-display text-ink-primary"
+							style={{ fontSize: 22, fontWeight: 700 }}
+						>
+							Analíticas
+						</h1>
+					</div>
+					<div className="font-body text-ink-disabled" style={{ fontSize: 12 }}>
 						Métricas de rendimiento
 					</div>
 				</div>
@@ -1068,6 +1080,8 @@ export default function AnalyticsPage() {
 					))}
 				</div>
 			</div>
+
+			<div className="divider-gold mb-7" />
 
 			<div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 				<KpiRow

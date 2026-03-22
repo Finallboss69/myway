@@ -422,12 +422,12 @@ function StatsRow({ orders }: { orders: DeliveryOrder[] }) {
 	return (
 		<div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
 			<div
-				className="stat-card col-span-2 sm:col-span-1 md:col-span-2"
+				className="card col-span-2 sm:col-span-1 md:col-span-2 p-5"
 				style={{
 					position: "relative",
 					overflow: "hidden",
 					borderColor: "rgba(245,158,11,0.25)",
-					boxShadow: "0 0 12px rgba(245,158,11,0.06)",
+					boxShadow: "0 0 24px rgba(245,158,11,0.06)",
 				}}
 			>
 				<div
@@ -481,7 +481,7 @@ function StatsRow({ orders }: { orders: DeliveryOrder[] }) {
 				{ label: "En camino", count: onTheWay, color: "#f59e0b" },
 				{ label: "Entregados", count: delivered, color: "#10b981" },
 			].map(({ label, count, color }) => (
-				<div key={label} className="stat-card flex flex-col gap-2">
+				<div key={label} className="card p-4 flex flex-col gap-2">
 					<div className="flex items-center gap-2">
 						<span
 							style={{
@@ -761,20 +761,30 @@ export default function DeliveryPage() {
 			: orders.filter((o) => o.status === key).length;
 
 	return (
-		<div style={{ minHeight: "100vh" }} className="p-5 md:p-7">
+		<div
+			className="min-h-screen p-5 md:p-7 pb-10"
+			style={{ background: "var(--s0)" }}
+		>
 			{/* Header */}
 			<div className="flex items-center justify-between mb-7">
 				<div>
-					<h1
-						className="font-display text-ink-primary"
-						style={{ fontSize: 20, fontWeight: 700 }}
-					>
-						Delivery
-					</h1>
-					<div
-						className="font-body text-ink-disabled mt-1"
-						style={{ fontSize: 12 }}
-					>
+					<div className="flex items-center gap-2 mb-1">
+						<div
+							style={{
+								width: 3,
+								height: 20,
+								borderRadius: 3,
+								background: "var(--gold)",
+							}}
+						/>
+						<h1
+							className="font-display text-ink-primary"
+							style={{ fontSize: 22, fontWeight: 700 }}
+						>
+							Delivery
+						</h1>
+					</div>
+					<div className="font-body text-ink-disabled" style={{ fontSize: 12 }}>
 						{activeOrders.length} pedidos activos
 					</div>
 				</div>
@@ -787,6 +797,8 @@ export default function DeliveryPage() {
 					Nueva orden
 				</button>
 			</div>
+
+			<div className="divider-gold mb-7" />
 
 			<div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 				<StatsRow orders={orders} />

@@ -7,18 +7,16 @@ import {
 	CheckCircle2,
 	Package,
 	TrendingDown,
-	DollarSign,
 	Search,
 	Plus,
+	Minus,
 	RefreshCw,
 	ChevronRight,
-	FlaskConical,
 	Zap,
 	ArrowRight,
-	Sliders,
+	Wine,
 } from "lucide-react";
 import Link from "next/link";
-import { formatCurrency } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,7 +41,7 @@ function getStatus(ing: Ingredient): IngStatus {
 
 function stockPct(ing: Ingredient): number {
 	const max = Math.max(ing.alertThreshold * 3, ing.stockCurrent);
-	return Math.round((ing.stockCurrent / max) * 100);
+	return Math.min(100, Math.round((ing.stockCurrent / max) * 100));
 }
 
 function formatUnit(value: number, unit: string): string {
@@ -63,11 +61,11 @@ function BarNav() {
 			{/* Desktop sidebar */}
 			<aside className="hidden lg:flex w-56 shrink-0 flex-col gap-1 py-6 px-3 bg-surface-1 border-r border-surface-3 min-h-screen sticky top-0 self-start h-screen overflow-y-auto">
 				<div className="flex items-center gap-2.5 px-3 mb-6">
-					<div className="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-lg leading-none">
-						🍸
+					<div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+						<Wine className="w-4 h-4 text-blue-400" />
 					</div>
 					<div>
-						<p className="font-display text-xs font-bold uppercase tracking-widest text-brand-500">
+						<p className="font-display text-xs font-bold uppercase tracking-widest text-blue-400">
 							Bar
 						</p>
 						<p className="font-body text-xs text-ink-tertiary">My Way</p>
@@ -84,7 +82,7 @@ function BarNav() {
 				</Link>
 				<Link
 					href="/bar/stock"
-					className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-semibold transition-all bg-brand-500/10 text-brand-500 border border-brand-500/20"
+					className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-semibold transition-all bg-blue-500/10 text-blue-400 border border-blue-500/20"
 				>
 					<Package className="w-4 h-4" />
 					Stock
@@ -104,10 +102,10 @@ function BarNav() {
 			{/* Mobile top nav bar */}
 			<nav className="lg:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-surface-1/95 backdrop-blur-md border-b border-surface-3">
 				<div className="flex items-center gap-2 mr-auto">
-					<div className="w-8 h-8 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-base leading-none">
-						🍸
+					<div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+						<Wine className="w-4 h-4 text-blue-400" />
 					</div>
-					<span className="font-display text-xs font-bold uppercase tracking-widest text-brand-500">
+					<span className="font-display text-xs font-bold uppercase tracking-widest text-blue-400">
 						Bar
 					</span>
 				</div>
@@ -120,7 +118,7 @@ function BarNav() {
 				</Link>
 				<Link
 					href="/bar/stock"
-					className="flex items-center gap-2 px-3 min-h-[40px] rounded-xl text-xs font-display font-semibold bg-brand-500/10 text-brand-500 border border-brand-500/20"
+					className="flex items-center gap-2 px-3 min-h-[40px] rounded-xl text-xs font-display font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20"
 				>
 					<Package className="w-3.5 h-3.5" />
 					Stock
@@ -130,31 +128,7 @@ function BarNav() {
 	);
 }
 
-// ─── Status chip ──────────────────────────────────────────────────────────────
-
-function StatusChip({ status }: { status: IngStatus }) {
-	const config = {
-		ok: { label: "OK", cls: "badge-ready", icon: <CheckCircle2 size={11} /> },
-		low: {
-			label: "BAJO",
-			cls: "badge-pending",
-			icon: <TrendingDown size={11} />,
-		},
-		critical: {
-			label: "CRÍTICO",
-			cls: "badge-cancelled",
-			icon: <AlertTriangle size={11} />,
-		},
-	}[status];
-	return (
-		<span className={clsx("badge", config.cls)}>
-			{config.icon}
-			{config.label}
-		</span>
-	);
-}
-
-// ─── Stock bar ────────────────────────────────────────────────────────────────
+// ─── Stock progress bar ───────────────────────────────────────────────────────
 
 function StockBar({ pct, status }: { pct: number; status: IngStatus }) {
 	const fill = {
@@ -163,7 +137,7 @@ function StockBar({ pct, status }: { pct: number; status: IngStatus }) {
 		critical: "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]",
 	}[status];
 	return (
-		<div className="w-full h-2 bg-surface-3 rounded-full overflow-hidden">
+		<div className="w-full h-2.5 bg-surface-3 rounded-full overflow-hidden">
 			<div
 				className={clsx(
 					"h-full rounded-full transition-all duration-500",
@@ -175,144 +149,140 @@ function StockBar({ pct, status }: { pct: number; status: IngStatus }) {
 	);
 }
 
-// ─── Ingredient card (mobile/tablet card view) ────────────────────────────────
+// ─── Ingredient card ──────────────────────────────────────────────────────────
 
 function IngredientCard({
 	ing,
 	onAdjust,
+	onQuickAdjust,
 }: {
 	ing: Ingredient;
 	onAdjust: (ing: Ingredient) => void;
+	onQuickAdjust: (id: string, delta: number, current: number) => void;
 }) {
 	const status = getStatus(ing);
 	const pct = stockPct(ing);
 
+	const borderAccent = {
+		ok: "border-surface-3 hover:border-emerald-500/20",
+		low: "border-amber-500/25 hover:border-amber-500/40",
+		critical: "border-red-500/30 hover:border-red-500/50",
+	}[status];
+
+	const bgAccent = {
+		ok: "bg-surface-1",
+		low: "bg-amber-500/[0.03]",
+		critical: "bg-red-500/[0.04]",
+	}[status];
+
+	const dotCls = {
+		ok: "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]",
+		low: "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.5)]",
+		critical: "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.7)] animate-pulse",
+	}[status];
+
 	return (
 		<div
 			className={clsx(
-				"flex flex-col gap-3 p-4 rounded-2xl border transition-colors",
-				status === "critical"
-					? "bg-red-500/[0.04] border-red-500/25 hover:bg-red-500/[0.07]"
-					: status === "low"
-						? "bg-amber-500/[0.03] border-amber-500/20 hover:bg-amber-500/[0.06]"
-						: "bg-surface-1 border-surface-3 hover:bg-surface-2/50",
+				"flex flex-col gap-3 p-4 rounded-2xl border transition-all duration-200",
+				bgAccent,
+				borderAccent,
 			)}
 		>
-			{/* Header row */}
+			{/* Header row: name + status badge */}
 			<div className="flex items-start justify-between gap-2">
 				<div className="flex items-center gap-2.5 min-w-0">
-					{status === "critical" && (
-						<AlertTriangle size={14} className="text-red-400 shrink-0" />
-					)}
-					{status === "low" && (
-						<TrendingDown size={14} className="text-amber-400 shrink-0" />
-					)}
-					{status === "ok" && (
-						<CheckCircle2 size={14} className="text-emerald-400/50 shrink-0" />
-					)}
-					<span className="font-display text-sm font-bold text-ink-primary truncate">
+					<span
+						className={clsx("w-2.5 h-2.5 rounded-full shrink-0 mt-0.5", dotCls)}
+					/>
+					<span className="font-display text-sm font-bold text-ink-primary truncate uppercase tracking-wide">
 						{ing.name}
 					</span>
 				</div>
-				<StatusChip status={status} />
+				{status === "critical" ? (
+					<span className="badge badge-cancelled shrink-0">
+						<AlertTriangle className="w-2.5 h-2.5" />
+						Crítico
+					</span>
+				) : status === "low" ? (
+					<span className="badge badge-pending shrink-0">
+						<TrendingDown className="w-2.5 h-2.5" />
+						Bajo
+					</span>
+				) : (
+					<span className="badge badge-ready shrink-0">
+						<CheckCircle2 className="w-2.5 h-2.5" />
+						OK
+					</span>
+				)}
 			</div>
 
-			{/* Stock value + bar */}
-			<div className="flex flex-col gap-1.5">
-				<div className="flex items-baseline justify-between">
-					<span
-						className={clsx(
-							"font-mono font-bold text-sm",
-							status === "critical"
-								? "text-red-400"
-								: status === "low"
-									? "text-amber-400"
-									: "text-ink-primary",
-						)}
-					>
-						{ing.stockCurrent.toLocaleString("es-AR")}
-					</span>
-					<span className="text-ink-tertiary text-xs font-body">
-						{ing.unit}
-					</span>
-				</div>
-				<StockBar pct={pct} status={status} />
-				<div className="flex items-center justify-between text-xs">
-					<span className="font-body text-ink-tertiary">
-						Umbral: {ing.alertThreshold.toLocaleString("es-AR")} {ing.unit}
-					</span>
-					<span className="font-body text-ink-tertiary">
-						{ing.costPerUnit > 0 && (
-							<>
-								$
-								{ing.costPerUnit.toLocaleString("es-AR", {
-									minimumFractionDigits: 2,
-								})}
-								/{ing.unit}
-							</>
-						)}
-					</span>
-				</div>
-			</div>
-
-			{/* Action button */}
-			<button
-				className="flex items-center justify-center gap-2 min-h-[44px] rounded-xl border border-surface-3 bg-surface-2 text-ink-secondary text-xs font-display font-bold uppercase tracking-wide hover:text-brand-500 hover:border-brand-500/30 transition-all active:scale-95"
-				onClick={() => onAdjust(ing)}
-			>
-				<Sliders size={14} />
-				Ajustar Stock
-			</button>
-		</div>
-	);
-}
-
-// ─── Stat card ────────────────────────────────────────────────────────────────
-
-function StatCard({
-	icon,
-	label,
-	value,
-	sub,
-	accent,
-}: {
-	icon: React.ReactNode;
-	label: string;
-	value: string;
-	sub?: string;
-	accent?: "gold" | "red" | "green";
-}) {
-	const valueColor =
-		{
-			gold: "text-brand-500",
-			red: "text-red-400",
-			green: "text-emerald-400",
-		}[accent ?? "gold"] ?? "text-ink-primary";
-
-	return (
-		<div className="card-sm p-3 sm:p-4 flex flex-col gap-2 sm:gap-2.5">
-			<div className="flex items-center justify-between">
-				<span className="font-display text-[9px] sm:text-[10px] uppercase tracking-widest text-ink-tertiary">
-					{label}
-				</span>
-				<div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-surface-2 border border-surface-3 flex items-center justify-center text-ink-secondary">
-					{icon}
-				</div>
-			</div>
-			<div>
+			{/* Large KDS stock number */}
+			<div className="flex items-baseline gap-2">
 				<span
 					className={clsx(
-						"font-kds text-3xl sm:text-4xl leading-none",
-						valueColor,
+						"font-kds leading-none",
+						status === "critical"
+							? "text-red-400 text-5xl"
+							: status === "low"
+								? "text-amber-400 text-5xl"
+								: "text-ink-primary text-5xl",
 					)}
 				>
-					{value}
+					{ing.stockCurrent.toLocaleString("es-AR")}
 				</span>
-				{sub && (
-					<div className="text-ink-tertiary font-body text-xs mt-1 hidden sm:block">
-						{sub}
-					</div>
-				)}
+				<span className="font-display text-xs text-ink-tertiary uppercase tracking-wider">
+					{ing.unit}
+				</span>
+			</div>
+
+			{/* Progress bar + threshold */}
+			<div className="flex flex-col gap-1.5">
+				<StockBar pct={pct} status={status} />
+				<div className="flex items-center justify-between">
+					<span className="font-body text-xs text-ink-tertiary">
+						Umbral: {formatUnit(ing.alertThreshold, ing.unit)}
+					</span>
+					<span
+						className={clsx(
+							"font-kds text-lg leading-none",
+							pct <= 30
+								? "text-red-400"
+								: pct <= 60
+									? "text-amber-400"
+									: "text-emerald-400",
+						)}
+					>
+						{pct}
+						<span className="text-xs font-body text-ink-tertiary ml-0.5">
+							%
+						</span>
+					</span>
+				</div>
+			</div>
+
+			{/* Quick +/- controls */}
+			<div className="flex items-center gap-2">
+				<button
+					className="flex items-center justify-center w-10 h-10 rounded-xl bg-surface-3 border border-surface-4 text-ink-secondary hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all active:scale-95"
+					onClick={() => onQuickAdjust(ing.id, -1, ing.stockCurrent)}
+					title="Restar 1"
+				>
+					<Minus className="w-4 h-4" />
+				</button>
+				<button
+					className="flex items-center justify-center flex-1 h-10 rounded-xl bg-surface-2 border border-surface-3 text-xs font-display font-bold uppercase tracking-wide text-ink-secondary hover:text-blue-400 hover:border-blue-500/30 transition-all active:scale-95"
+					onClick={() => onAdjust(ing)}
+				>
+					Ajustar
+				</button>
+				<button
+					className="flex items-center justify-center w-10 h-10 rounded-xl bg-surface-3 border border-surface-4 text-ink-secondary hover:text-emerald-400 hover:border-emerald-500/30 hover:bg-emerald-500/10 transition-all active:scale-95"
+					onClick={() => onQuickAdjust(ing.id, 1, ing.stockCurrent)}
+					title="Sumar 1"
+				>
+					<Plus className="w-4 h-4" />
+				</button>
 			</div>
 		</div>
 	);
@@ -341,6 +311,8 @@ function AdjustModal({
 		onClose();
 	}
 
+	const status = getStatus(ingredient);
+
 	return (
 		<div
 			className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in px-4"
@@ -352,9 +324,14 @@ function AdjustModal({
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="flex items-center justify-between">
-					<h3 className="font-display font-bold text-ink-primary text-sm uppercase tracking-wider">
-						Ajustar Stock
-					</h3>
+					<div className="flex items-center gap-3">
+						<div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+							<Wine className="w-4 h-4 text-blue-400" />
+						</div>
+						<h3 className="font-display font-bold text-ink-primary text-sm uppercase tracking-wider">
+							Ajustar Stock
+						</h3>
+					</div>
 					<button
 						onClick={onClose}
 						className="text-ink-tertiary hover:text-ink-primary text-lg leading-none min-w-[32px] min-h-[32px] flex items-center justify-center"
@@ -362,17 +339,38 @@ function AdjustModal({
 						×
 					</button>
 				</div>
-				<div>
-					<p className="font-body text-sm text-ink-secondary mb-1">
+
+				<div className="p-3 rounded-xl bg-surface-2 border border-surface-3">
+					<p className="font-display text-sm font-bold text-ink-primary uppercase tracking-wide">
 						{ingredient.name}
 					</p>
-					<p className="font-body text-xs text-ink-tertiary">
-						Unidad: {ingredient.unit}
+					<div className="flex items-baseline gap-3 mt-2">
+						<span
+							className={clsx(
+								"font-kds text-4xl leading-none",
+								status === "critical"
+									? "text-red-400"
+									: status === "low"
+										? "text-amber-400"
+										: "text-ink-primary",
+							)}
+						>
+							{ingredient.stockCurrent.toLocaleString("es-AR")}
+						</span>
+						<span className="font-body text-xs text-ink-tertiary">
+							{ingredient.unit} actual
+						</span>
+					</div>
+					<StockBar pct={stockPct(ingredient)} status={status} />
+					<p className="font-body text-xs text-ink-tertiary mt-1.5">
+						Umbral de alerta:{" "}
+						{formatUnit(ingredient.alertThreshold, ingredient.unit)}
 					</p>
 				</div>
+
 				<div>
 					<label className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary mb-1.5 block">
-						Stock actual
+						Nuevo stock ({ingredient.unit})
 					</label>
 					<input
 						type="number"
@@ -380,8 +378,10 @@ function AdjustModal({
 						value={value}
 						onChange={(e) => setValue(e.target.value)}
 						min={0}
+						autoFocus
 					/>
 				</div>
+
 				<div className="flex gap-2">
 					<button
 						onClick={onClose}
@@ -443,11 +443,7 @@ export default function BarStockPage() {
 	);
 	const lowIngredients = ingredients.filter((i) => getStatus(i) === "low");
 	const okIngredients = ingredients.filter((i) => getStatus(i) === "ok");
-
-	const totalValue = ingredients.reduce(
-		(sum, ing) => sum + ing.stockCurrent * ing.costPerUnit,
-		0,
-	);
+	const alertCount = criticalIngredients.length + lowIngredients.length;
 
 	async function handleAdjust(id: string, stockCurrent: number) {
 		const res = await fetch(`/api/ingredients/${id}`, {
@@ -465,40 +461,77 @@ export default function BarStockPage() {
 		}
 	}
 
+	async function handleQuickAdjust(id: string, delta: number, current: number) {
+		const next = Math.max(0, current + delta);
+		// Optimistic update
+		setIngredients((prev) =>
+			prev.map((ing) => (ing.id === id ? { ...ing, stockCurrent: next } : ing)),
+		);
+		const res = await fetch(`/api/ingredients/${id}`, {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ stockCurrent: next }),
+		});
+		if (!res.ok) {
+			// Revert on failure
+			setIngredients((prev) =>
+				prev.map((ing) =>
+					ing.id === id ? { ...ing, stockCurrent: current } : ing,
+				),
+			);
+		}
+	}
+
 	return (
-		<div className="flex min-h-screen bg-surface-0 flex-col lg:flex-row">
+		<div className="flex min-h-screen bg-surface-0 flex-col lg:flex-row noise-overlay">
 			<BarNav />
 
 			<div className="flex-1 flex flex-col min-w-0">
 				{/* ── Page header ── */}
-				<div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-surface-3 bg-surface-1/95 backdrop-blur-md">
+				<header className="relative sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-surface-3 bg-surface-1/95 backdrop-blur-md top-accent">
 					<div>
-						<div className="flex items-center gap-2.5 mb-0.5">
-							<div className="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-lg leading-none">
-								🍶
+						<div className="flex items-center gap-3 mb-1">
+							<div className="flex items-center justify-center w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/25 shrink-0">
+								<Package className="w-5 h-5 text-blue-400" />
 							</div>
-							<h1 className="font-display text-lg sm:text-xl font-bold text-ink-primary uppercase tracking-wide">
-								Stock del Bar
-							</h1>
+							<div>
+								<h1 className="font-kds text-3xl leading-none text-blue-400 tracking-widest">
+									STOCK
+								</h1>
+								<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-[0.2em] mt-0.5">
+									Bar · My Way
+								</p>
+							</div>
 						</div>
-						<p className="font-body text-sm text-ink-tertiary ml-11">
-							Ingredientes y disponibilidad ·{" "}
-							{criticalIngredients.length > 0 ? (
-								<span className="text-red-400 font-semibold">
-									{criticalIngredients.length} críticos
-								</span>
-							) : (
-								<span className="text-emerald-400">Todo en orden</span>
-							)}
-						</p>
 					</div>
 
+					{/* Summary badges */}
+					<div className="flex items-center gap-2 flex-wrap">
+						<div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-2 border border-surface-3">
+							<span className="font-kds text-2xl leading-none text-ink-secondary">
+								{loading ? "…" : ingredients.length}
+							</span>
+							<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary">
+								ítems
+							</span>
+						</div>
+						{alertCount > 0 && (
+							<div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-red-500/10 border border-red-500/25 animate-pulse">
+								<AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+								<span className="font-kds text-2xl leading-none text-red-400">
+									{alertCount}
+								</span>
+								<span className="font-display text-[10px] uppercase tracking-widest text-red-400/70">
+									alerta
+								</span>
+							</div>
+						)}
+					</div>
+
+					{/* Search + add */}
 					<div className="flex items-center gap-3 w-full sm:w-auto">
 						<div className="relative flex-1 sm:flex-none">
-							<Search
-								size={14}
-								className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-tertiary"
-							/>
+							<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-tertiary" />
 							<input
 								type="text"
 								placeholder="Buscar ingrediente..."
@@ -508,47 +541,36 @@ export default function BarStockPage() {
 							/>
 						</div>
 						<button className="btn-primary text-xs px-4 min-h-[44px] shrink-0">
-							<Plus size={14} />
+							<Plus className="w-4 h-4" />
 							Nuevo ítem
 						</button>
 					</div>
-				</div>
+				</header>
 
 				<div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
-					{/* ── Critical alert ── */}
+					{/* ── Alert banner (critical) ── */}
 					{criticalIngredients.length > 0 && (
-						<div
-							className="rounded-2xl p-4 flex items-start gap-4"
-							style={{
-								background: "rgba(239,68,68,0.07)",
-								border: "1px solid rgba(239,68,68,0.22)",
-							}}
-						>
-							<div className="w-10 h-10 rounded-xl bg-red-500/15 flex items-center justify-center shrink-0">
-								<AlertTriangle size={18} className="text-red-400" />
+						<div className="rounded-2xl p-4 flex items-start gap-4 bg-red-500/[0.06] border border-red-500/25">
+							<div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center shrink-0">
+								<AlertTriangle className="w-5 h-5 text-red-400" />
 							</div>
 							<div className="flex-1 min-w-0">
 								<p className="font-display font-bold text-red-400 text-sm uppercase tracking-wider">
-									Ingredientes críticos — requieren reposición inmediata
+									{criticalIngredients.length} ingrediente
+									{criticalIngredients.length !== 1 ? "s" : ""} en stock crítico
+									— reposición urgente
 								</p>
 								<div className="mt-2 flex flex-wrap gap-2">
 									{criticalIngredients.map((ing) => (
 										<span
 											key={ing.id}
-											className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-body"
-											style={{
-												background: "rgba(239,68,68,0.09)",
-												border: "1px solid rgba(239,68,68,0.18)",
-											}}
+											className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-body bg-red-500/[0.09] border border-red-500/18"
 										>
 											<span className="text-red-300 font-semibold">
 												{ing.name}
 											</span>
 											<span className="text-ink-tertiary text-xs">
 												{formatUnit(ing.stockCurrent, ing.unit)} actual
-											</span>
-											<span className="text-red-500 text-xs font-mono">
-												/ {formatUnit(ing.alertThreshold, ing.unit)} mín.
 											</span>
 										</span>
 									))}
@@ -559,14 +581,8 @@ export default function BarStockPage() {
 
 					{/* ── Low stock notice ── */}
 					{lowIngredients.length > 0 && (
-						<div
-							className="rounded-2xl px-4 py-3 flex items-center gap-3"
-							style={{
-								background: "rgba(245,158,11,0.06)",
-								border: "1px solid rgba(245,158,11,0.18)",
-							}}
-						>
-							<TrendingDown size={15} className="text-amber-400 shrink-0" />
+						<div className="rounded-2xl px-4 py-3 flex items-center gap-3 bg-amber-500/[0.06] border border-amber-500/20">
+							<TrendingDown className="w-4 h-4 text-amber-400 shrink-0" />
 							<span className="text-amber-300 font-body text-sm">
 								<span className="font-display font-bold">
 									{lowIngredients.length}{" "}
@@ -580,45 +596,56 @@ export default function BarStockPage() {
 						</div>
 					)}
 
-					{/* ── Stats row ── */}
-					<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-						<StatCard
-							icon={<Package size={15} />}
-							label="Total ítems"
-							value={loading ? "…" : String(ingredients.length)}
-							sub="ingredientes activos"
-							accent="gold"
-						/>
-						<StatCard
-							icon={<AlertTriangle size={15} />}
-							label="Críticos"
-							value={String(criticalIngredients.length)}
-							sub="bajo umbral mínimo"
-							accent="red"
-						/>
-						<StatCard
-							icon={<TrendingDown size={15} />}
-							label="Stock bajo"
-							value={String(lowIngredients.length)}
-							sub="cerca del umbral"
-							accent="gold"
-						/>
-						<StatCard
-							icon={<DollarSign size={15} />}
-							label="Valor estimado"
-							value={formatCurrency(Math.round(totalValue))}
-							sub="inventario actual"
-							accent="green"
-						/>
+					{/* ── Summary chips ── */}
+					<div className="grid grid-cols-3 gap-3">
+						<div className="card-sm p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+							<div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+								<AlertTriangle className="w-4 h-4 text-red-400" />
+							</div>
+							<div>
+								<p className="font-display text-[9px] sm:text-[10px] uppercase tracking-wider text-ink-tertiary">
+									Críticos
+								</p>
+								<p className="font-kds text-2xl sm:text-3xl leading-none text-red-400">
+									{criticalIngredients.length}
+								</p>
+							</div>
+						</div>
+						<div className="card-sm p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+							<div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+								<TrendingDown className="w-4 h-4 text-amber-400" />
+							</div>
+							<div>
+								<p className="font-display text-[9px] sm:text-[10px] uppercase tracking-wider text-ink-tertiary">
+									Bajos
+								</p>
+								<p className="font-kds text-2xl sm:text-3xl leading-none text-amber-400">
+									{lowIngredients.length}
+								</p>
+							</div>
+						</div>
+						<div className="card-sm p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+							<div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+								<CheckCircle2 className="w-4 h-4 text-emerald-400" />
+							</div>
+							<div>
+								<p className="font-display text-[9px] sm:text-[10px] uppercase tracking-wider text-ink-tertiary">
+									OK
+								</p>
+								<p className="font-kds text-2xl sm:text-3xl leading-none text-emerald-400">
+									{okIngredients.length}
+								</p>
+							</div>
+						</div>
 					</div>
 
-					{/* ── Ingredient list header ── */}
-					<div className="card rounded-2xl overflow-hidden">
+					{/* ── Ingredient cards / table ── */}
+					<div className="card overflow-hidden">
 						<div className="px-4 sm:px-5 py-4 border-b border-surface-3 flex items-center justify-between bg-surface-2/20">
 							<div className="flex items-center gap-2">
-								<FlaskConical size={15} className="text-brand-500" />
+								<Package className="w-4 h-4 text-blue-400" />
 								<h2 className="font-display font-bold text-sm uppercase tracking-wider text-ink-primary">
-									Inventario de Ingredientes
+									Inventario del Bar
 								</h2>
 							</div>
 							<div className="flex items-center gap-3">
@@ -637,7 +664,7 @@ export default function BarStockPage() {
 											});
 									}}
 								>
-									<RefreshCw size={11} />
+									<RefreshCw className="w-3 h-3" />
 									Actualizar
 								</button>
 							</div>
@@ -646,17 +673,25 @@ export default function BarStockPage() {
 						{/* Card grid on mobile/tablet */}
 						<div className="block lg:hidden p-4">
 							{filteredIngredients.length === 0 ? (
-								<p className="font-body text-sm text-ink-tertiary text-center py-8">
-									{loading
-										? "Cargando..."
-										: `No se encontraron ingredientes para "${query}"`}
-								</p>
+								<div className="flex flex-col items-center justify-center py-16 gap-4 text-ink-tertiary">
+									<div className="w-16 h-16 rounded-2xl bg-surface-2 border border-surface-3 flex items-center justify-center">
+										<Package className="w-7 h-7 opacity-30" />
+									</div>
+									<p className="font-kds text-xl tracking-wider opacity-40">
+										{loading ? "CARGANDO..." : "SIN INGREDIENTES"}
+									</p>
+									{!loading && query && (
+										<p className="font-body text-sm text-ink-tertiary">
+											No hay resultados para &ldquo;{query}&rdquo;
+										</p>
+									)}
+								</div>
 							) : (
 								<div
 									className="grid gap-3"
 									style={{
 										gridTemplateColumns:
-											"repeat(auto-fill, minmax(min(100%, 200px), 1fr))",
+											"repeat(auto-fill, minmax(min(100%, 220px), 1fr))",
 									}}
 								>
 									{filteredIngredients.map((ing) => (
@@ -664,6 +699,7 @@ export default function BarStockPage() {
 											key={ing.id}
 											ing={ing}
 											onAdjust={setAdjusting}
+											onQuickAdjust={handleQuickAdjust}
 										/>
 									))}
 								</div>
@@ -682,24 +718,42 @@ export default function BarStockPage() {
 											Stock
 										</th>
 										<th className="text-right px-4 py-3 font-display font-bold text-[10px] uppercase tracking-wider text-ink-tertiary">
-											Alerta
+											Umbral
 										</th>
 										<th className="text-center px-4 py-3 font-display font-bold text-[10px] uppercase tracking-wider text-ink-tertiary">
 											Estado
 										</th>
-										<th className="text-right px-4 py-3 font-display font-bold text-[10px] uppercase tracking-wider text-ink-tertiary">
-											Costo/u
+										<th className="text-center px-4 py-3 font-display font-bold text-[10px] uppercase tracking-wider text-ink-tertiary">
+											Nivel
 										</th>
 										<th className="text-right px-5 py-3 font-display font-bold text-[10px] uppercase tracking-wider text-ink-tertiary">
-											Acciones
+											Ajustar
 										</th>
 									</tr>
 								</thead>
 								<tbody>
+									{filteredIngredients.length === 0 && (
+										<tr>
+											<td colSpan={6} className="px-5 py-16 text-center">
+												<div className="flex flex-col items-center gap-3 text-ink-tertiary">
+													<Package className="w-8 h-8 opacity-20" />
+													<p className="font-kds text-xl tracking-wider opacity-40">
+														{loading ? "CARGANDO..." : `SIN RESULTADOS`}
+													</p>
+												</div>
+											</td>
+										</tr>
+									)}
 									{filteredIngredients.map((ing, idx) => {
 										const status = getStatus(ing);
 										const pct = stockPct(ing);
 										const isLast = idx === filteredIngredients.length - 1;
+										const dotCls = {
+											ok: "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]",
+											low: "bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)]",
+											critical:
+												"bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.7)] animate-pulse",
+										}[status];
 										return (
 											<tr
 												key={ing.id}
@@ -713,49 +767,35 @@ export default function BarStockPage() {
 												{/* Name */}
 												<td className="px-5 py-3.5">
 													<div className="flex items-center gap-2.5">
-														{status === "critical" && (
-															<AlertTriangle
-																size={13}
-																className="text-red-400 shrink-0"
-															/>
-														)}
-														{status === "low" && (
-															<TrendingDown
-																size={13}
-																className="text-amber-400 shrink-0"
-															/>
-														)}
-														{status === "ok" && (
-															<CheckCircle2
-																size={13}
-																className="text-emerald-400/40 shrink-0"
-															/>
-														)}
-														<span className="font-body text-sm text-ink-primary">
+														<span
+															className={clsx(
+																"w-2.5 h-2.5 rounded-full shrink-0",
+																dotCls,
+															)}
+														/>
+														<span className="font-display text-sm font-semibold text-ink-primary">
 															{ing.name}
 														</span>
 													</div>
 												</td>
-												{/* Stock bar */}
+												{/* Stock number + bar */}
 												<td className="px-4 py-3.5">
 													<div className="flex flex-col gap-1.5 w-44">
-														<div className="flex items-baseline justify-between">
-															<span
-																className={clsx(
-																	"font-mono font-bold text-sm",
-																	status === "critical"
-																		? "text-red-400"
-																		: status === "low"
-																			? "text-amber-400"
-																			: "text-ink-primary",
-																)}
-															>
-																{ing.stockCurrent.toLocaleString("es-AR")}
-															</span>
-															<span className="text-ink-tertiary text-xs font-body">
+														<span
+															className={clsx(
+																"font-kds text-3xl leading-none",
+																status === "critical"
+																	? "text-red-400"
+																	: status === "low"
+																		? "text-amber-400"
+																		: "text-ink-primary",
+															)}
+														>
+															{ing.stockCurrent.toLocaleString("es-AR")}
+															<span className="font-body text-xs text-ink-tertiary ml-1.5">
 																{ing.unit}
 															</span>
-														</div>
+														</span>
 														<StockBar pct={pct} status={status} />
 													</div>
 												</td>
@@ -768,46 +808,71 @@ export default function BarStockPage() {
 												</td>
 												{/* Status */}
 												<td className="px-4 py-3.5 text-center">
-													<StatusChip status={status} />
+													{status === "critical" ? (
+														<span className="badge badge-cancelled">
+															<AlertTriangle className="w-2.5 h-2.5" />
+															Crítico
+														</span>
+													) : status === "low" ? (
+														<span className="badge badge-pending">
+															<TrendingDown className="w-2.5 h-2.5" />
+															Bajo
+														</span>
+													) : (
+														<span className="badge badge-ready">
+															<CheckCircle2 className="w-2.5 h-2.5" />
+															OK
+														</span>
+													)}
 												</td>
-												{/* Cost */}
-												<td className="px-4 py-3.5 text-right">
-													<span className="font-mono text-xs text-ink-secondary">
-														$
-														{ing.costPerUnit.toLocaleString("es-AR", {
-															minimumFractionDigits: 3,
-														})}
-													</span>
-													<span className="text-ink-tertiary text-[10px] block">
-														/{ing.unit}
+												{/* % level */}
+												<td className="px-4 py-3.5 text-center">
+													<span
+														className={clsx(
+															"font-kds text-2xl leading-none",
+															pct <= 30
+																? "text-red-400"
+																: pct <= 60
+																	? "text-amber-400"
+																	: "text-emerald-400",
+														)}
+													>
+														{pct}
+														<span className="text-xs font-body text-ink-tertiary ml-0.5">
+															%
+														</span>
 													</span>
 												</td>
-												{/* Actions */}
+												{/* Quick adjust */}
 												<td className="px-5 py-3.5">
-													<div className="flex items-center justify-end gap-2">
+													<div className="flex items-center justify-end gap-1.5">
+														<button
+															className="flex items-center justify-center w-8 h-8 rounded-lg bg-surface-3 border border-surface-4 text-ink-secondary hover:text-red-400 hover:border-red-500/30 transition-all active:scale-95"
+															onClick={() =>
+																handleQuickAdjust(ing.id, -1, ing.stockCurrent)
+															}
+														>
+															<Minus className="w-3.5 h-3.5" />
+														</button>
 														<button
 															className="btn-ghost text-[11px] px-2.5 py-1.5 rounded-lg"
 															onClick={() => setAdjusting(ing)}
 														>
-															<RefreshCw size={11} />
 															Ajustar
+														</button>
+														<button
+															className="flex items-center justify-center w-8 h-8 rounded-lg bg-surface-3 border border-surface-4 text-ink-secondary hover:text-emerald-400 hover:border-emerald-500/30 transition-all active:scale-95"
+															onClick={() =>
+																handleQuickAdjust(ing.id, 1, ing.stockCurrent)
+															}
+														>
+															<Plus className="w-3.5 h-3.5" />
 														</button>
 													</div>
 												</td>
 											</tr>
 										);
 									})}
-									{filteredIngredients.length === 0 && (
-										<tr>
-											<td colSpan={6} className="px-5 py-10 text-center">
-												<p className="font-body text-sm text-ink-tertiary">
-													{loading
-														? "Cargando..."
-														: `No se encontraron ingredientes para "${query}"`}
-												</p>
-											</td>
-										</tr>
-									)}
 								</tbody>
 							</table>
 						</div>
@@ -815,26 +880,14 @@ export default function BarStockPage() {
 
 					{/* ── Critical restock cards ── */}
 					{criticalIngredients.length > 0 && (
-						<div
-							className="rounded-2xl overflow-hidden"
-							style={{
-								border: "1px solid rgba(239,68,68,0.18)",
-								background: "rgba(239,68,68,0.02)",
-							}}
-						>
-							<div
-								className="px-4 sm:px-5 py-4 border-b flex items-center justify-between"
-								style={{
-									borderColor: "rgba(239,68,68,0.15)",
-									background: "rgba(239,68,68,0.05)",
-								}}
-							>
-								<div className="flex items-center gap-2.5">
-									<div className="w-8 h-8 rounded-lg bg-red-500/15 border border-red-500/30 flex items-center justify-center">
-										<AlertTriangle size={14} className="text-red-400" />
+						<div className="card border-red-500/15 overflow-hidden">
+							<div className="px-4 sm:px-5 py-4 border-b border-red-500/15 bg-red-500/[0.04] flex items-center justify-between">
+								<div className="flex items-center gap-3">
+									<div className="w-9 h-9 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center">
+										<AlertTriangle className="w-4 h-4 text-red-400" />
 									</div>
 									<div>
-										<h2 className="font-display text-sm font-bold uppercase tracking-wider text-red-400">
+										<h2 className="font-display text-sm font-bold uppercase tracking-widest text-red-400">
 											Reabastecer urgente
 										</h2>
 										<p className="font-body text-xs text-ink-tertiary">
@@ -848,6 +901,7 @@ export default function BarStockPage() {
 									{criticalIngredients.length}
 								</span>
 							</div>
+
 							<div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 								{criticalIngredients.map((ing) => {
 									const pct = stockPct(ing);
@@ -855,18 +909,14 @@ export default function BarStockPage() {
 									return (
 										<div
 											key={ing.id}
-											className="flex flex-col gap-3 p-4 rounded-xl"
-											style={{
-												background: "rgba(239,68,68,0.05)",
-												border: "1px solid rgba(239,68,68,0.15)",
-											}}
+											className="flex flex-col gap-3 p-4 rounded-xl bg-red-500/[0.05] border border-red-500/15"
 										>
 											<div className="flex items-center justify-between">
 												<div>
-													<p className="font-display text-sm font-bold text-ink-primary">
+													<p className="font-display text-sm font-bold text-ink-primary uppercase tracking-wide">
 														{ing.name}
 													</p>
-													<p className="font-body text-xs text-ink-tertiary uppercase tracking-wide">
+													<p className="font-body text-xs text-ink-tertiary uppercase tracking-wide mt-0.5">
 														{ing.unit}
 													</p>
 												</div>
@@ -880,7 +930,7 @@ export default function BarStockPage() {
 													<span className="text-xs text-ink-tertiary">
 														Actual
 													</span>
-													<span className="font-kds text-2xl text-red-400 leading-none">
+													<span className="font-kds text-3xl text-red-400 leading-none">
 														{formatUnit(ing.stockCurrent, ing.unit)}
 													</span>
 												</div>
@@ -898,7 +948,7 @@ export default function BarStockPage() {
 												className="btn-primary w-full justify-center text-xs min-h-[48px] rounded-xl"
 												onClick={() => setAdjusting(ing)}
 											>
-												<Plus size={13} />
+												<Plus className="w-3.5 h-3.5" />
 												Reabastecer
 											</button>
 										</div>
@@ -911,12 +961,12 @@ export default function BarStockPage() {
 					{/* ── Footer ── */}
 					<div className="flex items-center justify-between text-ink-tertiary text-xs font-body pb-4 flex-wrap gap-2">
 						<div className="flex items-center gap-1.5">
-							<RefreshCw size={11} />
-							<span>Última sincronización: hoy · Sistema My Way</span>
+							<RefreshCw className="w-3 h-3" />
+							<span>Sincronización automática cada 30 s · Sistema My Way</span>
 						</div>
 						<button className="btn-ghost text-xs px-3 py-1.5">
-							<ChevronRight size={12} />
-							Ver historial completo
+							<ChevronRight className="w-3 h-3" />
+							Ver historial
 						</button>
 					</div>
 				</div>

@@ -13,6 +13,7 @@ import {
 	Send,
 	ShoppingCart,
 	Loader2,
+	UtensilsCrossed,
 } from "lucide-react";
 import clsx from "clsx";
 import { formatCurrency } from "@/lib/utils";
@@ -46,6 +47,7 @@ interface Product {
 	target: string;
 	categoryId: string;
 	category: { id: string; name: string };
+	isPoolChip?: boolean;
 }
 
 interface CartItem {
@@ -61,6 +63,7 @@ interface TableInfo {
 	number: number;
 	status: string;
 	type: string;
+	zone?: { name: string };
 }
 
 // ─── Polling hook ─────────────────────────────────────────────────────────────
@@ -157,7 +160,12 @@ function PedidoTab({
 	if (activeOrders.length === 0) {
 		return (
 			<div className="flex flex-col items-center gap-4 pt-20 px-6">
-				<ShoppingCart className="w-12 h-12 text-ink-disabled" />
+				<div
+					className="w-16 h-16 rounded-2xl flex items-center justify-center"
+					style={{ background: "var(--s2)", border: "1px solid var(--s3)" }}
+				>
+					<ShoppingCart className="w-8 h-8 text-ink-disabled" />
+				</div>
 				<p className="font-display text-sm text-ink-tertiary text-center">
 					No hay pedidos activos para esta mesa
 				</p>
@@ -168,8 +176,8 @@ function PedidoTab({
 	return (
 		<div className="flex flex-col gap-4 p-4">
 			{activeOrders.map((order) => (
-				<div key={order.id} className="card-sm overflow-hidden">
-					<div className="px-4 py-3 border-b border-surface-3 bg-surface-2/40 flex items-center justify-between">
+				<div key={order.id} className="card overflow-hidden">
+					<div className="px-4 py-3 border-b border-surface-3 bg-surface-2/50 flex items-center justify-between">
 						<span className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
 							Orden
 						</span>
@@ -193,6 +201,7 @@ function PedidoTab({
 										className={clsx(
 											"flex items-center gap-3 px-4 py-3 transition-opacity",
 											item.status === "delivered" && "opacity-40",
+											item.status === "ready" && "bg-emerald-500/5",
 										)}
 									>
 										<span className="font-kds text-3xl leading-none text-brand-500 w-8 text-center shrink-0">
@@ -214,12 +223,16 @@ function PedidoTab({
 											<button
 												onClick={() => handleDeliver(order.id, item.id)}
 												disabled={isDelivering}
-												className="shrink-0 btn-green text-[11px] px-3 py-2 rounded-xl shadow-green-sm"
+												className="shrink-0 btn-green text-[11px] px-3 rounded-xl min-h-[44px]"
+												style={{ boxShadow: "0 0 12px rgba(16,185,129,0.25)" }}
 											>
 												{isDelivering ? (
 													<Loader2 className="w-3 h-3 animate-spin" />
 												) : (
-													"✓ Entregar"
+													<>
+														<UtensilsCrossed className="w-3 h-3" />
+														Entregar
+													</>
 												)}
 											</button>
 										)}
@@ -233,18 +246,22 @@ function PedidoTab({
 			{/* Total + account button */}
 			<div className="card-gold p-4 flex items-center justify-between">
 				<div>
-					<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
+					<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest mb-0.5">
 						Total
 					</p>
-					<p className="font-kds text-3xl text-brand-500 leading-none">
+					<p
+						className="font-kds leading-none text-brand-500"
+						style={{ fontSize: 32 }}
+					>
 						{formatCurrency(total)}
 					</p>
 				</div>
 				<button
 					onClick={() => router.push(`/waiter/payment?tableId=${tableId}`)}
-					className="btn-primary"
+					className="btn-primary min-h-[44px]"
 				>
-					Solicitar cuenta →
+					<CreditCard className="w-4 h-4" />
+					Solicitar cuenta
 				</button>
 			</div>
 		</div>
@@ -381,22 +398,26 @@ function AgregarTab({
 
 	return (
 		<div className="flex flex-col">
-			{/* Category chips */}
+			{/* Category chips — sticky horizontal scroll */}
 			<div
-				className="flex gap-2 px-4 py-3 overflow-x-auto border-b border-surface-3"
-				style={{ scrollbarWidth: "none" }}
+				className="sticky top-0 z-10 flex gap-2 px-4 py-3 overflow-x-auto border-b border-surface-3"
+				style={{
+					scrollbarWidth: "none",
+					background: "rgba(16,16,16,0.97)",
+					backdropFilter: "blur(12px)",
+				}}
 			>
 				{categories.map((cat) => (
 					<button
 						key={cat.id}
 						onClick={() => setActiveCategoryId(cat.id)}
 						className={clsx(
-							"shrink-0 px-4 py-2 rounded-xl font-display text-xs font-bold uppercase tracking-wider transition-all active:scale-95",
+							"shrink-0 px-4 rounded-full font-display text-xs font-bold uppercase tracking-wider transition-all active:scale-95",
 							activeCategoryId === cat.id
 								? "bg-brand-500 text-surface-0 shadow-gold-sm"
 								: "bg-surface-2 text-ink-secondary border border-surface-3 hover:border-brand-500/30",
 						)}
-						style={{ minHeight: 44 }}
+						style={{ minHeight: 36 }}
 					>
 						{cat.name}
 					</button>
@@ -404,22 +425,28 @@ function AgregarTab({
 			</div>
 
 			{/* Product list */}
-			<div className="p-3 flex flex-col gap-2">
+			<div className="p-3 flex flex-col gap-2 pb-4">
 				{filteredProducts.map((product) => {
 					const inCart = cart.get(product.id);
 					return (
 						<div
 							key={product.id}
 							className={clsx(
-								"flex items-center gap-3 rounded-xl border transition-all",
+								"flex items-center gap-3 rounded-2xl border transition-all",
 								inCart
-									? "border-brand-500/40 bg-brand-500/06"
+									? "border-brand-500/45 bg-brand-500/08"
 									: "border-surface-3 bg-surface-1",
+								product.isPoolChip && "pool-chip-border",
 							)}
-							style={{ padding: "12px 14px", minHeight: 64 }}
+							style={{ padding: "12px 14px", minHeight: 68 }}
 						>
 							<div className="flex-1 min-w-0">
-								<p className="font-display text-sm font-semibold text-ink-primary leading-tight">
+								<p
+									className={clsx(
+										"font-display text-sm font-semibold leading-tight",
+										product.isPoolChip ? "pool-chip-badge" : "text-ink-primary",
+									)}
+								>
 									{product.name}
 								</p>
 								<p
@@ -441,7 +468,7 @@ function AgregarTab({
 									</button>
 									<span
 										className="font-kds text-brand-500 text-center leading-none"
-										style={{ width: 28, fontSize: 26 }}
+										style={{ width: 32, fontSize: 28 }}
 									>
 										{inCart.qty}
 									</span>
@@ -467,44 +494,43 @@ function AgregarTab({
 				})}
 			</div>
 
-			{/* Cart summary + send */}
+			{/* Cart summary bar — sticky above bottom nav */}
 			{cart.size > 0 && (
 				<div
 					className="sticky bottom-16 mx-3 mb-3 card-gold animate-slide-up"
-					style={{ padding: "14px 16px" }}
+					style={{
+						padding: "14px 16px",
+						boxShadow:
+							"0 0 32px rgba(245,158,11,0.18), 0 4px 24px rgba(0,0,0,0.5)",
+					}}
 				>
 					<div className="flex items-center justify-between gap-4">
 						<div>
-							<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
-								Pedido pendiente
-							</p>
+							<div className="flex items-center gap-2 mb-0.5">
+								<ShoppingCart className="w-3.5 h-3.5 text-brand-500" />
+								<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
+									{cartCount} {cartCount === 1 ? "item" : "items"}
+								</p>
+							</div>
 							<p
-								className="font-kds text-brand-500 leading-none mt-0.5"
-								style={{ fontSize: 22 }}
+								className="font-kds text-brand-500 leading-none"
+								style={{ fontSize: 24 }}
 							>
 								{formatCurrency(cartTotal)}
-							</p>
-							<p className="font-display text-[10px] text-ink-disabled mt-0.5">
-								{cartCount} {cartCount === 1 ? "item" : "items"}
 							</p>
 						</div>
 						<button
 							onClick={handleSend}
 							disabled={sending}
-							className="btn-primary shrink-0"
-							style={{
-								paddingTop: 14,
-								paddingBottom: 14,
-								paddingLeft: 20,
-								paddingRight: 20,
-							}}
+							className="btn-primary shrink-0 min-h-[48px]"
+							style={{ paddingLeft: 20, paddingRight: 20 }}
 						>
 							{sending ? (
 								<Loader2 className="w-4 h-4 animate-spin" />
 							) : (
 								<>
 									<Send className="w-4 h-4" />
-									Enviar pedido
+									ENVIAR PEDIDO
 								</>
 							)}
 						</button>
@@ -601,48 +627,77 @@ export default function TableDetailPage() {
 					? "Reservada"
 					: "";
 
+	const tableTypeIcon =
+		tableInfo?.type === "pool"
+			? "POOL"
+			: tableInfo?.type === "bar"
+				? "BAR"
+				: null;
+
 	return (
 		<div
-			className="min-h-screen flex flex-col"
+			className="noise-overlay min-h-screen flex flex-col"
 			style={{ background: "var(--s0)" }}
 		>
 			{/* Header */}
 			<header
-				className="sticky top-0 z-40 flex items-center gap-3 px-4 py-3"
+				className="sticky top-0 z-40 flex items-center gap-3 px-4 py-3 top-accent"
 				style={{
-					background: "rgba(10,10,10,0.92)",
-					backdropFilter: "blur(20px)",
+					background: "rgba(10,10,10,0.95)",
+					backdropFilter: "blur(24px)",
 					borderBottom: "1px solid var(--s3)",
+					position: "sticky",
 				}}
 			>
 				<Link
 					href="/waiter/tables"
-					className="btn-ghost p-2 rounded-xl shrink-0"
+					className="btn-ghost p-2 rounded-xl shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
 					aria-label="Volver"
 				>
 					<ArrowLeft className="w-5 h-5" />
 				</Link>
 
-				<div className="flex items-center gap-3 flex-1 min-w-0">
-					<span className="font-kds text-4xl leading-none text-ink-primary">
+				<div className="flex items-center gap-2.5 flex-1 min-w-0">
+					{/* Large table number */}
+					<span
+						className="font-kds leading-none text-ink-primary"
+						style={{ fontSize: 44 }}
+					>
 						{tableInfo ? tableInfo.number : "—"}
 					</span>
-					{tableInfo?.type === "pool" && <span className="text-xl">🎱</span>}
-					{tableInfo?.type === "bar" && <span className="text-xl">🍺</span>}
-					{tableInfo && (
-						<span
-							className={clsx("badge", {
-								"badge-available": tableInfo.status === "available",
-								"badge-occupied": tableInfo.status === "occupied",
-								"badge-reserved": tableInfo.status === "reserved",
-							})}
-						>
-							{statusLabel}
-						</span>
-					)}
+					<div className="flex flex-col gap-1 min-w-0">
+						{tableTypeIcon && (
+							<span
+								className={clsx(
+									"font-display font-bold text-[9px] uppercase tracking-[0.2em]",
+									tableInfo?.type === "pool"
+										? "pool-chip-badge"
+										: "text-ink-tertiary",
+								)}
+							>
+								{tableTypeIcon}
+							</span>
+						)}
+						{tableInfo?.zone?.name && (
+							<span className="font-display text-[10px] text-ink-disabled uppercase tracking-widest truncate">
+								{tableInfo.zone.name}
+							</span>
+						)}
+						{tableInfo && (
+							<span
+								className={clsx("badge", {
+									"badge-available": tableInfo.status === "available",
+									"badge-occupied": tableInfo.status === "occupied",
+									"badge-reserved": tableInfo.status === "reserved",
+								})}
+							>
+								{statusLabel}
+							</span>
+						)}
+					</div>
 				</div>
 
-				<span className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest shrink-0">
+				<span className="font-display text-[10px] text-ink-disabled uppercase tracking-[0.3em] shrink-0">
 					Mesa
 				</span>
 			</header>
@@ -657,13 +712,13 @@ export default function TableDetailPage() {
 						key={tab}
 						onClick={() => setActiveTab(tab)}
 						className={clsx(
-							"flex-1 py-3 font-display text-xs font-bold uppercase tracking-widest transition-all border-b-2",
+							"flex-1 py-3.5 font-display text-xs font-bold uppercase tracking-widest transition-all border-b-2 min-h-[48px]",
 							activeTab === tab
 								? "text-brand-500 border-brand-500"
 								: "text-ink-tertiary border-transparent hover:text-ink-secondary",
 						)}
 					>
-						{tab === "pedido" ? "Pedido" : "Agregar"}
+						{tab === "pedido" ? "Pedido Actual" : "Agregar Items"}
 					</button>
 				))}
 			</div>
@@ -685,10 +740,10 @@ export default function TableDetailPage() {
 			{showSuccess && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-0/80 backdrop-blur-md animate-fade-in">
 					<div className="card-gold p-8 flex flex-col items-center gap-4 animate-scale-in">
-						<div className="w-16 h-16 rounded-2xl bg-pool-500/15 border border-pool-500/30 flex items-center justify-center">
-							<CheckCircle2 className="w-8 h-8 text-pool-500" />
+						<div className="w-16 h-16 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+							<CheckCircle2 className="w-8 h-8 text-emerald-400" />
 						</div>
-						<p className="font-kds text-2xl text-pool-500 tracking-wider">
+						<p className="font-kds text-2xl text-emerald-400 tracking-wider">
 							PEDIDO ENVIADO
 						</p>
 					</div>

@@ -12,7 +12,10 @@ export default function AdminLayout({
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 
 	return (
-		<div className="flex min-h-screen" style={{ background: "var(--s0)" }}>
+		<div
+			className="flex min-h-screen noise-overlay"
+			style={{ background: "var(--s0)" }}
+		>
 			<AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
 			{/* Main content — offset by sidebar width on md+ */}

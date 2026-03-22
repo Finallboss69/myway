@@ -2,13 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import {
-	ArrowLeft,
-	Home,
-	CheckCircle2,
-	CreditCard,
-	Loader2,
-} from "lucide-react";
+import { Home, CheckCircle2, CreditCard, Bell, Loader2 } from "lucide-react";
 import clsx from "clsx";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -83,11 +77,11 @@ function ReadyItemRow({
 	return (
 		<div
 			className="flex items-center gap-3"
-			style={{ padding: "12px 16px", minHeight: 64 }}
+			style={{ padding: "13px 16px", minHeight: 68 }}
 		>
 			<div
-				className="font-kds text-brand-500 leading-none text-center shrink-0"
-				style={{ fontSize: 28, width: 32 }}
+				className="font-kds leading-none text-center shrink-0"
+				style={{ fontSize: 30, width: 34, color: "#10b981" }}
 			>
 				{item.qty}
 			</div>
@@ -102,15 +96,22 @@ function ReadyItemRow({
 			<button
 				onClick={handleDeliver}
 				disabled={loading}
-				className="shrink-0 btn-green rounded-xl shadow-green-sm active:scale-95"
+				className="shrink-0 btn-green rounded-xl active:scale-95 min-h-[44px]"
 				style={{
-					minWidth: 90,
-					minHeight: 44,
+					minWidth: 100,
 					fontSize: 12,
-					padding: "10px 14px",
+					padding: "10px 16px",
+					boxShadow: "0 0 14px rgba(16,185,129,0.25)",
 				}}
 			>
-				{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Entregar ✓"}
+				{loading ? (
+					<Loader2 className="w-4 h-4 animate-spin" />
+				) : (
+					<>
+						<CheckCircle2 className="w-3.5 h-3.5" />
+						ENTREGADO
+					</>
+				)}
 			</button>
 		</div>
 	);
@@ -185,39 +186,60 @@ export default function ReadyPage() {
 
 	return (
 		<div
-			className="min-h-screen flex flex-col"
+			className="noise-overlay min-h-screen flex flex-col"
 			style={{ background: "var(--s0)" }}
 		>
 			{/* Header */}
 			<header
-				className="sticky top-0 z-40 flex items-center gap-3 px-4 py-3"
+				className="sticky top-0 z-40 flex items-center gap-3 px-4 py-3 top-accent"
 				style={{
-					background: "rgba(10,10,10,0.92)",
-					backdropFilter: "blur(20px)",
+					background: "rgba(10,10,10,0.95)",
+					backdropFilter: "blur(24px)",
 					borderBottom: "1px solid var(--s3)",
+					position: "sticky",
 				}}
 			>
-				<Link
-					href="/waiter/tables"
-					className="btn-ghost p-2 rounded-xl shrink-0"
-					aria-label="Volver"
+				{/* Bell icon */}
+				<div
+					className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+					style={{
+						background:
+							totalReadyCount > 0
+								? "rgba(16,185,129,0.12)"
+								: "rgba(255,255,255,0.04)",
+						border:
+							totalReadyCount > 0
+								? "1px solid rgba(16,185,129,0.3)"
+								: "1px solid rgba(255,255,255,0.07)",
+					}}
 				>
-					<ArrowLeft className="w-5 h-5" />
-				</Link>
+					<Bell
+						className={clsx(
+							"w-5 h-5",
+							totalReadyCount > 0 ? "text-emerald-400" : "text-ink-disabled",
+						)}
+					/>
+				</div>
 
 				<div className="flex-1 min-w-0">
-					<h1 className="font-display text-sm font-semibold text-ink-primary leading-tight">
-						Listos para servir
+					<h1 className="font-kds text-2xl leading-none text-ink-primary tracking-widest">
+						LISTOS PARA SERVIR
 					</h1>
-					<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
+					<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest mt-0.5">
 						{totalReadyCount}{" "}
 						{totalReadyCount === 1 ? "item listo" : "items listos"}
 					</p>
 				</div>
 
 				{totalReadyCount > 0 && (
-					<div className="flex items-center justify-center w-8 h-8 rounded-xl bg-brand-500/15 border border-brand-500/30 shrink-0">
-						<span className="font-kds text-xl leading-none text-brand-500">
+					<div
+						className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0"
+						style={{
+							background: "rgba(16,185,129,0.12)",
+							border: "1px solid rgba(16,185,129,0.3)",
+						}}
+					>
+						<span className="font-kds text-2xl leading-none text-emerald-400">
 							{totalReadyCount}
 						</span>
 					</div>
@@ -228,22 +250,27 @@ export default function ReadyPage() {
 			<main className="flex-1 p-3 pb-safe">
 				{!rawOrders ? (
 					<div className="flex flex-col items-center gap-3 pt-20">
-						<div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
-						<p className="font-display text-xs text-ink-disabled uppercase tracking-widest">Cargando...</p>
+						<div className="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
+						<p className="font-display text-xs text-ink-disabled uppercase tracking-widest">
+							Cargando...
+						</p>
 					</div>
 				) : groupedByTable.length === 0 ? (
 					<div className="flex flex-col items-center gap-4 pt-20">
 						<div
-							className="w-16 h-16 rounded-2xl flex items-center justify-center"
-							style={{ background: "var(--s2)", border: "1px solid var(--s3)" }}
+							className="w-20 h-20 rounded-3xl flex items-center justify-center"
+							style={{
+								background: "rgba(16,185,129,0.08)",
+								border: "1px solid rgba(16,185,129,0.2)",
+							}}
 						>
-							<CheckCircle2 className="w-8 h-8 text-ink-disabled" />
+							<CheckCircle2 className="w-10 h-10 text-emerald-400" />
 						</div>
 						<div className="text-center">
-							<p className="font-kds text-2xl text-ink-secondary tracking-widest">
+							<p className="font-kds text-2xl text-emerald-400 tracking-widest">
 								TODO ENTREGADO
 							</p>
-							<p className="font-display text-sm text-ink-tertiary mt-1">
+							<p className="font-display text-sm text-ink-tertiary mt-1.5">
 								No hay items listos para servir
 							</p>
 						</div>
@@ -251,16 +278,23 @@ export default function ReadyPage() {
 				) : (
 					<div className="flex flex-col gap-4">
 						{groupedByTable.map((group) => (
-							<div key={group.tableNumber} className="card-sm overflow-hidden">
+							<div
+								key={group.tableNumber}
+								className="card-green overflow-hidden animate-slide-up"
+								style={{
+									boxShadow:
+										"0 0 24px rgba(16,185,129,0.1), 0 2px 16px rgba(0,0,0,0.4)",
+								}}
+							>
 								{/* Table header */}
 								<div
 									className="flex items-center justify-between px-4 py-3 border-b border-surface-3"
-									style={{ background: "rgba(16,185,129,0.06)" }}
+									style={{ background: "rgba(16,185,129,0.07)" }}
 								>
 									<div className="flex items-center gap-3">
 										<span
-											className="font-kds text-4xl leading-none"
-											style={{ color: "#10b981" }}
+											className="font-kds leading-none"
+											style={{ fontSize: 44, color: "#10b981" }}
 										>
 											{group.tableNumber}
 										</span>
@@ -268,7 +302,10 @@ export default function ReadyPage() {
 											<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
 												Mesa
 											</p>
-											<p className="font-display text-xs text-pool-400 font-semibold">
+											<p
+												className="font-display text-xs font-semibold"
+												style={{ color: "#34d399" }}
+											>
 												{group.entries.length}{" "}
 												{group.entries.length === 1
 													? "item listo"
@@ -276,10 +313,8 @@ export default function ReadyPage() {
 											</p>
 										</div>
 									</div>
-									<span
-										className={clsx("badge", "badge-ready")}
-										style={{ animation: "blink 1.5s ease-in-out infinite" }}
-									>
+									<span className="badge badge-ready animate-blink">
+										<span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
 										Listo
 									</span>
 								</div>

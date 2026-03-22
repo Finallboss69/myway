@@ -10,6 +10,7 @@ import {
 	Bell,
 	Users,
 	Clock,
+	Plus,
 } from "lucide-react";
 import clsx from "clsx";
 import { formatCurrency, formatTime, elapsedMinutes } from "@/lib/utils";
@@ -73,30 +74,6 @@ function usePolling<T>(url: string, interval = 5000) {
 	return data;
 }
 
-// ─── Status dot ───────────────────────────────────────────────────────────────
-
-function StatusDot({ status }: { status: string }) {
-	const colors: Record<string, string> = {
-		available: "#10b981",
-		occupied: "#f59e0b",
-		reserved: "#8b5cf6",
-	};
-	const color = colors[status] ?? "#6b7280";
-	return (
-		<span
-			style={{
-				display: "inline-block",
-				width: 8,
-				height: 8,
-				borderRadius: "50%",
-				background: color,
-				boxShadow: `0 0 6px ${color}`,
-				flexShrink: 0,
-			}}
-		/>
-	);
-}
-
 // ─── Table card ───────────────────────────────────────────────────────────────
 
 function TableCard({
@@ -113,6 +90,13 @@ function TableCard({
 		}, 0);
 	}, [ordersForTable]);
 
+	const itemCount = useMemo(() => {
+		return ordersForTable.reduce(
+			(sum, o) => sum + o.items.filter((i) => i.status !== "cancelled").length,
+			0,
+		);
+	}, [ordersForTable]);
+
 	const oldestOrder = ordersForTable.reduce<Order | null>((oldest, o) => {
 		if (!oldest) return o;
 		return new Date(o.createdAt) < new Date(oldest.createdAt) ? o : oldest;
@@ -120,32 +104,33 @@ function TableCard({
 
 	const elapsed = oldestOrder ? elapsedMinutes(oldestOrder.createdAt) : 0;
 
-	const borderColor =
-		table.status === "available"
-			? "rgba(16,185,129,0.35)"
-			: table.status === "occupied"
-				? "rgba(245,158,11,0.4)"
-				: "rgba(139,92,246,0.4)";
+	const isAvailable = table.status === "available";
+	const isOccupied = table.status === "occupied";
+	const isReserved = table.status === "reserved";
 
-	const bgColor =
-		table.status === "available"
-			? "rgba(16,185,129,0.04)"
-			: table.status === "occupied"
-				? "rgba(245,158,11,0.06)"
-				: "rgba(139,92,246,0.06)";
+	const borderColor = isAvailable
+		? "rgba(16,185,129,0.3)"
+		: isOccupied
+			? "rgba(245,158,11,0.45)"
+			: "rgba(139,92,246,0.4)";
+
+	const bgColor = isAvailable
+		? "rgba(16,185,129,0.04)"
+		: isOccupied
+			? "rgba(245,158,11,0.07)"
+			: "rgba(139,92,246,0.06)";
+
+	const boxShadow = isOccupied
+		? "0 0 20px rgba(245,158,11,0.09), 0 2px 12px rgba(0,0,0,0.4)"
+		: isReserved
+			? "0 0 16px rgba(139,92,246,0.08), 0 2px 12px rgba(0,0,0,0.4)"
+			: "0 2px 12px rgba(0,0,0,0.3)";
 
 	const statusLabels: Record<string, string> = {
 		available: "Libre",
 		occupied: "Ocupada",
 		reserved: "Reservada",
 	};
-
-	const statusTextColor =
-		table.status === "available"
-			? "#10b981"
-			: table.status === "occupied"
-				? "#f59e0b"
-				: "#8b5cf6";
 
 	return (
 		<button
@@ -154,41 +139,41 @@ function TableCard({
 			style={{
 				background: bgColor,
 				borderColor: borderColor,
+				boxShadow,
 				padding: "14px 14px 12px",
-				minHeight: 120,
+				minHeight: 124,
 			}}
 		>
 			{/* Top row: number + status */}
-			<div className="flex items-start justify-between w-full mb-2">
+			<div className="flex items-start justify-between w-full mb-1.5">
 				<div className="flex items-baseline gap-1.5">
 					<span
 						className="font-kds leading-none text-ink-primary"
-						style={{ fontSize: "clamp(36px,8vw,52px)" }}
+						style={{ fontSize: "clamp(40px,9vw,56px)" }}
 					>
 						{table.number}
 					</span>
 					{table.type === "pool" && (
-						<span className="text-base" title="Mesa de pool">
-							🎱
+						<span
+							className="pool-chip-badge font-display font-bold text-[9px] uppercase tracking-widest"
+							style={{ letterSpacing: "0.15em" }}
+						>
+							POOL
 						</span>
 					)}
 				</div>
-				<div className="flex items-center gap-1.5 mt-0.5">
-					<StatusDot status={table.status} />
-					<span
-						className="font-display font-bold uppercase tracking-widest"
-						style={{
-							fontSize: 9,
-							color: statusTextColor,
-							letterSpacing: "0.3em",
-						}}
-					>
-						{statusLabels[table.status] ?? table.status}
-					</span>
-				</div>
+				<span
+					className={clsx("badge mt-0.5", {
+						"badge-available": isAvailable,
+						"badge-occupied": isOccupied,
+						"badge-reserved": isReserved,
+					})}
+				>
+					{statusLabels[table.status] ?? table.status}
+				</span>
 			</div>
 
-			{/* Zone badge + seats */}
+			{/* Zone + seats */}
 			<div className="flex items-center gap-2 mb-auto">
 				<div
 					className="font-display uppercase tracking-widest rounded-lg px-2 py-0.5"
@@ -210,10 +195,10 @@ function TableCard({
 				</div>
 			</div>
 
-			{/* Occupied details */}
-			{table.status === "occupied" && oldestOrder && (
+			{/* Occupied: elapsed + items + total */}
+			{isOccupied && oldestOrder && (
 				<div
-					className="mt-3 pt-2.5 border-t w-full flex items-center justify-between"
+					className="mt-2.5 pt-2.5 border-t w-full flex items-center justify-between"
 					style={{ borderColor: "rgba(245,158,11,0.2)" }}
 				>
 					<div className="flex items-center gap-1.5">
@@ -227,6 +212,11 @@ function TableCard({
 								min
 							</span>
 						</span>
+						{itemCount > 0 && (
+							<span className="font-display text-[10px] text-ink-disabled ml-1">
+								· {itemCount} ítems
+							</span>
+						)}
 					</div>
 					{total > 0 && (
 						<span
@@ -240,9 +230,9 @@ function TableCard({
 			)}
 
 			{/* Reserved time */}
-			{table.status === "reserved" && oldestOrder && (
+			{isReserved && oldestOrder && (
 				<div
-					className="mt-3 pt-2.5 border-t w-full"
+					className="mt-2.5 pt-2.5 border-t w-full"
 					style={{ borderColor: "rgba(139,92,246,0.2)" }}
 				>
 					<span className="font-display text-[10px] text-purple-400 uppercase tracking-wide">
@@ -313,91 +303,132 @@ export default function WaiterTablesPage() {
 
 	return (
 		<div
-			className="min-h-screen flex flex-col"
+			className="noise-overlay min-h-screen flex flex-col"
 			style={{ background: "var(--s0)" }}
 		>
 			{/* Header */}
 			<header
-				className="sticky top-0 z-40 flex items-center justify-between px-4"
+				className="sticky top-0 z-40 flex items-center justify-between px-4 top-accent"
 				style={{
-					height: 56,
-					background: "rgba(8,8,8,0.94)",
-					backdropFilter: "blur(20px)",
+					height: 60,
+					background: "rgba(8,8,8,0.95)",
+					backdropFilter: "blur(24px)",
 					borderBottom: "1px solid var(--s3)",
+					position: "sticky",
 				}}
 			>
 				<div className="flex items-center gap-3">
 					<img
 						src="/logo.svg"
 						alt="My Way"
-						style={{ height: 22, width: 'auto', filter: 'invert(1)', display: 'block' }}
+						style={{
+							height: 22,
+							width: "auto",
+							filter: "invert(1)",
+							display: "block",
+						}}
 					/>
 					<div className="h-4 w-px bg-surface-4" />
-					<div className="flex flex-col">
-						<span className="font-display text-[9px] text-ink-disabled uppercase tracking-widest">
-							Hola,
-						</span>
-						<span className="font-display text-xs font-semibold text-ink-primary leading-tight">
-							{waiterName}
-						</span>
-					</div>
+					<span className="font-kds text-3xl leading-none text-ink-primary tracking-widest">
+						MESAS
+					</span>
 				</div>
 
-				<div className="flex items-center gap-2">
-					{/* Quick stats */}
-					<div className="hidden sm:flex items-center gap-3 mr-2">
-						<div className="flex items-center gap-1.5">
+				<div className="flex items-center gap-2.5">
+					{/* Stats pills */}
+					<div className="hidden sm:flex items-center gap-2 mr-1">
+						<div
+							className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl"
+							style={{
+								background: "rgba(16,185,129,0.08)",
+								border: "1px solid rgba(16,185,129,0.2)",
+							}}
+						>
 							<span
-								style={{
-									width: 6,
-									height: 6,
-									borderRadius: "50%",
-									background: "#10b981",
-									boxShadow: "0 0 5px #10b981",
-									display: "inline-block",
-								}}
+								className="dot-available w-1.5 h-1.5 rounded-full inline-block"
+								style={{ width: 6, height: 6 }}
 							/>
-							<span className="font-display text-[10px] text-ink-tertiary uppercase tracking-wide">
+							<span
+								className="font-display text-[10px] uppercase tracking-wide"
+								style={{ color: "#34d399" }}
+							>
 								{availableCount} libres
 							</span>
 						</div>
-						<div className="flex items-center gap-1.5">
+						<div
+							className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl"
+							style={{
+								background: "rgba(245,158,11,0.08)",
+								border: "1px solid rgba(245,158,11,0.2)",
+							}}
+						>
 							<span
-								style={{
-									width: 6,
-									height: 6,
-									borderRadius: "50%",
-									background: "#f59e0b",
-									boxShadow: "0 0 5px #f59e0b",
-									display: "inline-block",
-								}}
+								className="dot-occupied w-1.5 h-1.5 rounded-full inline-block"
+								style={{ width: 6, height: 6 }}
 							/>
-							<span className="font-display text-[10px] text-ink-tertiary uppercase tracking-wide">
+							<span
+								className="font-display text-[10px] uppercase tracking-wide"
+								style={{ color: "#fbbf24" }}
+							>
 								{occupiedCount} ocupadas
 							</span>
 						</div>
 					</div>
-					<button
-						className="btn-ghost p-2 rounded-xl relative"
-						aria-label="Notificaciones"
+
+					{/* Waiter name */}
+					<div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-surface-2 border border-surface-3">
+						<div
+							className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0"
+							style={{
+								background: "rgba(245,158,11,0.15)",
+								border: "1px solid rgba(245,158,11,0.3)",
+							}}
+						>
+							<span className="font-kds text-xs leading-none text-brand-500">
+								{waiterName.slice(0, 1).toUpperCase()}
+							</span>
+						</div>
+						<span className="font-display text-xs font-semibold text-ink-primary">
+							{waiterName}
+						</span>
+					</div>
+
+					{/* Bell with ready badge */}
+					<Link
+						href="/waiter/ready"
+						className="relative p-2 rounded-xl transition-all hover:bg-surface-3"
+						aria-label="Items listos"
+						style={{
+							minWidth: 40,
+							minHeight: 40,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+						}}
 					>
-						<Bell className="w-4 h-4 text-ink-tertiary" />
+						<Bell
+							className={clsx(
+								"w-5 h-5",
+								readyCount > 0 ? "text-brand-500" : "text-ink-tertiary",
+							)}
+						/>
 						{readyCount > 0 && (
-							<span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-brand-500 text-surface-0 font-kds text-[9px] leading-none flex items-center justify-center">
+							<span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-brand-500 text-surface-0 font-kds text-[9px] leading-none flex items-center justify-center animate-pulse-glow">
 								{readyCount}
 							</span>
 						)}
-					</button>
+					</Link>
 				</div>
 			</header>
 
 			{/* Zone tabs */}
 			{zones.length > 0 && (
 				<div
-					className="flex gap-2 px-4 py-2.5 overflow-x-auto"
+					className="flex gap-2 px-4 py-3 overflow-x-auto"
 					style={{
 						borderBottom: "1px solid var(--s3)",
 						scrollbarWidth: "none",
+						background: "rgba(16,16,16,0.6)",
 					}}
 				>
 					{zones.map((zone) => (
@@ -405,11 +436,12 @@ export default function WaiterTablesPage() {
 							key={zone.id}
 							onClick={() => setActiveZoneId(zone.id)}
 							className={clsx(
-								"shrink-0 px-4 py-2 rounded-xl font-display text-[11px] font-bold uppercase tracking-widest transition-all",
+								"shrink-0 px-5 rounded-full font-display text-[11px] font-bold uppercase tracking-widest transition-all",
 								activeZoneId === zone.id
 									? "bg-brand-500 text-surface-0 shadow-gold-sm"
 									: "bg-surface-2 text-ink-secondary border border-surface-3 hover:border-brand-500/30 hover:text-ink-primary active:scale-95",
 							)}
+							style={{ minHeight: 36 }}
 						>
 							{zone.name}
 						</button>
@@ -453,6 +485,29 @@ export default function WaiterTablesPage() {
 					</div>
 				)}
 			</main>
+
+			{/* Nueva Orden FAB */}
+			<Link
+				href="/waiter/tables"
+				className="fixed z-40 flex items-center gap-2 btn-primary animate-slide-up"
+				style={{
+					bottom: 80,
+					right: 16,
+					borderRadius: 28,
+					paddingLeft: 18,
+					paddingRight: 18,
+					paddingTop: 14,
+					paddingBottom: 14,
+					boxShadow:
+						"0 0 28px rgba(245,158,11,0.3), 0 4px 16px rgba(0,0,0,0.5)",
+				}}
+				aria-label="Nueva orden"
+			>
+				<Plus className="w-4 h-4" />
+				<span className="font-display font-bold text-xs uppercase tracking-wider">
+					Nueva Orden
+				</span>
+			</Link>
 
 			{/* Bottom nav */}
 			<nav className="mobile-nav">

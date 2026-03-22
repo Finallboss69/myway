@@ -331,13 +331,12 @@ export default function POSLoginPage() {
 			<div className="flex-[0.7]" />
 
 			{/* Footer */}
-			<div className="flex flex-col items-center gap-1.5 pb-10 animate-fade-in">
-				<div
-					className="font-display text-ink-disabled uppercase tracking-widest"
-					style={{ fontSize: 10, letterSpacing: "0.3em" }}
-				>
-					My Way · Bar & Pool
-				</div>
+			<div className="flex flex-col items-center gap-2 pb-10 animate-fade-in">
+				<img
+					src="/logo.svg"
+					alt="My Way"
+					style={{ height: 16, width: "auto", filter: "invert(1)", opacity: 0.3, display: "block" }}
+				/>
 				<div
 					className="text-ink-disabled font-kds"
 					style={{ fontSize: 13, letterSpacing: "0.05em" }}

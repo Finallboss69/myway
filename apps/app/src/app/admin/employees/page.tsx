@@ -15,38 +15,6 @@ const ROLE_LABELS: Record<string, string> = {
 	admin: "Admin",
 };
 
-const ROLE_COLORS: Record<
-	string,
-	{ avatar: string; badge: string; num: string }
-> = {
-	admin: {
-		avatar:
-			"rgba(245,158,11,0.25) border border-[rgba(245,158,11,0.4)] text-[#f59e0b]",
-		badge: "rgba(245,158,11,0.1)",
-		num: "#f59e0b",
-	},
-	waiter: {
-		avatar: "rgba(59,130,246,0.25)",
-		badge: "rgba(59,130,246,0.1)",
-		num: "#3b82f6",
-	},
-	kitchen: {
-		avatar: "rgba(16,185,129,0.25)",
-		badge: "rgba(16,185,129,0.1)",
-		num: "#10b981",
-	},
-	bar: {
-		avatar: "rgba(139,92,246,0.25)",
-		badge: "rgba(139,92,246,0.1)",
-		num: "#8b5cf6",
-	},
-	cashier: {
-		avatar: "rgba(245,158,11,0.25)",
-		badge: "rgba(245,158,11,0.1)",
-		num: "#f59e0b",
-	},
-};
-
 const ROLE_ACCENT: Record<
 	string,
 	{
@@ -135,14 +103,12 @@ function StatsRow({ staff }: { staff: Staff[] }) {
 
 	return (
 		<div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
-			{/* Total active */}
+			{/* Total active — spans 2 cols */}
 			<div
-				className="stat-card col-span-2 md:col-span-2"
+				className="card col-span-2 md:col-span-2 p-5 relative overflow-hidden"
 				style={{
-					position: "relative",
-					overflow: "hidden",
 					borderColor: "rgba(245,158,11,0.25)",
-					boxShadow: "0 0 12px rgba(245,158,11,0.06)",
+					boxShadow: "0 0 24px rgba(245,158,11,0.06)",
 				}}
 			>
 				<div
@@ -164,7 +130,7 @@ function StatsRow({ staff }: { staff: Staff[] }) {
 					<div className="flex items-end gap-3">
 						<span
 							className="font-kds text-brand-500"
-							style={{ fontSize: 42, lineHeight: 1 }}
+							style={{ fontSize: 44, lineHeight: 1 }}
 						>
 							{staff.length}
 						</span>
@@ -199,11 +165,11 @@ function StatsRow({ staff }: { staff: Staff[] }) {
 			{roleEntries.map(({ role, label, count }) => {
 				const c = ROLE_ACCENT[role] ?? DEFAULT_ACCENT;
 				return (
-					<div key={role} className="stat-card flex flex-col gap-2">
+					<div key={role} className="card p-4 flex flex-col gap-2">
 						<span
 							style={{
 								display: "inline-flex",
-								padding: "2px 8px",
+								padding: "3px 9px",
 								borderRadius: 6,
 								border: `1px solid ${c.badgeBorder}`,
 								background: c.badgeBg,
@@ -219,7 +185,7 @@ function StatsRow({ staff }: { staff: Staff[] }) {
 						</span>
 						<span
 							className="font-kds"
-							style={{ fontSize: 36, lineHeight: 1, color: c.textColor }}
+							style={{ fontSize: 38, lineHeight: 1, color: c.textColor }}
 						>
 							{count}
 						</span>
@@ -230,21 +196,12 @@ function StatsRow({ staff }: { staff: Staff[] }) {
 	);
 }
 
-// ─── Staff table ──────────────────────────────────────────────────────────────
+// ─── Staff grid (cards) ───────────────────────────────────────────────────────
 
-function StaffTable({ staff }: { staff: Staff[] }) {
+function StaffGrid({ staff }: { staff: Staff[] }) {
 	return (
-		<div className="card" style={{ padding: 0, overflow: "hidden" }}>
-			<div
-				style={{
-					padding: "16px 20px",
-					borderBottom: "1px solid var(--s3)",
-					background: "var(--s2)",
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "space-between",
-				}}
-			>
+		<div>
+			<div className="flex items-center justify-between mb-4">
 				<div>
 					<h3
 						className="font-display text-ink-primary"
@@ -261,182 +218,149 @@ function StaffTable({ staff }: { staff: Staff[] }) {
 				</div>
 			</div>
 
-			<table style={{ width: "100%", borderCollapse: "collapse" }}>
-				<thead>
-					<tr style={{ borderBottom: "1px solid var(--s3)" }}>
-						{["Empleado", "Rol", "Estado", "Turno actual", "Acciones"].map(
-							(h) => (
-								<th
-									key={h}
-									className="font-display text-ink-disabled uppercase"
-									style={{
-										fontSize: 9,
-										letterSpacing: "0.2em",
-										padding: "12px 20px",
-										textAlign: "left",
-										fontWeight: 600,
-									}}
-								>
-									{h}
-								</th>
-							),
-						)}
-					</tr>
-				</thead>
-				<tbody>
-					{staff.length === 0 ? (
-						<tr>
-							<td
-								colSpan={5}
-								className="text-center font-body text-ink-disabled"
-								style={{ padding: "40px 20px", fontSize: 13 }}
+			{staff.length === 0 ? (
+				<div
+					className="card text-center font-body text-ink-disabled py-16"
+					style={{ fontSize: 13 }}
+				>
+					No hay empleados registrados
+				</div>
+			) : (
+				<div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+					{staff.map((s) => {
+						const c = ROLE_ACCENT[s.role] ?? DEFAULT_ACCENT;
+						return (
+							<div
+								key={s.id}
+								className="card p-5 flex flex-col gap-4 hover:border-[rgba(245,158,11,0.2)] transition-all duration-150"
 							>
-								No hay empleados registrados
-							</td>
-						</tr>
-					) : (
-						staff.map((s) => {
-							const c = ROLE_ACCENT[s.role] ?? DEFAULT_ACCENT;
-							return (
-								<tr key={s.id} style={{ borderBottom: "1px solid var(--s3)" }}>
-									{/* Avatar + Name */}
-									<td style={{ padding: "14px 20px" }}>
-										<div className="flex items-center gap-3">
-											<div
-												style={{
-													width: 36,
-													height: 36,
-													borderRadius: "50%",
-													border: `1px solid ${c.avatarBorder}`,
-													background: c.avatarBg,
-													display: "flex",
-													alignItems: "center",
-													justifyContent: "center",
-													flexShrink: 0,
-												}}
-											>
-												<span
-													className="font-kds"
-													style={{
-														fontSize: 14,
-														lineHeight: 1,
-														color: c.textColor,
-													}}
-												>
-													{s.avatar}
-												</span>
-											</div>
-											<div>
-												<div
-													className="font-display text-ink-primary"
-													style={{
-														fontSize: 13,
-														fontWeight: 600,
-														lineHeight: 1.2,
-													}}
-												>
-													{s.name}
-												</div>
-												<div
-													className="font-body text-ink-disabled"
-													style={{ fontSize: 10 }}
-												>
-													ID #{s.id.slice(0, 8)}
-												</div>
-											</div>
-										</div>
-									</td>
-
-									{/* Role */}
-									<td style={{ padding: "14px 20px" }}>
+								{/* Avatar + name */}
+								<div className="flex items-center gap-3">
+									<div
+										style={{
+											width: 44,
+											height: 44,
+											borderRadius: "50%",
+											border: `1.5px solid ${c.avatarBorder}`,
+											background: c.avatarBg,
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "center",
+											flexShrink: 0,
+										}}
+									>
 										<span
+											className="font-kds"
 											style={{
-												display: "inline-flex",
-												alignItems: "center",
-												padding: "4px 10px",
-												borderRadius: 8,
-												border: `1px solid ${c.badgeBorder}`,
-												background: c.badgeBg,
+												fontSize: 16,
+												lineHeight: 1,
 												color: c.textColor,
-												fontFamily: "var(--font-syne)",
-												fontSize: 11,
-												fontWeight: 700,
 											}}
 										>
-											{ROLE_LABELS[s.role] ?? s.role}
+											{s.avatar}
 										</span>
-									</td>
-
-									{/* Status */}
-									<td style={{ padding: "14px 20px" }}>
-										<div className="flex items-center gap-2">
-											<div
-												style={{
-													width: 6,
-													height: 6,
-													borderRadius: "50%",
-													background: "#10b981",
-												}}
-											/>
-											<span
-												className="font-display"
-												style={{
-													fontSize: 12,
-													fontWeight: 600,
-													color: "#10b981",
-												}}
-											>
-												Activo
-											</span>
+									</div>
+									<div>
+										<div
+											className="font-display text-ink-primary"
+											style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.2 }}
+										>
+											{s.name}
 										</div>
-									</td>
-
-									{/* Shift */}
-									<td style={{ padding: "14px 20px" }}>
-										<div className="flex items-center gap-2">
-											<Clock
-												size={12}
-												style={{ color: "#555", flexShrink: 0 }}
-											/>
-											<span
-												className="font-body text-ink-secondary"
-												style={{ fontSize: 12, fontFamily: "monospace" }}
-											>
-												18:00 – 02:00
-											</span>
+										<div
+											className="font-body text-ink-disabled"
+											style={{ fontSize: 10, marginTop: 2 }}
+										>
+											#{s.id.slice(0, 8)}
 										</div>
-									</td>
+									</div>
+								</div>
 
-									{/* Actions */}
-									<td style={{ padding: "14px 20px" }}>
-										<div className="flex items-center justify-end gap-1">
-											<button
-												className="btn-ghost"
-												style={{ padding: "6px 10px", fontSize: 11 }}
-											>
-												<Eye size={13} />
-												Ver perfil
-											</button>
-											<button
-												className="btn-ghost"
-												style={{ padding: "6px 8px" }}
-											>
-												<Edit2 size={13} />
-											</button>
-											<button
-												className="btn-ghost"
-												style={{ padding: "6px 8px", color: "#ef4444" }}
-											>
-												<UserX size={13} />
-											</button>
-										</div>
-									</td>
-								</tr>
-							);
-						})
-					)}
-				</tbody>
-			</table>
+								{/* Role badge + status */}
+								<div className="flex items-center justify-between">
+									<span
+										style={{
+											display: "inline-flex",
+											alignItems: "center",
+											padding: "4px 10px",
+											borderRadius: 8,
+											border: `1px solid ${c.badgeBorder}`,
+											background: c.badgeBg,
+											color: c.textColor,
+											fontFamily: "var(--font-syne)",
+											fontSize: 10,
+											fontWeight: 700,
+											letterSpacing: "0.1em",
+											textTransform: "uppercase",
+										}}
+									>
+										{ROLE_LABELS[s.role] ?? s.role}
+									</span>
+
+									<div className="flex items-center gap-1.5">
+										<div
+											style={{
+												width: 6,
+												height: 6,
+												borderRadius: "50%",
+												background: "#10b981",
+											}}
+										/>
+										<span
+											className="font-display"
+											style={{
+												fontSize: 10,
+												fontWeight: 600,
+												color: "#10b981",
+											}}
+										>
+											Activo
+										</span>
+									</div>
+								</div>
+
+								{/* Shift */}
+								<div className="flex items-center gap-2">
+									<Clock size={11} style={{ color: "#555", flexShrink: 0 }} />
+									<span
+										className="font-body text-ink-disabled"
+										style={{ fontSize: 11, fontFamily: "monospace" }}
+									>
+										18:00 – 02:00
+									</span>
+								</div>
+
+								{/* Actions */}
+								<div
+									className="flex items-center gap-1 pt-1"
+									style={{ borderTop: "1px solid var(--s3)" }}
+								>
+									<button
+										className="btn-ghost flex-1 justify-center transition-all duration-150"
+										style={{ padding: "6px 8px", fontSize: 11 }}
+									>
+										<Eye size={13} />
+										Ver
+									</button>
+									<button
+										className="btn-ghost flex-1 justify-center transition-all duration-150"
+										style={{ padding: "6px 8px" }}
+									>
+										<Edit2 size={13} />
+										Editar
+									</button>
+									<button
+										className="btn-ghost transition-all duration-150"
+										style={{ padding: "6px 8px", color: "#ef4444" }}
+									>
+										<UserX size={13} />
+									</button>
+								</div>
+							</div>
+						);
+					})}
+				</div>
+			)}
 		</div>
 	);
 }
@@ -458,7 +382,7 @@ function ShiftsSection({ staff }: { staff: Staff[] }) {
 	}, []);
 
 	return (
-		<div className="card" style={{ padding: 24 }}>
+		<div className="card p-6">
 			<div className="flex items-center gap-2.5 mb-5">
 				<Calendar size={15} style={{ color: "#f59e0b" }} />
 				<h3
@@ -606,20 +530,30 @@ export default function EmployeesPage() {
 	}, [fetchStaff]);
 
 	return (
-		<div style={{ minHeight: "100vh" }} className="p-5 md:p-7">
-			{/* Header */}
+		<div
+			className="min-h-screen p-5 md:p-7 pb-10"
+			style={{ background: "var(--s0)" }}
+		>
+			{/* ── Header ── */}
 			<div className="flex items-center justify-between mb-7">
 				<div>
-					<h1
-						className="font-display text-ink-primary"
-						style={{ fontSize: 20, fontWeight: 700 }}
-					>
-						Empleados
-					</h1>
-					<div
-						className="font-body text-ink-disabled mt-1"
-						style={{ fontSize: 12 }}
-					>
+					<div className="flex items-center gap-2 mb-1">
+						<div
+							style={{
+								width: 3,
+								height: 20,
+								borderRadius: 3,
+								background: "var(--gold)",
+							}}
+						/>
+						<h1
+							className="font-display text-ink-primary"
+							style={{ fontSize: 22, fontWeight: 700 }}
+						>
+							Empleados
+						</h1>
+					</div>
+					<div className="font-body text-ink-disabled" style={{ fontSize: 12 }}>
 						{staff.length} activos hoy
 					</div>
 				</div>
@@ -629,9 +563,11 @@ export default function EmployeesPage() {
 				</button>
 			</div>
 
-			<div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+			<div className="divider-gold mb-7" />
+
+			<div className="flex flex-col gap-6">
 				<StatsRow staff={staff} />
-				<StaffTable staff={staff} />
+				<StaffGrid staff={staff} />
 				<ShiftsSection staff={staff} />
 			</div>
 		</div>

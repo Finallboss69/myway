@@ -437,20 +437,30 @@ export default function AccountingPage() {
 	};
 
 	return (
-		<div className="p-5 md:p-7">
+		<div
+			className="min-h-screen p-5 md:p-7 pb-10"
+			style={{ background: "var(--s0)" }}
+		>
 			{/* Header */}
 			<div className="flex flex-wrap items-start justify-between gap-4 mb-7">
 				<div>
-					<h1
-						className="font-display text-ink-primary"
-						style={{ fontSize: 20, fontWeight: 700 }}
-					>
-						Contabilidad
-					</h1>
-					<div
-						className="font-body text-ink-disabled mt-1"
-						style={{ fontSize: 12 }}
-					>
+					<div className="flex items-center gap-2 mb-1">
+						<div
+							style={{
+								width: 3,
+								height: 20,
+								borderRadius: 3,
+								background: "var(--gold)",
+							}}
+						/>
+						<h1
+							className="font-display text-ink-primary"
+							style={{ fontSize: 22, fontWeight: 700 }}
+						>
+							Contabilidad
+						</h1>
+					</div>
+					<div className="font-body text-ink-disabled" style={{ fontSize: 12 }}>
 						Pedidos activos para cierre
 					</div>
 				</div>
@@ -481,16 +491,42 @@ export default function AccountingPage() {
 				</div>
 			</div>
 
+			<div className="divider-gold mb-7" />
+
 			{/* Orders list */}
 			{activeOrders.length === 0 ? (
-				<div
-					className="text-center py-20 text-ink-disabled font-body"
-					style={{ fontSize: 13 }}
-				>
-					No hay pedidos activos en este momento
+				<div className="card flex flex-col items-center justify-center gap-4 py-20">
+					<div
+						style={{
+							width: 56,
+							height: 56,
+							borderRadius: 14,
+							background: "var(--s2)",
+							border: "1px solid var(--s3)",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+					>
+						<Check size={24} style={{ color: "#555" }} />
+					</div>
+					<div className="text-center">
+						<p
+							className="font-kds text-ink-secondary"
+							style={{ fontSize: 20, letterSpacing: "0.05em" }}
+						>
+							TODO COBRADO
+						</p>
+						<p
+							className="font-body text-ink-disabled mt-1"
+							style={{ fontSize: 12 }}
+						>
+							No hay pedidos activos en este momento
+						</p>
+					</div>
 				</div>
 			) : (
-				<div>
+				<div className="flex flex-col gap-2">
 					{activeOrders.map((order) => (
 						<OrderRow
 							key={order.id}

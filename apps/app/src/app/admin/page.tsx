@@ -29,40 +29,55 @@ function StatCard({
 	icon: React.ElementType;
 }) {
 	return (
-		<div className="stat-card">
-			<div className="flex items-center gap-2 mb-3">
-				<div
-					style={{
-						width: 32,
-						height: 32,
-						borderRadius: 8,
-						background: `${color}18`,
-						border: `1px solid ${color}30`,
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-					}}
-				>
-					<Icon size={16} style={{ color }} />
+		<div className="card p-5 relative overflow-hidden">
+			{/* subtle gradient glow */}
+			<div
+				style={{
+					position: "absolute",
+					inset: 0,
+					background: `radial-gradient(ellipse 200px 140px at 100% 0%, ${color}08 0%, transparent 60%)`,
+					pointerEvents: "none",
+				}}
+			/>
+			<div className="relative z-10">
+				<div className="flex items-center gap-2.5 mb-4">
+					<div
+						style={{
+							width: 36,
+							height: 36,
+							borderRadius: 10,
+							background: `${color}18`,
+							border: `1px solid ${color}30`,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							flexShrink: 0,
+						}}
+					>
+						<Icon size={16} style={{ color }} />
+					</div>
+					<span
+						className="font-display text-ink-disabled uppercase tracking-widest"
+						style={{ fontSize: 9, letterSpacing: "0.25em" }}
+					>
+						{label}
+					</span>
 				</div>
-				<span
-					className="font-display text-ink-disabled uppercase tracking-widest"
-					style={{ fontSize: 9, letterSpacing: "0.25em" }}
-				>
-					{label}
-				</span>
-			</div>
-			<div className="font-kds" style={{ fontSize: 38, lineHeight: 1, color }}>
-				{value}
-			</div>
-			{sub && (
 				<div
-					className="font-body text-ink-disabled mt-1"
-					style={{ fontSize: 11 }}
+					className="font-kds"
+					style={{ fontSize: 40, lineHeight: 1, color }}
 				>
-					{sub}
+					{value}
 				</div>
-			)}
+				{sub && (
+					<div
+						className="font-body text-ink-tertiary mt-1.5"
+						style={{ fontSize: 11 }}
+					>
+						{sub}
+					</div>
+				)}
+			</div>
 		</div>
 	);
 }
@@ -115,303 +130,322 @@ export default function AdminDashboard() {
 	};
 
 	return (
-		<div style={{ padding: "20px 20px 28px" }} className="md:p-7">
-			{/* Page header */}
-			<div className="flex items-center justify-between mb-6">
-				<div>
-					<h1
-						className="font-display text-ink-primary"
-						style={{ fontSize: 20, fontWeight: 700 }}
-					>
-						Dashboard
-					</h1>
-					<div
-						className="font-body text-ink-disabled mt-1"
-						style={{ fontSize: 12 }}
-					>
-						Vista general del sistema
-					</div>
-				</div>
-				<div className="font-body text-ink-disabled" style={{ fontSize: 11 }}>
-					Actualiza cada 10s
-				</div>
-			</div>
-
-			{/* KPI stats — 2 cols mobile, 4 cols desktop */}
-			<div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-				<StatCard
-					label="Pedidos activos"
-					value={activeOrders.length}
-					sub={`${orders.filter((o) => o.status === "preparing").length} preparando`}
-					color="#3b82f6"
-					icon={TrendingUp}
-				/>
-				<StatCard
-					label="Mesas ocupadas"
-					value={occupiedTables}
-					sub={`de ${tables.length} totales`}
-					color="#f59e0b"
-					icon={LayoutDashboard}
-				/>
-				<StatCard
-					label="Stock bajo"
-					value={lowStock.length}
-					sub={lowStock.length > 0 ? "Requieren atención" : "Todo en orden"}
-					color={lowStock.length > 0 ? "#ef4444" : "#10b981"}
-					icon={AlertTriangle}
-				/>
-				<StatCard
-					label="Ingresos activos"
-					value={formatCurrency(totalRevenue)}
-					sub="pedidos abiertos"
-					color="#10b981"
-					icon={Package}
-				/>
-			</div>
-
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-				{/* Active orders table */}
-				<div className="card" style={{ padding: 0, overflow: "hidden" }}>
-					<div
-						style={{
-							padding: "16px 20px",
-							borderBottom: "1px solid var(--s3)",
-						}}
-					>
-						<h2
-							className="font-display text-ink-primary uppercase"
-							style={{ fontSize: 11, letterSpacing: "0.2em" }}
-						>
-							Pedidos activos
-						</h2>
-					</div>
-					<div style={{ maxHeight: 340, overflowY: "auto" }}>
-						{activeOrders.length === 0 ? (
+		<div
+			className="min-h-screen noise-overlay"
+			style={{ background: "var(--s0)" }}
+		>
+			<div className="p-5 md:p-7 pb-10">
+				{/* ── Page header ── */}
+				<div className="flex items-center justify-between mb-7">
+					<div>
+						<div className="flex items-center gap-2 mb-1">
 							<div
-								className="text-center py-10 text-ink-disabled font-body"
-								style={{ fontSize: 12 }}
+								style={{
+									width: 3,
+									height: 20,
+									borderRadius: 3,
+									background: "var(--gold)",
+								}}
+							/>
+							<h1
+								className="font-display text-ink-primary"
+								style={{ fontSize: 22, fontWeight: 700 }}
 							>
-								Sin pedidos activos
-							</div>
-						) : (
-							activeOrders.map((order) => {
-								const total = order.items.reduce(
-									(s, i) => s + i.qty * i.price,
-									0,
-								);
-								const elapsed = elapsedMinutes(order.createdAt);
-								const sColor =
-									order.status === "preparing"
-										? "#3b82f6"
-										: order.status === "ready"
-											? "#10b981"
-											: "#f59e0b";
-								return (
-									<div
-										key={order.id}
-										className="flex items-center gap-3"
-										style={{
-											padding: "10px 20px",
-											borderBottom: "1px solid var(--s3)",
-										}}
-									>
-										<div
-											style={{
-												width: 3,
-												height: 32,
-												borderRadius: 3,
-												background: sColor,
-												flexShrink: 0,
-											}}
-										/>
-										<span
-											className="font-kds text-ink-primary"
-											style={{ fontSize: 18, lineHeight: 1, minWidth: 70 }}
-										>
-											Mesa {order.tableNumber}
-										</span>
-										<span
-											className="font-body text-ink-disabled flex-1"
-											style={{ fontSize: 11 }}
-										>
-											{order.items.length} ítems
-										</span>
-										<div className="flex items-center gap-1">
-											<Clock size={10} style={{ color: "#555" }} />
-											<span
-												className="font-kds"
-												style={{
-													fontSize: 13,
-													color:
-														elapsed > 20
-															? "#ef4444"
-															: elapsed > 10
-																? "#f59e0b"
-																: "#555",
-												}}
-											>
-												{elapsed}m
-											</span>
-										</div>
-										<span
-											className="font-kds text-brand-500"
-											style={{
-												fontSize: 14,
-												minWidth: 80,
-												textAlign: "right",
-											}}
-										>
-											{formatCurrency(total)}
-										</span>
-									</div>
-								);
-							})
-						)}
+								Dashboard
+							</h1>
+						</div>
+						<div
+							className="font-body text-ink-disabled"
+							style={{ fontSize: 12 }}
+						>
+							Vista general del sistema
+						</div>
 					</div>
+					<span
+						className="font-body text-ink-disabled"
+						style={{ fontSize: 11 }}
+					>
+						Actualiza cada 10s
+					</span>
 				</div>
 
-				{/* Right column: tables map + stock alerts */}
-				<div className="flex flex-col gap-5">
-					{/* Tables mini map */}
-					<div className="card" style={{ padding: 0, overflow: "hidden" }}>
-						<div
-							style={{
-								padding: "16px 20px",
-								borderBottom: "1px solid var(--s3)",
-							}}
-						>
+				{/* ── Gold accent divider ── */}
+				<div className="divider-gold mb-7" />
+
+				{/* ── KPI stats ── */}
+				<div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-7">
+					<StatCard
+						label="Pedidos activos"
+						value={activeOrders.length}
+						sub={`${orders.filter((o) => o.status === "preparing").length} preparando`}
+						color="#3b82f6"
+						icon={TrendingUp}
+					/>
+					<StatCard
+						label="Mesas ocupadas"
+						value={occupiedTables}
+						sub={`de ${tables.length} totales`}
+						color="#f59e0b"
+						icon={LayoutDashboard}
+					/>
+					<StatCard
+						label="Stock bajo"
+						value={lowStock.length}
+						sub={lowStock.length > 0 ? "Requieren atención" : "Todo en orden"}
+						color={lowStock.length > 0 ? "#ef4444" : "#10b981"}
+						icon={AlertTriangle}
+					/>
+					<StatCard
+						label="Ingresos activos"
+						value={formatCurrency(totalRevenue)}
+						sub="pedidos abiertos"
+						color="#10b981"
+						icon={Package}
+					/>
+				</div>
+
+				{/* ── Main grid ── */}
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+					{/* Active orders */}
+					<div className="card overflow-hidden">
+						<div className="flex items-center justify-between px-5 py-4 border-b border-[var(--s3)]">
 							<h2
 								className="font-display text-ink-primary uppercase"
 								style={{ fontSize: 11, letterSpacing: "0.2em" }}
 							>
-								Estado de mesas
+								Pedidos activos
 							</h2>
+							<span
+								className="font-kds text-brand-500"
+								style={{ fontSize: 22, lineHeight: 1 }}
+							>
+								{activeOrders.length}
+							</span>
 						</div>
-						<div
-							style={{
-								padding: "16px 20px",
-								display: "flex",
-								flexWrap: "wrap",
-								gap: 8,
-							}}
-						>
-							{tables.map((t) => (
-								<Link
-									key={t.id}
-									href={`/pos/salon/${t.id}`}
-									style={{ textDecoration: "none" }}
+						<div style={{ maxHeight: 340, overflowY: "auto" }}>
+							{activeOrders.length === 0 ? (
+								<div
+									className="text-center py-10 text-ink-disabled font-body"
+									style={{ fontSize: 12 }}
 								>
-									<div
-										style={{
-											width: 48,
-											height: 48,
-											borderRadius: 10,
-											border: `2px solid ${tableColorMap[t.status] ?? "#333"}40`,
-											background: `${tableColorMap[t.status] ?? "#333"}12`,
-											display: "flex",
-											flexDirection: "column",
-											alignItems: "center",
-											justifyContent: "center",
-											cursor: "pointer",
-											transition: "all 0.15s",
-										}}
-									>
-										<span
-											className="font-kds"
-											style={{
-												fontSize: 16,
-												color: tableColorMap[t.status] ?? "#555",
-												lineHeight: 1,
-											}}
+									Sin pedidos activos
+								</div>
+							) : (
+								activeOrders.map((order) => {
+									const total = order.items.reduce(
+										(s, i) => s + i.qty * i.price,
+										0,
+									);
+									const elapsed = elapsedMinutes(order.createdAt);
+									const sColor =
+										order.status === "preparing"
+											? "#3b82f6"
+											: order.status === "ready"
+												? "#10b981"
+												: "#f59e0b";
+									return (
+										<div
+											key={order.id}
+											className="flex items-center gap-3 px-5 py-3 border-b border-[var(--s3)] hover:bg-[var(--s2)] transition-all duration-150"
 										>
-											{t.number}
-										</span>
-										<span style={{ fontSize: 9 }}>
-											{t.type === "pool" ? "🎱" : "🍺"}
-										</span>
-									</div>
-								</Link>
-							))}
+											<div
+												style={{
+													width: 3,
+													height: 32,
+													borderRadius: 3,
+													background: sColor,
+													flexShrink: 0,
+												}}
+											/>
+											<span
+												className="font-kds text-ink-primary"
+												style={{ fontSize: 18, lineHeight: 1, minWidth: 70 }}
+											>
+												Mesa {order.tableNumber}
+											</span>
+											<span
+												className="font-body text-ink-disabled flex-1"
+												style={{ fontSize: 11 }}
+											>
+												{order.items.length} ítems
+											</span>
+											<div className="flex items-center gap-1">
+												<Clock size={10} style={{ color: "#555" }} />
+												<span
+													className="font-kds"
+													style={{
+														fontSize: 13,
+														color:
+															elapsed > 20
+																? "#ef4444"
+																: elapsed > 10
+																	? "#f59e0b"
+																	: "#555",
+													}}
+												>
+													{elapsed}m
+												</span>
+											</div>
+											<span
+												className="font-kds text-brand-500"
+												style={{
+													fontSize: 14,
+													minWidth: 80,
+													textAlign: "right",
+												}}
+											>
+												{formatCurrency(total)}
+											</span>
+										</div>
+									);
+								})
+							)}
 						</div>
 					</div>
 
-					{/* Stock alerts */}
-					<div className="card" style={{ padding: 0, overflow: "hidden" }}>
-						<div
-							style={{
-								padding: "16px 20px",
-								borderBottom: "1px solid var(--s3)",
-							}}
-						>
-							<h2
-								className="font-display text-ink-primary uppercase flex items-center gap-2"
-								style={{ fontSize: 11, letterSpacing: "0.2em" }}
-							>
-								<AlertTriangle
-									size={12}
-									style={{
-										color: lowStock.length > 0 ? "#ef4444" : "#555",
-									}}
-								/>
-								Stock bajo
-								{lowStock.length > 0 && (
-									<span
-										style={{
-											background: "rgba(239,68,68,0.15)",
-											color: "#ef4444",
-											border: "1px solid rgba(239,68,68,0.25)",
-											fontFamily: "var(--font-syne)",
-											fontSize: 9,
-											fontWeight: 700,
-											borderRadius: "99px",
-											padding: "1px 7px",
-										}}
+					{/* Right column */}
+					<div className="flex flex-col gap-5">
+						{/* Tables mini map */}
+						<div className="card overflow-hidden">
+							<div className="flex items-center justify-between px-5 py-4 border-b border-[var(--s3)]">
+								<h2
+									className="font-display text-ink-primary uppercase"
+									style={{ fontSize: 11, letterSpacing: "0.2em" }}
+								>
+									Estado de mesas
+								</h2>
+								<div className="flex items-center gap-3">
+									{[
+										{ label: "Libre", color: "#10b981" },
+										{ label: "Ocupada", color: "#f59e0b" },
+										{ label: "Reservada", color: "#8b5cf6" },
+									].map(({ label, color }) => (
+										<div key={label} className="flex items-center gap-1">
+											<span
+												style={{
+													width: 6,
+													height: 6,
+													borderRadius: "50%",
+													background: color,
+												}}
+											/>
+											<span
+												className="font-display text-ink-disabled"
+												style={{ fontSize: 9, letterSpacing: "0.1em" }}
+											>
+												{label}
+											</span>
+										</div>
+									))}
+								</div>
+							</div>
+							<div className="flex flex-wrap gap-2 p-4">
+								{tables.map((t) => (
+									<Link
+										key={t.id}
+										href={`/pos/salon/${t.id}`}
+										style={{ textDecoration: "none" }}
 									>
-										{lowStock.length}
+										<div
+											className="transition-all duration-150 hover:scale-105"
+											style={{
+												width: 52,
+												height: 52,
+												borderRadius: 12,
+												border: `2px solid ${tableColorMap[t.status] ?? "#333"}40`,
+												background: `${tableColorMap[t.status] ?? "#333"}12`,
+												display: "flex",
+												flexDirection: "column",
+												alignItems: "center",
+												justifyContent: "center",
+												cursor: "pointer",
+											}}
+										>
+											<span
+												className="font-kds"
+												style={{
+													fontSize: 18,
+													color: tableColorMap[t.status] ?? "#555",
+													lineHeight: 1,
+												}}
+											>
+												{t.number}
+											</span>
+											<span style={{ fontSize: 9 }}>
+												{t.type === "pool" ? "🎱" : "🍺"}
+											</span>
+										</div>
+									</Link>
+								))}
+							</div>
+						</div>
+
+						{/* Stock alerts */}
+						<div className="card overflow-hidden">
+							<div className="flex items-center justify-between px-5 py-4 border-b border-[var(--s3)]">
+								<h2
+									className="font-display text-ink-primary uppercase flex items-center gap-2"
+									style={{ fontSize: 11, letterSpacing: "0.2em" }}
+								>
+									<AlertTriangle
+										size={12}
+										style={{
+											color: lowStock.length > 0 ? "#ef4444" : "#555",
+										}}
+									/>
+									Stock bajo
+								</h2>
+								{lowStock.length > 0 && (
+									<span className="badge badge-cancelled">
+										{lowStock.length} alertas
 									</span>
 								)}
-							</h2>
-						</div>
-						<div style={{ maxHeight: 180, overflowY: "auto" }}>
-							{lowStock.length === 0 ? (
-								<div
-									className="text-center py-6 text-ink-disabled font-body"
-									style={{ fontSize: 12 }}
-								>
-									Todo en orden ✓
-								</div>
-							) : (
-								lowStock.map((ing) => (
+							</div>
+							<div style={{ maxHeight: 180, overflowY: "auto" }}>
+								{lowStock.length === 0 ? (
 									<div
-										key={ing.id}
-										className="flex items-center gap-3"
-										style={{
-											padding: "10px 20px",
-											borderBottom: "1px solid var(--s3)",
-										}}
+										className="text-center py-6 font-body"
+										style={{ fontSize: 12, color: "#10b981" }}
 									>
-										<AlertTriangle size={13} style={{ color: "#ef4444" }} />
-										<span
-											className="font-body text-ink-secondary flex-1"
-											style={{ fontSize: 13 }}
-										>
-											{ing.name}
-										</span>
-										<span
-											className="font-kds"
-											style={{ fontSize: 14, color: "#ef4444" }}
-										>
-											{ing.stockCurrent} {ing.unit}
-										</span>
-										<span
-											className="font-body text-ink-disabled"
-											style={{ fontSize: 11 }}
-										>
-											/ {ing.alertThreshold}
-										</span>
+										Todo en orden ✓
 									</div>
-								))
-							)}
+								) : (
+									lowStock.map((ing) => (
+										<div
+											key={ing.id}
+											className="flex items-center gap-3 px-5 py-3 border-b border-[var(--s3)] hover:bg-[var(--s2)] transition-all duration-150"
+										>
+											<div
+												style={{
+													width: 6,
+													height: 6,
+													borderRadius: "50%",
+													background: "#ef4444",
+													flexShrink: 0,
+												}}
+											/>
+											<span
+												className="font-body text-ink-secondary flex-1"
+												style={{ fontSize: 13 }}
+											>
+												{ing.name}
+											</span>
+											<span
+												className="font-kds"
+												style={{ fontSize: 14, color: "#ef4444" }}
+											>
+												{ing.stockCurrent} {ing.unit}
+											</span>
+											<span
+												className="font-body text-ink-disabled"
+												style={{ fontSize: 11 }}
+											>
+												/ {ing.alertThreshold}
+											</span>
+										</div>
+									))
+								)}
+							</div>
 						</div>
 					</div>
 				</div>
