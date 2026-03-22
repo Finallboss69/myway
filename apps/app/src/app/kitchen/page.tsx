@@ -502,9 +502,9 @@ export default function KitchenKDSPage() {
 		<div className="min-h-screen bg-surface-0 flex flex-col noise-overlay">
 			{/* ── Header ── */}
 			<header className="sticky top-0 z-40 bg-surface-1/95 backdrop-blur-md border-b border-surface-3 shadow-[0_1px_0_rgba(255,255,255,0.04)]">
-				<div className="flex items-center px-4 sm:px-6 py-3 gap-3">
+				<div className="relative flex items-center px-4 sm:px-6 py-3 gap-3">
 					{/* Left: Brand */}
-					<div className="flex items-center gap-3 min-w-0 flex-1">
+					<div className="flex items-center gap-3 min-w-0 flex-1 max-w-[40%]">
 						<div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-brand-500/10 border border-brand-500/25 shadow-gold-sm shrink-0">
 							<ChefHat className="w-5 h-5 sm:w-6 sm:h-6 text-brand-500" />
 						</div>
