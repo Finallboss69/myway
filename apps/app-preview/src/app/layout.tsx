@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Syne, DM_Sans, Bebas_Neue, DM_Mono } from "next/font/google";
 import "./globals.css";
-import { InstallPrompt } from "@/components/InstallPrompt";
 
 const syne = Syne({
 	subsets: ["latin"],
@@ -62,7 +61,6 @@ export default function RootLayout({
 		>
 			<body className="bg-surface-0 text-ink-primary antialiased">
 				{children}
-				<InstallPrompt />
 			</body>
 		</html>
 	);

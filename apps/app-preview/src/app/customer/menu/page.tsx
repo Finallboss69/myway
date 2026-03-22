@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import Link from "next/link";
 import {
 	ShoppingCart,
@@ -46,10 +47,9 @@ function BottomNav({
 	const carts = useAppStore((s) => s.carts);
 	const allOrders = useAppStore((s) => s.orders);
 	const cartCount = (carts[TABLE_ID] ?? []).reduce((s, i) => s + i.qty, 0);
-	const orderCount = allOrders.filter(o => o.tableId === TABLE_ID && o.status !== "closed").reduce(
-		(s, o) => s + o.items.length,
-		0,
-	);
+	const orderCount = allOrders
+		.filter((o) => o.tableId === TABLE_ID && o.status !== "closed")
+		.reduce((s, o) => s + o.items.length, 0);
 
 	const items = [
 		{
@@ -112,7 +112,9 @@ function BottomNav({
 
 function OrderStatusPill() {
 	const allOrders2 = useAppStore((s) => s.orders);
-	const orders = allOrders2.filter(o => o.tableId === TABLE_ID && o.status !== "closed");
+	const orders = allOrders2.filter(
+		(o) => o.tableId === TABLE_ID && o.status !== "closed",
+	);
 
 	if (!orders.length) return null;
 
@@ -696,6 +698,7 @@ export default function CustomerMenuPage() {
 
 			{/* ── Bottom nav ─────────────────────────────────────────────────── */}
 			<BottomNav active="menu" />
+			<InstallPrompt />
 		</div>
 	);
 }

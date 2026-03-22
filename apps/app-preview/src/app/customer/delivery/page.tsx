@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { InstallPrompt } from "@/components/InstallPrompt";
 import {
 	Truck,
 	MapPin,
@@ -803,6 +804,7 @@ export default function DeliveryPage() {
 
 			{/* ── Bottom nav ─────────────────────────────────────────────────── */}
 			<BottomNav />
+			<InstallPrompt />
 		</div>
 	);
 }
