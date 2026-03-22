@@ -117,7 +117,20 @@ export interface DeliveryOrder {
 	paymentMethod: string;
 	notes: string | null;
 	createdAt: string;
+	repartidorLat: number | null;
+	repartidorLng: number | null;
+	repartidorUpdatedAt: string | null;
 	items: DeliveryOrderItem[];
+}
+
+export interface TrackingData {
+	id: string;
+	status: DeliveryStatus;
+	repartidorLat: number | null;
+	repartidorLng: number | null;
+	items: { name: string; qty: number; price: number }[];
+	total: number;
+	customerName: string;
 }
 
 export interface Ingredient {

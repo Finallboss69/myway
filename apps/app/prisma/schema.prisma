@@ -84,16 +84,19 @@ model OrderItem {
 }
 
 model DeliveryOrder {
-  id            String              @id @default(cuid())
-  customerName  String
-  address       String
-  phone         String?
-  total         Float
-  status        String              @default("pending")
-  paymentMethod String              @default("cash")
-  notes         String?
-  createdAt     DateTime            @default(now())
-  items         DeliveryOrderItem[]
+  id                  String              @id @default(cuid())
+  customerName        String
+  address             String
+  phone               String?
+  total               Float
+  status              String              @default("pending")
+  paymentMethod       String              @default("cash")
+  notes               String?
+  createdAt           DateTime            @default(now())
+  repartidorLat       Float?
+  repartidorLng       Float?
+  repartidorUpdatedAt DateTime?
+  items               DeliveryOrderItem[]
 }
 
 model DeliveryOrderItem {
