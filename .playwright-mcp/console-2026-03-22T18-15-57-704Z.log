@@ -1,0 +1,2 @@
+[     958ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/products?available=true:0
+[     968ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/categories:0

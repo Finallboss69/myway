@@ -1,0 +1,42 @@
+[     486ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/tables:0
+[     488ms] [ERROR] Error: Failed to fetch tables
+    at t (https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:1:812)
+    at async Promise.all (index 1)
+    at async https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:1:2824 @ https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:0
+[     493ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/ingredients:0
+[     515ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/orders:0
+[   10488ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/ingredients:0
+[   10489ms] [ERROR] Error: Failed to fetch ingredients
+    at t (https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:1:812)
+    at async Promise.all (index 2)
+    at async https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:1:2824 @ https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:0
+[   10511ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/orders:0
+[   10917ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/tables:0
+[   20480ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/tables:0
+[   20482ms] [ERROR] Error: Failed to fetch tables
+    at t (https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:1:812)
+    at async Promise.all (index 1)
+    at async https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:1:2824 @ https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:0
+[   20485ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/orders:0
+[   20487ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/ingredients:0
+[   30474ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/tables:0
+[   30476ms] [ERROR] Error: Failed to fetch tables
+    at t (https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:1:812)
+    at async Promise.all (index 1)
+    at async https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:1:2824 @ https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:0
+[   30480ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/ingredients:0
+[   30532ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/orders:0
+[   40489ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/ingredients:0
+[   40490ms] [ERROR] Error: Failed to fetch ingredients
+    at t (https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:1:812)
+    at async Promise.all (index 2)
+    at async https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:1:2824 @ https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:0
+[   40491ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/tables:0
+[   40495ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/orders:0
+[   50485ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/ingredients:0
+[   50486ms] [ERROR] Error: Failed to fetch ingredients
+    at t (https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:1:812)
+    at async Promise.all (index 2)
+    at async https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:1:2824 @ https://myway-app-pink.vercel.app/_next/static/chunks/0-jtd8z.c_y84.js:0
+[   50491ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/tables:0
+[   50494ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://myway-app-pink.vercel.app/api/orders:0
