@@ -54,8 +54,8 @@ export default function PublicDeliveryPage() {
 			fetch("/api/products?available=true").then((r) => r.json()),
 		])
 			.then(([cats, prods]) => {
-				setCategories(cats as Category[]);
-				setProducts(prods as Product[]);
+				setCategories(Array.isArray(cats) ? cats : []);
+				setProducts(Array.isArray(prods) ? prods : []);
 			})
 			.catch(console.error)
 			.finally(() => setLoading(false));
