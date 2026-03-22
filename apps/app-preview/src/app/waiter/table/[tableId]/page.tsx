@@ -464,51 +464,23 @@ export default function WaiterTablePage() {
 							<div className="grid grid-cols-2 gap-2.5">
 								{filteredProducts.map((product) => {
 									const qty = getCartQty(product.id);
-									const isPoolChip = product.isPoolChip;
 									return (
 										<div
 											key={product.id}
 											className={clsx(
 												"flex flex-col gap-2 p-3 transition-all duration-150",
-												isPoolChip
-													? "card-gold pool-chip-border"
-													: qty > 0
-														? "card"
-														: "card-sm",
+												qty > 0 ? "card" : "card-sm",
 											)}
 											style={{
-												borderColor:
-													qty > 0 && !isPoolChip ? "#f59e0b" : undefined,
-												boxShadow:
-													qty > 0 && !isPoolChip
-														? "0 0 12px rgba(245,158,11,0.18)"
-														: undefined,
-												background: isPoolChip
-													? "linear-gradient(135deg, #0f0f0f, #1a1200)"
-													: "var(--s1)",
-												position: "relative",
-												overflow: "hidden",
+												borderColor: qty > 0 ? "#f59e0b" : undefined,
+												boxShadow: qty > 0
+													? "0 0 12px rgba(245,158,11,0.18)"
+													: undefined,
 											}}
 										>
-											{/* Pool chip shimmer overlay */}
-											{isPoolChip && (
-												<div
-													style={{
-														position: "absolute",
-														inset: 0,
-														background:
-															"linear-gradient(135deg, transparent 35%, rgba(245,158,11,0.05) 55%, transparent 75%)",
-														pointerEvents: "none",
-													}}
-												/>
-											)}
-
 											<div className="flex-1">
 												<div
-													className={clsx(
-														"font-display uppercase leading-tight",
-														isPoolChip ? "pool-chip-badge" : "text-ink-primary",
-													)}
+													className="font-display uppercase leading-tight text-ink-primary"
 													style={{ fontSize: 11 }}
 												>
 													{product.name}

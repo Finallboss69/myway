@@ -1,0 +1,51 @@
+[     797ms] [ERROR] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+%s%s https://react.dev/link/hydration-mismatch 
+
+  ...
+    <RedirectBoundary>
+      <RedirectErrorBoundary router={{...}}>
+        <InnerLayoutRouter url="/admin" tree={[...]} cacheNode={{lazyData:null, ...}} segmentPath={[...]}>
+          <SegmentViewNode type="page" pagePath="admin/page...">
+            <SegmentTrieNode>
+            <ClientPageRoot Component={function AdminDashboard} searchParams={{}} params={{}}>
+              <AdminDashboard params={Promise} searchParams={Promise}>
+                <div className="flex flex-...">
+                  <TopBar>
+                  <div className="flex-1 px-...">
+                    <div>
+                    <RevenueByHourChart>
+                    <div className="grid gap-4" style={{...}}>
+                      <ActiveOrders orders={[...]}>
+                        <div className="card p-6 f...">
+                          <div>
+                          <div className="space-y-2 ...">
+                            <div
++                             className="flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-colors bg-su..."
+-                             className="flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-colors bg-st..."
+                            >
+                              <div
++                               className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-surface-3"
+-                               className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-status..."
+                              >
+                                <span
++                                 className="font-kds text-base leading-none text-ink-secondary"
+-                                 className="font-kds text-base leading-none text-status-cancelled"
+                                >
++                                 2
+                              ...
+                            ...
+                          ...
+                      ...
+                    ...
+          ...
+        ...
+ @ webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:56

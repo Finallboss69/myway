@@ -582,12 +582,8 @@ export default function TableDetailPage({
 
 												<div className="flex-1 min-w-0">
 													<div
-														className={`font-body text-ink-primary ${item.isPoolChip ? "pool-chip-badge" : ""}`}
-														style={{
-															fontSize: 13,
-															fontWeight: 500,
-															...(item.isPoolChip ? {} : { color: "#f5f5f5" }),
-														}}
+														className="font-body text-ink-primary"
+														style={{ fontSize: 13, fontWeight: 500, color: "#f5f5f5" }}
 													>
 														{item.name}
 													</div>
@@ -862,16 +858,11 @@ export default function TableDetailPage({
 								{filteredProducts.map((product) => (
 									<button
 										key={product.id}
-										className={product.isPoolChip ? "pool-chip-border" : ""}
 										style={{
 											padding: "11px 12px",
 											borderRadius: 12,
-											border: product.isPoolChip
-												? "1px solid rgba(245,158,11,0.4)"
-												: "1px solid var(--s3)",
-											background: product.isPoolChip
-												? "rgba(245,158,11,0.05)"
-												: "var(--s2)",
+											border: "1px solid var(--s3)",
+											background: "var(--s2)",
 											cursor: "pointer",
 											textAlign: "left",
 											transition: "all 0.12s",
@@ -882,48 +873,22 @@ export default function TableDetailPage({
 										}}
 										onMouseEnter={(e) => {
 											const el = e.currentTarget;
-											el.style.borderColor = product.isPoolChip
-												? "rgba(245,158,11,0.7)"
-												: "rgba(245,158,11,0.3)";
-											el.style.background = product.isPoolChip
-												? "rgba(245,158,11,0.1)"
-												: "var(--s3)";
+											el.style.borderColor = "rgba(245,158,11,0.3)";
+											el.style.background = "var(--s3)";
 										}}
 										onMouseLeave={(e) => {
 											const el = e.currentTarget;
-											el.style.borderColor = product.isPoolChip
-												? "rgba(245,158,11,0.4)"
-												: "var(--s3)";
-											el.style.background = product.isPoolChip
-												? "rgba(245,158,11,0.05)"
-												: "var(--s2)";
+											el.style.borderColor = "var(--s3)";
+											el.style.background = "var(--s2)";
 										}}
 										onClick={() => handleAddToCart(product)}
 									>
-										{product.isPoolChip && (
-											<span
-												className="pool-chip-badge"
-												style={{
-													fontSize: 9,
-													fontFamily: "var(--font-syne)",
-													fontWeight: 700,
-													letterSpacing: "0.1em",
-													position: "absolute",
-													top: 8,
-													right: 10,
-												}}
-											>
-												🎱 POOL
-											</span>
-										)}
-
 										<div
 											className="font-body text-ink-secondary"
 											style={{
 												fontSize: 12,
 												fontWeight: 500,
 												lineHeight: 1.3,
-												paddingRight: product.isPoolChip ? 40 : 0,
 											}}
 										>
 											{product.name}

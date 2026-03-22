@@ -58,14 +58,6 @@ function elapsedBg(mins: number): string {
 	return "bg-emerald-500/15 text-emerald-400 border-emerald-500/25";
 }
 
-const poolChipProductIds = new Set(
-	PRODUCTS.filter((p) => p.isPoolChip).map((p) => p.id),
-);
-
-function isPoolChipItem(item: Order["items"][number]): boolean {
-	return !!item.isPoolChip || item.name === "Ficha de Pool";
-}
-
 // ─── Elapsed badge ─────────────────────────────────────────────────────────────
 
 function ElapsedBadge({ date }: { date: Date }) {
@@ -99,9 +91,6 @@ function BarOrderCard({
 }) {
 	const mins = elapsedMinutes(order.createdAt);
 	const isUrgent = mins >= 8 && column !== "ready";
-
-	const chipItems = order.items.filter(isPoolChipItem);
-	const drinkItems = order.items.filter((i) => !isPoolChipItem(i));
 
 	const borderAccent = {
 		pending: "border-l-amber-500",
@@ -171,65 +160,41 @@ function BarOrderCard({
 			{/* Divider */}
 			<div className="divider" />
 
-			{/* Drink items */}
-			{drinkItems.length > 0 && (
-				<div className="flex flex-col gap-2">
-					{drinkItems.map((item) => (
-						<div
-							key={item.id}
-							className="flex items-center justify-between gap-2"
-						>
-							<div className="flex items-center gap-2 min-w-0">
-								{column === "ready" ? (
-									<CheckCircle2
-										size={12}
-										className="text-emerald-400 shrink-0"
-									/>
-								) : (
-									<span
-										className={clsx(
-											"w-2 h-2 rounded-full shrink-0",
-											item.status === "preparing"
-												? "bg-blue-400 animate-pulse"
-												: item.status === "pending"
-													? "bg-amber-400"
-													: "bg-emerald-400",
-										)}
-									/>
-								)}
-								<span className="font-display text-sm font-semibold text-ink-primary truncate uppercase tracking-wide">
-									{item.name}
-								</span>
-							</div>
-							<span className="font-kds text-2xl text-brand-500 leading-none shrink-0">
-								×{item.qty}
+			{/* Items */}
+			<div className="flex flex-col gap-2">
+				{order.items.map((item) => (
+					<div
+						key={item.id}
+						className="flex items-center justify-between gap-2"
+					>
+						<div className="flex items-center gap-2 min-w-0">
+							{column === "ready" ? (
+								<CheckCircle2
+									size={12}
+									className="text-emerald-400 shrink-0"
+								/>
+							) : (
+								<span
+									className={clsx(
+										"w-2 h-2 rounded-full shrink-0",
+										item.status === "preparing"
+											? "bg-blue-400 animate-pulse"
+											: item.status === "pending"
+												? "bg-amber-400"
+												: "bg-emerald-400",
+									)}
+								/>
+							)}
+							<span className="font-display text-sm font-semibold text-ink-primary truncate uppercase tracking-wide">
+								{item.name}
 							</span>
 						</div>
-					))}
-				</div>
-			)}
-
-			{/* Pool chip items */}
-			{chipItems.length > 0 && (
-				<div className="flex flex-col gap-2">
-					{chipItems.map((item) => (
-						<div
-							key={item.id}
-							className="flex items-center justify-between gap-2"
-						>
-							<div className="flex items-center gap-2 min-w-0">
-								<span className="text-sm shrink-0">🎱</span>
-								<span className="pool-chip-badge font-display font-bold text-sm truncate">
-									{item.name}
-								</span>
-							</div>
-							<span className="font-kds text-2xl text-brand-500 leading-none shrink-0">
-								×{item.qty}
-							</span>
-						</div>
-					))}
-				</div>
-			)}
+						<span className="font-kds text-2xl text-brand-500 leading-none shrink-0">
+							×{item.qty}
+						</span>
+					</div>
+				))}
+			</div>
 
 			{/* Action button */}
 			<div className="divider" />
@@ -333,107 +298,6 @@ function KanbanColumn({
 	);
 }
 
-// ─── Pool chips panel ─────────────────────────────────────────────────────────
-
-function PoolChipsPanel({
-	orders,
-	onDeliver,
-}: {
-	orders: Order[];
-	onDeliver: (orderId: string, itemIds: string[]) => void;
-}) {
-	const chipOrders = orders.filter((o) => o.items.some(isPoolChipItem));
-	if (chipOrders.length === 0) return null;
-
-	return (
-		<div className="card-gold pool-chip-border rounded-2xl overflow-hidden">
-			{/* Header */}
-			<div
-				className="px-5 py-4 flex items-center justify-between"
-				style={{
-					background:
-						"linear-gradient(90deg, rgba(245,158,11,0.12) 0%, rgba(245,158,11,0.04) 100%)",
-					borderBottom: "1px solid rgba(245,158,11,0.18)",
-				}}
-			>
-				<div className="flex items-center gap-3">
-					<span className="text-2xl leading-none">🎱</span>
-					<span className="pool-chip-badge font-kds text-3xl tracking-widest">
-						FICHAS DE POOL
-					</span>
-				</div>
-				<span
-					className="font-kds text-2xl px-3 py-1 rounded-xl"
-					style={{
-						background: "rgba(245,158,11,0.15)",
-						color: "#f59e0b",
-						border: "1px solid rgba(245,158,11,0.30)",
-					}}
-				>
-					{chipOrders.length}
-				</span>
-			</div>
-
-			{/* Chip rows */}
-			<div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-				{chipOrders.map((order) => {
-					const chips = order.items.filter(isPoolChipItem);
-					const totalChips = chips.reduce((s, i) => s + i.qty, 0);
-					const chipItemIds = chips.map((c) => c.id);
-					return (
-						<div
-							key={order.id}
-							className="flex items-center justify-between rounded-2xl px-4 py-3.5 gap-4"
-							style={{
-								background: "rgba(245,158,11,0.06)",
-								border: "1px solid rgba(245,158,11,0.18)",
-							}}
-						>
-							<div className="flex items-center gap-3 min-w-0">
-								<div className="flex flex-col items-start">
-									<span className="font-display text-[9px] uppercase tracking-widest text-ink-tertiary">
-										Mesa
-									</span>
-									<span className="font-kds text-4xl leading-none text-brand-500">
-										{order.tableNumber}
-									</span>
-								</div>
-								<div className="flex flex-col gap-1">
-									<div className="flex items-center gap-1 flex-wrap">
-										{Array.from({ length: Math.min(totalChips, 6) }).map(
-											(_, i) => (
-												<span key={i} className="text-base leading-none">
-													🎱
-												</span>
-											),
-										)}
-										{totalChips > 6 && (
-											<span className="text-brand-500 font-bold text-sm">
-												+{totalChips - 6}
-											</span>
-										)}
-									</div>
-									<span className="font-kds text-xl text-brand-500 leading-none">
-										×{totalChips}{" "}
-										<span className="text-xs font-body font-normal text-ink-tertiary">
-											fichas
-										</span>
-									</span>
-								</div>
-							</div>
-							<button
-								onClick={() => onDeliver(order.id, chipItemIds)}
-								className="btn-primary text-xs px-3 py-2 rounded-xl shrink-0"
-							>
-								Entregar
-							</button>
-						</div>
-					);
-				})}
-			</div>
-		</div>
-	);
-}
 
 // ─── Bottom ticker ────────────────────────────────────────────────────────────
 
@@ -542,11 +406,6 @@ export default function BarDisplayPage() {
 		itemIds.forEach((itemId) => updateItemStatus(orderId, itemId, next));
 	}
 
-	function handleDeliverChips(orderId: string, chipItemIds: string[]) {
-		chipItemIds.forEach((itemId) =>
-			updateItemStatus(orderId, itemId, "delivered"),
-		);
-	}
 
 	return (
 		<div className="noise-overlay min-h-screen bg-surface-0 flex flex-col pb-10">
@@ -562,7 +421,10 @@ export default function BarDisplayPage() {
 
 					{/* Center: live clock */}
 					<div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-						<span className="font-kds text-4xl text-ink-secondary leading-none tracking-[0.1em]" suppressHydrationWarning>
+						<span
+							className="font-kds text-4xl text-ink-secondary leading-none tracking-[0.1em]"
+							suppressHydrationWarning
+						>
 							{currentTime}
 						</span>
 						<span className="font-display text-[9px] text-ink-tertiary uppercase tracking-[0.2em]">
@@ -687,10 +549,6 @@ export default function BarDisplayPage() {
 				</div>
 			</main>
 
-			{/* ── Pool chips panel ── */}
-			<div className="px-4 pb-6">
-				<PoolChipsPanel orders={allOrders} onDeliver={handleDeliverChips} />
-			</div>
 
 			{/* ── Bottom ticker ── */}
 			<TickerStrip />

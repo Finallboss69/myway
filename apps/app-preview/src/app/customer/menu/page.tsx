@@ -220,90 +220,7 @@ function QtyControl({
 	);
 }
 
-// ─── Pool chip product card ───────────────────────────────────────────────────
-
-function PoolChipCard({
-	product,
-	qty,
-	onAdd,
-	onDecrease,
-}: {
-	product: (typeof PRODUCTS)[number];
-	qty: number;
-	onAdd: () => void;
-	onDecrease: () => void;
-}) {
-	return (
-		<div className="card-gold pool-chip-border rounded-2xl overflow-hidden animate-slide-up relative">
-			{/* Shimmer bar */}
-			<div
-				aria-hidden
-				className="absolute top-0 left-0 right-0 h-[2px]"
-				style={{
-					background:
-						"linear-gradient(90deg, transparent, #f59e0b, #fcd34d, #f59e0b, transparent)",
-					backgroundSize: "200% auto",
-					animation: "shimmer 3s linear infinite",
-				}}
-			/>
-
-			<div className="p-4 flex items-center gap-4">
-				{/* Icon block */}
-				<div
-					className="w-[60px] h-[60px] rounded-xl flex items-center justify-center shrink-0 text-3xl"
-					style={{
-						background:
-							"linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(245,158,11,0.05) 100%)",
-						border: "1px solid rgba(245,158,11,0.2)",
-					}}
-				>
-					🎱
-				</div>
-
-				{/* Info */}
-				<div className="flex-1 min-w-0">
-					<div className="flex items-center gap-2 mb-0.5">
-						<span className="pool-chip-badge font-display text-[10px] font-bold tracking-widest">
-							FICHA DE POOL
-						</span>
-					</div>
-					<p className="font-display text-ink-primary text-sm uppercase font-bold leading-tight">
-						{product.name}
-					</p>
-					<p className="font-body text-ink-tertiary text-xs mt-0.5">
-						{product.description}
-					</p>
-				</div>
-
-				{/* Price + control */}
-				<div className="flex flex-col items-end gap-2 shrink-0">
-					<span
-						className="font-kds text-brand-500"
-						style={{ fontSize: "24px", lineHeight: 1 }}
-					>
-						{formatCurrency(product.price)}
-					</span>
-					{qty > 0 ? (
-						<QtyControl qty={qty} onIncrease={onAdd} onDecrease={onDecrease} />
-					) : (
-						<button
-							onClick={onAdd}
-							className="w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-95"
-							style={{
-								background: "rgba(245,158,11,0.15)",
-								border: "1px solid rgba(245,158,11,0.4)",
-							}}
-						>
-							<Plus size={16} className="text-brand-500" />
-						</button>
-					)}
-				</div>
-			</div>
-		</div>
-	);
-}
-
-// ─── Regular product card ─────────────────────────────────────────────────────
+// ─── Product card ─────────────────────────────────────────────────────────────
 
 function ProductCard({
 	product,
@@ -317,17 +234,6 @@ function ProductCard({
 	onDecrease: () => void;
 }) {
 	const category = CATEGORIES.find((c) => c.id === product.categoryId);
-
-	if (product.isPoolChip) {
-		return (
-			<PoolChipCard
-				product={product}
-				qty={qty}
-				onAdd={onAdd}
-				onDecrease={onDecrease}
-			/>
-		);
-	}
 
 	return (
 		<div
