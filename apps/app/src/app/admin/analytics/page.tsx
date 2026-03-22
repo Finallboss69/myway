@@ -996,7 +996,7 @@ export default function AnalyticsPage() {
 
 	const fetchOrders = useCallback(async () => {
 		try {
-			const data = await apiFetch<Order[]>("/api/orders");
+			const data = await apiFetch<Order[]>("/api/orders?includeClosed=true");
 			setOrders(data);
 		} catch (e) {
 			console.error(e);

@@ -32,13 +32,7 @@ export async function POST(request: NextRequest) {
 		const { customerName, address, phone, total, paymentMethod, notes, items } =
 			body;
 
-		if (
-			!customerName ||
-			!address ||
-			!total ||
-			!paymentMethod ||
-			!items?.length
-		) {
+		if (!customerName || !address || !paymentMethod) {
 			return NextResponse.json(
 				{ error: "Missing required fields" },
 				{ status: 400 },
@@ -50,11 +44,11 @@ export async function POST(request: NextRequest) {
 				customerName,
 				address,
 				phone: phone ?? null,
-				total,
+				total: total ?? 0,
 				paymentMethod,
 				notes: notes ?? null,
 				items: {
-					create: items.map((item) => ({
+					create: (items ?? []).map((item) => ({
 						name: item.name,
 						qty: item.qty,
 						price: item.price,

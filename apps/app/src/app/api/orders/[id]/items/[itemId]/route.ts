@@ -31,17 +31,16 @@ export async function PATCH(
 			DONE_STATUSES.includes(item.status),
 		);
 		const anyPreparing = allItems.some((item) => item.status === "preparing");
+		const anyReady = allItems.some((item) => item.status === "ready");
 		const allReadyOrDone = allItems.every((item) =>
 			["ready", "delivered", "cancelled"].includes(item.status),
 		);
 
 		let newOrderStatus: string;
-		if (allDone) {
+		if (allDone || allReadyOrDone) {
 			newOrderStatus = "ready";
-		} else if (anyPreparing) {
+		} else if (anyPreparing || anyReady) {
 			newOrderStatus = "preparing";
-		} else if (allReadyOrDone) {
-			newOrderStatus = "ready";
 		} else {
 			newOrderStatus = "pending";
 		}

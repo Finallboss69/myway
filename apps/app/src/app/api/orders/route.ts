@@ -7,10 +7,11 @@ export async function GET(request: NextRequest) {
 		const tableId = searchParams.get("tableId");
 		const status = searchParams.get("status");
 		const target = searchParams.get("target");
+		const includeClosed = searchParams.get("includeClosed") === "true";
 
 		const orders = await db.order.findMany({
 			where: {
-				status: { not: "closed" },
+				...(includeClosed ? {} : { status: { not: "closed" } }),
 				...(tableId ? { tableId } : {}),
 				...(status ? { status } : {}),
 			},
