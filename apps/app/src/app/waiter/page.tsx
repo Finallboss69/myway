@@ -82,17 +82,11 @@ export default function WaiterLoginPage() {
 
 			{/* Brand */}
 			<div className="flex flex-col items-center gap-2 animate-fade-in px-6">
-				<div
-					className="font-kds text-brand-500 select-none"
-					style={{
-						fontSize: "clamp(52px, 14vw, 80px)",
-						lineHeight: 1,
-						letterSpacing: "0.22em",
-						textShadow: "0 0 40px rgba(245,158,11,0.35)",
-					}}
-				>
-					MY WAY
-				</div>
+				<img
+					src="/logo.svg"
+					alt="My Way"
+					style={{ height: 28, width: 'auto', filter: 'invert(1)', display: 'block' }}
+				/>
 				<div
 					className="font-display text-ink-disabled uppercase tracking-widest"
 					style={{ fontSize: 11, letterSpacing: "0.45em" }}

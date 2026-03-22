@@ -141,17 +141,11 @@ export default function POSLoginPage() {
 
 			{/* Logo */}
 			<div className="flex flex-col items-center gap-3 animate-fade-in">
-				<div
-					className="font-kds text-brand-500 tracking-widest select-none"
-					style={{
-						fontSize: 72,
-						lineHeight: 1,
-						letterSpacing: "0.22em",
-						textShadow: "0 0 40px rgba(245,158,11,0.3)",
-					}}
-				>
-					MY WAY
-				</div>
+				<img
+					src="/logo.svg"
+					alt="My Way"
+					style={{ height: 32, width: 'auto', filter: 'invert(1)', display: 'block' }}
+				/>
 				<div
 					className="font-display text-ink-disabled uppercase tracking-widest"
 					style={{ fontSize: 11, letterSpacing: "0.45em" }}

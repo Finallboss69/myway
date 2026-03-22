@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import {
 	LayoutDashboard,
 	BarChart3,
@@ -16,7 +16,13 @@ import {
 } from "lucide-react";
 
 const NAV_ITEMS = [
-	{ href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true, section: "GESTIÓN" },
+	{
+		href: "/admin",
+		label: "Dashboard",
+		icon: LayoutDashboard,
+		exact: true,
+		section: "GESTIÓN",
+	},
 	{
 		href: "/admin/accounting",
 		label: "Contabilidad",
@@ -24,9 +30,27 @@ const NAV_ITEMS = [
 		exact: false,
 		section: "GESTIÓN",
 	},
-	{ href: "/admin/delivery", label: "Delivery", icon: Truck, exact: false, section: "GESTIÓN" },
-	{ href: "/admin/menu", label: "Menú", icon: UtensilsCrossed, exact: false, section: "GESTIÓN" },
-	{ href: "/admin/employees", label: "Empleados", icon: Users, exact: false, section: "GESTIÓN" },
+	{
+		href: "/admin/delivery",
+		label: "Delivery",
+		icon: Truck,
+		exact: false,
+		section: "GESTIÓN",
+	},
+	{
+		href: "/admin/menu",
+		label: "Menú",
+		icon: UtensilsCrossed,
+		exact: false,
+		section: "GESTIÓN",
+	},
+	{
+		href: "/admin/employees",
+		label: "Empleados",
+		icon: Users,
+		exact: false,
+		section: "GESTIÓN",
+	},
 	{
 		href: "/admin/analytics",
 		label: "Analíticas",
@@ -57,7 +81,7 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
 	// Close on route change (mobile)
 	useEffect(() => {
 		onClose();
-	// eslint-disable-next-line react-hooks/exhaustive-deps
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [pathname]);
 
 	const SidebarContent = () => (
@@ -77,12 +101,16 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
 				}}
 			>
 				<div className="flex items-end gap-2">
-					<span
-						className="font-kds text-brand-500 leading-none tracking-wide"
-						style={{ fontSize: 28 }}
-					>
-						MY WAY
-					</span>
+					<img
+						src="/logo.svg"
+						alt="My Way"
+						style={{
+							height: 28,
+							width: "auto",
+							filter: "invert(1)",
+							display: "block",
+						}}
+					/>
 					<span
 						className="font-display text-ink-tertiary uppercase tracking-widest"
 						style={{ fontSize: 9, fontWeight: 600, marginBottom: 2 }}
@@ -119,7 +147,13 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
 							>
 								{section}
 							</div>
-							<div style={{ height: 1, background: "var(--s3)", margin: "4px 12px 6px" }} />
+							<div
+								style={{
+									height: 1,
+									background: "var(--s3)",
+									margin: "4px 12px 6px",
+								}}
+							/>
 
 							{/* Items */}
 							<div style={{ padding: "0 8px" }}>
@@ -137,7 +171,10 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
 											].join(" ")}
 											style={
 												isActive
-													? { borderLeft: "2px solid var(--gold)", paddingLeft: 14 }
+													? {
+															borderLeft: "2px solid var(--gold)",
+															paddingLeft: 14,
+														}
 													: {}
 											}
 										>

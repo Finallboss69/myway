@@ -737,16 +737,16 @@ export default function PublicDeliveryPage() {
 						<a
 							href="/"
 							style={{
-								fontSize: 9,
-								letterSpacing: "0.35em",
-								textTransform: "uppercase",
-								color: "#f59e0b",
 								textDecoration: "none",
 								display: "block",
 								marginBottom: 1,
 							}}
 						>
-							MY WAY
+							<img
+								src="/logo.svg"
+								alt="My Way"
+								style={{ height: 24, width: 'auto', filter: 'invert(1)', display: 'block' }}
+							/>
 						</a>
 						<div
 							style={{

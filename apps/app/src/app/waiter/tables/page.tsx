@@ -327,12 +327,11 @@ export default function WaiterTablesPage() {
 				}}
 			>
 				<div className="flex items-center gap-3">
-					<div
-						className="font-kds text-brand-500 select-none"
-						style={{ fontSize: 26, letterSpacing: "0.15em", lineHeight: 1 }}
-					>
-						MY WAY
-					</div>
+					<img
+						src="/logo.svg"
+						alt="My Way"
+						style={{ height: 22, width: 'auto', filter: 'invert(1)', display: 'block' }}
+					/>
 					<div className="h-4 w-px bg-surface-4" />
 					<div className="flex flex-col">
 						<span className="font-display text-[9px] text-ink-disabled uppercase tracking-widest">

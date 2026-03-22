@@ -27,12 +27,11 @@ function POSSidebar({ activePath }: { activePath: string }) {
 					borderBottom: "1px solid var(--s3)",
 				}}
 			>
-				<div
-					className="font-kds text-brand-500"
-					style={{ fontSize: 26, letterSpacing: "0.2em", lineHeight: 1 }}
-				>
-					MY WAY
-				</div>
+				<img
+					src="/logo.svg"
+					alt="My Way"
+					style={{ height: 22, width: 'auto', filter: 'invert(1)', display: 'block' }}
+				/>
 				<div
 					className="font-display text-ink-disabled uppercase"
 					style={{ fontSize: 9, letterSpacing: "0.35em", marginTop: 3 }}
