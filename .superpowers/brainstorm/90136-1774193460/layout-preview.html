@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Way — Layout Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #080808;
+    color: #f0f0f0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  .page-header {
+    text-align: center;
+    padding: 40px 20px 32px;
+    background: #080808;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .page-header .eyebrow { font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: #f59e0b; margin-bottom: 10px; }
+  .page-header h1 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  .page-header p { font-size: 13px; color: #666; }
+
+  /* ── PREVIEW WRAPPER ── */
+  .preview-wrapper {
+    max-width: 420px;
+    margin: 32px auto;
+    border-radius: 24px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.8);
+    background: #050505;
+  }
+
+  /* ── S1: INTRO VIDEO LOADER ── */
+  .s-intro {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .s-intro video {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.5;
+  }
+  .s-intro .intro-logo {
+    position: relative; z-index: 2; text-align: center;
+  }
+  .s-intro .intro-logo-text {
+    font-size: 42px; font-weight: 900; letter-spacing: 0.3em;
+    color: #fff;
+    text-shadow: 0 0 40px rgba(245,158,11,0.8), 0 2px 4px rgba(0,0,0,0.9);
+  }
+  .s-intro .intro-sub {
+    font-size: 10px; letter-spacing: 0.4em; color: rgba(245,158,11,0.8);
+    text-transform: uppercase; margin-top: 6px;
+  }
+  .s-intro .intro-bar {
+    position: absolute; bottom: 0; left: 0;
+    height: 2px; background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    animation: load 2s ease-in-out infinite;
+    width: 60%;
+  }
+  @keyframes load { 0%{width:0%} 100%{width:100%} }
+
+  /* section labels */
+  .section-label {
+    text-align: center;
+    padding: 12px;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #f59e0b;
+    background: rgba(245,158,11,0.05);
+    border-bottom: 1px solid rgba(245,158,11,0.12);
+    border-top: 1px solid rgba(245,158,11,0.12);
+  }
+
+  /* ── S2: HERO ── */
+  .s-hero {
+    position: relative;
+    height: 280px;
+    overflow: hidden;
+  }
+  .s-hero img {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: brightness(0.55);
+  }
+  .s-hero .hero-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(5,5,5,0.95) 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-end;
+    padding: 28px 20px;
+    text-align: center;
+  }
+  .s-hero .hero-tag { font-size: 9px; letter-spacing: 0.3em; color: #f59e0b; text-transform: uppercase; margin-bottom: 8px; }
+  .s-hero .hero-title { font-size: 36px; font-weight: 900; color: #fff; letter-spacing: 0.15em; margin-bottom: 6px; line-height: 1; }
+  .s-hero .hero-sub { font-size: 11px; color: rgba(255,255,255,0.5); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 18px; }
+  .s-hero .hero-btns { display: flex; gap: 8px; }
+  .s-hero .btn-gold {
+    background: #f59e0b; color: #080808; border-radius: 8px;
+    padding: 9px 18px; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+  }
+  .s-hero .btn-outline {
+    background: transparent; border: 1px solid rgba(255,255,255,0.25);
+    color: #fff; border-radius: 8px;
+    padding: 9px 18px; font-size: 11px;
+  }
+
+  /* ── S3: FOTOS AMBIENTE ── */
+  .s-ambient {
+    padding: 20px 16px;
+    background: #080808;
+  }
+  .s-ambient .amb-title { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #888; margin-bottom: 12px; text-align: center; }
+  .amb-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .amb-grid img {
+    width: 100%; aspect-ratio: 3/4; object-fit: cover; border-radius: 10px;
+  }
+  .amb-grid img.wide {
+    grid-column: span 2; aspect-ratio: 16/7;
+  }
+
+  /* ── S4: MENÚ ── */
+  .s-menu {
+    padding: 20px 16px;
+    background: #050505;
+  }
+  .s-menu .menu-title { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+  .s-menu .menu-sub { font-size: 11px; color: #555; margin-bottom: 16px; }
+  .menu-cats {
+    display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px;
+    scrollbar-width: none;
+  }
+  .menu-cat {
+    flex-shrink: 0;
+    padding: 5px 12px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+  }
+  .menu-cat.active { background: #f59e0b; color: #080808; }
+  .menu-cat:not(.active) { background: rgba(255,255,255,0.05); color: #777; border: 1px solid rgba(255,255,255,0.08); }
+  .menu-items { display: flex; flex-direction: column; gap: 8px; }
+  .menu-item {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px; padding: 10px 12px;
+  }
+  .menu-item img { width: 52px; height: 52px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+  .menu-item-info { flex: 1; }
+  .menu-item-name { font-size: 12px; font-weight: 600; color: #e5e5e5; }
+  .menu-item-desc { font-size: 10px; color: #555; margin-top: 2px; }
+  .menu-item-price { font-size: 14px; font-weight: 700; color: #f59e0b; flex-shrink: 0; }
+
+  /* ── S5: DELIVERY CTA ── */
+  .s-delivery {
+    margin: 0 16px 16px;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+  }
+  .s-delivery img {
+    width: 100%; height: 140px; object-fit: cover;
+    filter: brightness(0.4);
+  }
+  .s-delivery .del-overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px;
+  }
+  .s-delivery .del-text { }
+  .s-delivery .del-tag { font-size: 9px; letter-spacing: 0.25em; color: #f59e0b; text-transform: uppercase; margin-bottom: 4px; }
+  .s-delivery .del-title { font-size: 18px; font-weight: 800; color: #fff; line-height: 1.1; }
+  .s-delivery .del-sub { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 3px; }
+  .s-delivery .del-btn {
+    background: #f59e0b; color: #080808;
+    border-radius: 10px; padding: 10px 16px;
+    font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* ── S6: TRACKING ── */
+  .s-tracking {
+    padding: 16px;
+    background: #050505;
+  }
+  .track-card {
+    background: rgba(16,185,129,0.05);
+    border: 1px solid rgba(16,185,129,0.15);
+    border-radius: 16px;
+    padding: 16px;
+  }
+  .track-tag { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: #10b981; margin-bottom: 10px; }
+  .track-status { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .track-dot { width: 10px; height: 10px; border-radius: 50%; background: #10b981; flex-shrink: 0; box-shadow: 0 0 8px #10b981; }
+  .track-name { font-size: 13px; font-weight: 600; color: #fff; }
+  .track-sub { font-size: 10px; color: #555; }
+  .track-steps {
+    display: flex; gap: 0; position: relative;
+  }
+  .track-steps::before {
+    content: ''; position: absolute; top: 6px; left: 6px; right: 6px; height: 2px;
+    background: rgba(255,255,255,0.06); border-radius: 2px; z-index: 0;
+  }
+  .track-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; z-index: 1; }
+  .track-step-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.1);
+    background: #050505;
+  }
+  .track-step-dot.done { background: #10b981; border-color: #10b981; }
+  .track-step-dot.active { background: #f59e0b; border-color: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,0.6); }
+  .track-step-label { font-size: 8px; color: #444; text-align: center; letter-spacing: 0.05em; }
+  .track-step-label.done { color: #10b981; }
+  .track-step-label.active { color: #f59e0b; }
+
+  /* ── S7: INFO ── */
+  .s-info {
+    padding: 20px 16px;
+    background: #080808;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .info-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .info-card.full { grid-column: span 2; }
+  .info-label { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: #555; margin-bottom: 6px; }
+  .info-val { font-size: 13px; color: #ccc; font-weight: 500; }
+  .info-sub { font-size: 11px; color: #444; margin-top: 2px; }
+
+  /* ── FOOTER ── */
+  .s-footer {
+    padding: 20px 16px;
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+  .footer-logo { font-size: 22px; font-weight: 900; letter-spacing: 0.3em; color: #f59e0b; }
+  .footer-sub { font-size: 9px; color: #444; letter-spacing: 0.2em; text-transform: uppercase; margin-top: 3px; }
+  .footer-links { display: flex; gap: 16px; justify-content: center; margin-top: 14px; }
+  .footer-link { font-size: 10px; color: #555; }
+
+  /* ── SIDE NOTES ── */
+  .notes-wrapper { max-width: 420px; margin: 0 auto 60px; padding: 0 20px; }
+  .note-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .note-num { font-size: 22px; font-weight: 900; color: rgba(245,158,11,0.2); line-height: 1; flex-shrink: 0; width: 28px; }
+  .note-text h4 { font-size: 13px; font-weight: 700; color: #ccc; margin-bottom: 3px; }
+  .note-text p { font-size: 12px; color: #555; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="eyebrow">My Way Olivos — Layout Completo (Opción B)</div>
+  <h1>Así quedaría la landing page</h1>
+  <p>Vista mobile-first con fotos reales. Scroll para ver todas las secciones.</p>
+</div>
+
+<div class="preview-wrapper">
+
+  <!-- 1. VIDEO INTRO LOADER -->
+  <div class="section-label">1 — Pantalla de carga (video intro)</div>
+  <div class="s-intro">
+    <video autoplay muted loop playsinline>
+      <source src="http://localhost:3000/media/intro.mp4" type="video/mp4">
+    </video>
+    <div class="intro-logo">
+      <div class="intro-logo-text">MY WAY</div>
+      <div class="intro-sub">Bar & Pool · Olivos</div>
+    </div>
+    <div class="intro-bar"></div>
+  </div>
+
+  <!-- 2. HERO -->
+  <div class="section-label">2 — Hero principal</div>
+  <div class="s-hero">
+    <img src="http://localhost:3000/media/pool-hero.jpg" alt="Pool hero">
+    <div class="hero-overlay">
+      <div class="hero-tag">Bar & Pool · Olivos, Buenos Aires</div>
+      <div class="hero-title">MY WAY</div>
+      <div class="hero-sub">Comida · Tragos · Pool</div>
+      <div class="hero-btns">
+        <div class="btn-gold">Ver menú</div>
+        <div class="btn-outline">Pedir delivery</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. GALERÍA AMBIENTE -->
+  <div class="section-label">3 — Ambiente & Galería</div>
+  <div class="s-ambient">
+    <div class="amb-title">Viví la experiencia</div>
+    <div class="amb-grid">
+      <img src="http://localhost:3000/media/cheers.jpg" alt="">
+      <img src="http://localhost:3000/media/drinks-hero.jpg" alt="">
+      <img src="http://localhost:3000/media/pool-ambiente.jpg" alt="" class="wide">
+    </div>
+  </div>
+
+  <!-- 4. MENÚ INTERACTIVO -->
+  <div class="section-label">4 — Menú interactivo</div>
+  <div class="s-menu">
+    <div class="menu-title">Menú</div>
+    <div class="menu-sub">Pedí en la mesa o llevátelo a casa</div>
+    <div class="menu-cats">
+      <div class="menu-cat active">Tragos</div>
+      <div class="menu-cat">Cervezas</div>
+      <div class="menu-cat">Comida</div>
+      <div class="menu-cat">Pool</div>
+      <div class="menu-cat">Sin alcohol</div>
+    </div>
+    <div class="menu-items">
+      <div class="menu-item">
+        <img src="http://localhost:3000/media/drinks-hero.jpg" alt="">
+        <div class="menu-item-info">
+          <div class="menu-item-name">Mojito</div>
+          <div class="menu-item-desc">Ron Havana + hierbabuena + lima</div>
+        </div>
+        <div class="menu-item-price">$4.200</div>
+      </div>
+      <div class="menu-item">
+        <img src="http://localhost:3000/media/combo-wrap-mojito.jpg" alt="">
+        <div class="menu-item-info">
+          <div class="menu-item-name">Combo Wrap + Trago</div>
+          <div class="menu-item-desc">Elegí tu wrap + bebida a elección</div>
+        </div>
+        <div class="menu-item-price">$7.500</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. DELIVERY CTA -->
+  <div class="section-label">5 — Delivery</div>
+  <div class="s-delivery">
+    <img src="http://localhost:3000/media/burger-hands.jpg" alt="">
+    <div class="del-overlay">
+      <div class="del-text">
+        <div class="del-tag">Delivery</div>
+        <div class="del-title">Tu pedido,<br>en tu puerta</div>
+        <div class="del-sub">Zona Olivos · GBA Norte</div>
+      </div>
+      <div class="del-btn">Pedir ahora</div>
+    </div>
+  </div>
+
+  <!-- 6. TRACKING -->
+  <div class="section-label">6 — Seguimiento del pedido</div>
+  <div class="s-tracking">
+    <div class="track-card">
+      <div class="track-tag">Tu pedido está en camino</div>
+      <div class="track-status">
+        <div class="track-dot"></div>
+        <div>
+          <div class="track-name">Rodrigo está en camino</div>
+          <div class="track-sub">Llega aprox. en 12 minutos</div>
+        </div>
+      </div>
+      <div class="track-steps">
+        <div class="track-step">
+          <div class="track-step-dot done"></div>
+          <div class="track-step-label done">Recibido</div>
+        </div>
+        <div class="track-step">
+          <div class="track-step-dot done"></div>
+          <div class="track-step-label done">Preparando</div>
+        </div>
+        <div class="track-step">
+          <div class="track-step-dot active"></div>
+          <div class="track-step-label active">En camino</div>
+        </div>
+        <div class="track-step">
+          <div class="track-step-dot"></div>
+          <div class="track-step-label">Entregado</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. INFO -->
+  <div class="section-label">7 — Horarios y ubicación</div>
+  <div class="s-info">
+    <div class="info-card">
+      <div class="info-label">Horarios</div>
+      <div class="info-val">Mar — Dom</div>
+      <div class="info-sub">19:00 — 03:00 hs</div>
+    </div>
+    <div class="info-card">
+      <div class="info-label">Ubicación</div>
+      <div class="info-val">Olivos</div>
+      <div class="info-sub">GBA Norte, Bs As</div>
+    </div>
+    <div class="info-card full">
+      <div class="info-label">Redes sociales</div>
+      <div class="info-val">@mywayolivos</div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="s-footer">
+    <div class="footer-logo">MY WAY</div>
+    <div class="footer-sub">Bar & Pool · Olivos</div>
+    <div class="footer-links">
+      <div class="footer-link">Menú</div>
+      <div class="footer-link">Delivery</div>
+      <div class="footer-link">Instagram</div>
+      <div class="footer-link">WhatsApp</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- NOTAS -->
+<div class="notes-wrapper">
+  <div class="note-item">
+    <div class="note-num">1</div>
+    <div class="note-text">
+      <h4>Video intro (pantalla de carga)</h4>
+      <p>El video que elegiste aparece al abrir la página por primera vez. Se muestra 2-3 segundos con el logo encima y una barra de progreso, después desaparece con fade y aparece la landing.</p>
+    </div>
+  </div>
+  <div class="note-item">
+    <div class="note-num">4</div>
+    <div class="note-text">
+      <h4>Menú interactivo con filtros</h4>
+      <p>El cliente navega por categorías, ve los productos con foto, precio y descripción. Botón para agregar al carrito de delivery o ver en detalle.</p>
+    </div>
+  </div>
+  <div class="note-item">
+    <div class="note-num">6</div>
+    <div class="note-text">
+      <h4>Tracking — ¿cómo funciona?</h4>
+      <p>El repartidor necesita una forma de compartir su estado. Hay dos opciones: (A) Actualiza el estado manualmente desde el teléfono (sin GPS), o (B) Comparte ubicación GPS en tiempo real. Necesito que me digas cuál preferís antes de diseñar esto.</p>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

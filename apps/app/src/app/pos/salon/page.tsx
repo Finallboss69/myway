@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
 	LayoutGrid,
@@ -228,6 +228,7 @@ export default function SalonPage() {
 	const [tables, setTables] = useState<Table[]>([]);
 	const [zones, setZones] = useState<Zone[]>([]);
 	const [orders, setOrders] = useState<Order[]>([]);
+	const zoneInitialized = useRef(false);
 
 	const fetchData = useCallback(async () => {
 		try {
@@ -239,11 +240,14 @@ export default function SalonPage() {
 			setTables(t);
 			setZones(z);
 			setOrders(o);
-			if (!activeZone && z.length > 0) setActiveZone(z[0].id);
+			if (!zoneInitialized.current && z.length > 0) {
+				setActiveZone(z[0].id);
+				zoneInitialized.current = true;
+			}
 		} catch (e) {
 			console.error(e);
 		}
-	}, [activeZone]);
+	}, []);
 
 	useEffect(() => {
 		fetchData();

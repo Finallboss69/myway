@@ -1,0 +1,8 @@
+{"type":"server-started","port":50454,"host":"0.0.0.0","url_host":"localhost","url":"http://localhost:50454","screen_dir":"/workspace/myway/.superpowers/brainstorm/90136-1774193460"}
+{"type":"screen-added","file":"/workspace/myway/.superpowers/brainstorm/90136-1774193460/vibe.html"}
+{"type":"screen-added","file":"/workspace/myway/.superpowers/brainstorm/90136-1774193460/landing-sections.html"}
+{"type":"screen-added","file":"/workspace/myway/.superpowers/brainstorm/90136-1774193460/layout-preview.html"}
+{"type":"screen-added","file":"/workspace/myway/.superpowers/brainstorm/90136-1774193460/tracking-design.html"}
+{"type":"screen-added","file":"/workspace/myway/.superpowers/brainstorm/90136-1774193460/waiting.html"}
+{"type":"screen-updated","file":"/workspace/myway/.superpowers/brainstorm/90136-1774193460/tracking-design.html"}
+{"type":"server-stopped","reason":"idle timeout"}

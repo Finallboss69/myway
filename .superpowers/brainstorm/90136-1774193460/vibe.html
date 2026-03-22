@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Way — Brainstorm</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #080808;
+    color: #f0f0f0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #f59e0b;
+    margin-bottom: 12px;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 10px;
+  }
+  .header p {
+    font-size: 14px;
+    color: #888;
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .card {
+    border-radius: 20px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.25s ease;
+    position: relative;
+  }
+  .card:hover { transform: translateY(-4px); }
+  .card.selected { border-color: #f59e0b; box-shadow: 0 0 30px rgba(245,158,11,0.25); }
+
+  .card-preview {
+    height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    padding: 24px;
+  }
+
+  /* OPCION A — Dark Premium */
+  .card-a .card-preview {
+    background: linear-gradient(135deg, #0a0a0a 0%, #111 50%, #0f0f0f 100%);
+  }
+  .card-a .demo-logo {
+    font-size: 36px;
+    font-weight: 900;
+    letter-spacing: 0.3em;
+    color: #f59e0b;
+    text-shadow: 0 0 40px rgba(245,158,11,0.5);
+    margin-bottom: 16px;
+  }
+  .card-a .demo-tag {
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: #666;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .card-a .demo-badge {
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.25);
+    border-radius: 99px;
+    padding: 8px 20px;
+    font-size: 12px;
+    color: #f59e0b;
+  }
+  .card-a .demo-line {
+    width: 60px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #f59e0b, transparent);
+    margin: 20px auto;
+  }
+  .card-a .demo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+  .card-a .demo-item {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+    font-size: 11px;
+    color: #555;
+  }
+
+  /* OPCION B — Colorful & Vibrant */
+  .card-b .card-preview {
+    background: linear-gradient(135deg, #1a0533 0%, #0d1a4a 50%, #001a1a 100%);
+  }
+  .card-b .demo-logo {
+    font-size: 36px;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    background: linear-gradient(90deg, #a78bfa, #38bdf8, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 16px;
+  }
+  .card-b .demo-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .card-b .chip {
+    border-radius: 99px;
+    padding: 5px 14px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .card-b .chip-1 { background: rgba(167,139,250,0.15); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); }
+  .card-b .chip-2 { background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); }
+  .card-b .chip-3 { background: rgba(52,211,153,0.15); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+  .card-b .demo-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 14px 20px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .card-b .demo-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, #7c3aed, #2563eb);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .card-b .demo-text { font-size: 12px; color: #aaa; }
+  .card-b .demo-text strong { color: #fff; display: block; margin-bottom: 2px; }
+
+  /* OPCION C — Warm & Energetic */
+  .card-c .card-preview {
+    background: linear-gradient(135deg, #1a0800 0%, #0f0500 50%, #1a0000 100%);
+  }
+  .card-c .demo-logo {
+    font-size: 38px;
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    background: linear-gradient(90deg, #fb923c, #f59e0b, #fbbf24);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    margin-bottom: 8px;
+  }
+  .card-c .demo-sub {
+    font-size: 10px;
+    color: #c2410c;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .card-c .demo-btn {
+    background: linear-gradient(135deg, #ea580c, #dc2626);
+    border-radius: 12px;
+    padding: 12px 28px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 24px rgba(234,88,12,0.4);
+  }
+  .card-c .demo-stats {
+    display: flex;
+    gap: 20px;
+  }
+  .card-c .stat { text-align: center; }
+  .card-c .stat-n { font-size: 22px; font-weight: 800; color: #fb923c; line-height: 1; }
+  .card-c .stat-l { font-size: 9px; color: #7c2d12; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
+
+  /* OPCION D — Clean & Modern */
+  .card-d .card-preview {
+    background: linear-gradient(135deg, #050505 0%, #0c0c0c 100%);
+  }
+  .card-d .demo-logo {
+    font-size: 32px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .card-d .demo-sub2 {
+    font-size: 11px;
+    color: #444;
+    margin-bottom: 28px;
+    letter-spacing: 0.1em;
+  }
+  .card-d .demo-hero {
+    background: linear-gradient(90deg, rgba(245,158,11,0.12), rgba(245,158,11,0.04));
+    border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 16px;
+    padding: 16px 20px;
+    width: 100%;
+    text-align: left;
+  }
+  .card-d .demo-hero-label { font-size: 9px; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 4px; }
+  .card-d .demo-hero-val { font-size: 28px; font-weight: 700; color: #fff; }
+  .card-d .demo-pills { display: flex; gap: 8px; margin-top: 16px; }
+  .card-d .pill {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 99px;
+    padding: 5px 14px;
+    font-size: 11px;
+    color: #555;
+  }
+
+  .card-info {
+    padding: 20px;
+    background: #111;
+  }
+  .card-letter {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #f59e0b;
+    margin-bottom: 6px;
+  }
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .card-desc {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+  }
+
+  .selected-indicator {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #f59e0b;
+    color: #080808;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 20px;
+    border-radius: 99px;
+    display: none;
+  }
+  .selected-indicator.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="eyebrow">My Way — Diseño Visual</div>
+  <h1>¿Qué vibe tiene la landing page?</h1>
+  <p>Elegí la dirección visual que más te representa. Después afinamos colores, tipografía y layout.</p>
+</div>
+
+<div class="cards">
+
+  <!-- A -->
+  <div class="card card-a" data-choice="a" onclick="selectCard(this)">
+    <div class="card-preview">
+      <div class="demo-logo">MY WAY</div>
+      <div class="demo-tag">Bar & Pool · Palermo</div>
+      <div class="demo-badge">✦ Pedí tu mesa</div>
+      <div class="demo-line"></div>
+      <div class="demo-grid">
+        <div class="demo-item">🍹 Tragos</div>
+        <div class="demo-item">🎱 Pool</div>
+        <div class="demo-item">🍔 Comida</div>
+        <div class="demo-item">🍺 Cervezas</div>
+      </div>
+    </div>
+    <div class="card-info">
+      <div class="card-letter">Opción A</div>
+      <div class="card-title">Dark Premium</div>
+      <div class="card-desc">Negro profundo, dorado, tipografía bold. Elegante y nocturno. El que ya tiene la app.</div>
+    </div>
+  </div>
+
+  <!-- B -->
+  <div class="card card-b" data-choice="b" onclick="selectCard(this)">
+    <div class="card-preview">
+      <div class="demo-logo">MY WAY</div>
+      <div class="demo-chips">
+        <div class="chip chip-1">🎱 Pool</div>
+        <div class="chip chip-2">🍹 Tragos</div>
+        <div class="chip chip-3">🚀 Delivery</div>
+      </div>
+      <div class="demo-card">
+        <div class="demo-icon">🍔</div>
+        <div class="demo-text">
+          <strong>Burger My Way</strong>
+          200g + bacon + cheddar + papas
+        </div>
+      </div>
+    </div>
+    <div class="card-info">
+      <div class="card-letter">Opción B</div>
+      <div class="card-title">Colorful & Electric</div>
+      <div class="card-desc">Violeta, cyan, verde. Vibrante, joven. Parece una app moderna de delivery.</div>
+    </div>
+  </div>
+
+  <!-- C -->
+  <div class="card card-c" data-choice="c" onclick="selectCard(this)">
+    <div class="card-preview">
+      <div class="demo-logo">MY WAY</div>
+      <div class="demo-sub">Pedí. Jugá. Disfrutá.</div>
+      <div class="demo-btn">🚀 Pedir ahora</div>
+      <div class="demo-stats">
+        <div class="stat"><div class="stat-n">12</div><div class="stat-l">Mesas</div></div>
+        <div class="stat"><div class="stat-n">20+</div><div class="stat-l">Tragos</div></div>
+        <div class="stat"><div class="stat-n">🎱</div><div class="stat-l">Pool</div></div>
+      </div>
+    </div>
+    <div class="card-info">
+      <div class="card-letter">Opción C</div>
+      <div class="card-title">Warm & Energetic</div>
+      <div class="card-desc">Naranja, rojo, fuego. Energético, llamativo. Grita "vení a divertirte".</div>
+    </div>
+  </div>
+
+  <!-- D -->
+  <div class="card card-d" data-choice="d" onclick="selectCard(this)">
+    <div class="card-preview">
+      <div class="demo-logo">MY WAY</div>
+      <div class="demo-sub2">BAR & POOL PALERMO</div>
+      <div class="demo-hero">
+        <div class="demo-hero-label">Total de hoy</div>
+        <div class="demo-hero-val">$ 124.500</div>
+      </div>
+      <div class="demo-pills">
+        <div class="pill">📍 Reservar</div>
+        <div class="pill">🛵 Delivery</div>
+        <div class="pill">📱 Menú</div>
+      </div>
+    </div>
+    <div class="card-info">
+      <div class="card-letter">Opción D</div>
+      <div class="card-title">Clean & Minimal</div>
+      <div class="card-desc">Blanco/gris, acento dorado sutil. Sofisticado, serio. Como una app SaaS premium.</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="selected-indicator" id="indicator">✓ Selección guardada</div>
+
+<script>
+let selected = null;
+function selectCard(el) {
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selected = el.dataset.choice;
+  document.getElementById('indicator').classList.add('show');
+
+  // Log to events
+  const ev = { type: 'click', choice: selected, text: el.querySelector('.card-title').textContent, timestamp: Date.now() };
+  fetch('/__event', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(ev) }).catch(()=>{});
+}
+</script>
+
+</body>
+</html>

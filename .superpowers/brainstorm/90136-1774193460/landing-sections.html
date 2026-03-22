@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Way — Secciones Landing</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #080808;
+    color: #f0f0f0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px 80px;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #f59e0b;
+    margin-bottom: 12px;
+  }
+  .header h1 { font-size: 26px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+  .header p { font-size: 13px; color: #666; max-width: 480px; margin: 0 auto; line-height: 1.6; }
+
+  .layouts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .layout-card {
+    border-radius: 18px;
+    overflow: hidden;
+    border: 2px solid rgba(255,255,255,0.06);
+    background: #0e0e0e;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .layout-card:hover { border-color: rgba(245,158,11,0.3); transform: translateY(-3px); }
+  .layout-card.selected { border-color: #f59e0b; box-shadow: 0 0 30px rgba(245,158,11,0.2); }
+
+  .layout-preview {
+    padding: 20px;
+    background: #080808;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+
+  /* Mini wireframe sections */
+  .wf-section {
+    border-radius: 6px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    font-size: 11px;
+    color: #888;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .wf-section .dot {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  }
+  .wf-hero { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.2); color: #f59e0b; }
+  .wf-hero .dot { background: #f59e0b; }
+  .wf-menu { background: rgba(255,255,255,0.03); }
+  .wf-menu .dot { background: #555; }
+  .wf-delivery { background: rgba(59,130,246,0.08); border-color: rgba(59,130,246,0.2); color: #60a5fa; }
+  .wf-delivery .dot { background: #3b82f6; }
+  .wf-tracking { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.2); color: #34d399; }
+  .wf-tracking .dot { background: #10b981; }
+  .wf-about { background: rgba(255,255,255,0.03); }
+  .wf-about .dot { background: #444; }
+  .wf-hours { background: rgba(139,92,246,0.08); border-color: rgba(139,92,246,0.2); color: #a78bfa; }
+  .wf-hours .dot { background: #8b5cf6; }
+  .wf-gallery { background: rgba(255,255,255,0.03); }
+  .wf-gallery .dot { background: #444; }
+  .wf-cta { background: rgba(245,158,11,0.05); border-color: rgba(245,158,11,0.15); color: #78716c; }
+  .wf-cta .dot { background: #92400e; }
+
+  .layout-info { padding: 18px 20px; }
+  .layout-letter { font-size: 10px; font-weight: 700; letter-spacing: 0.2em; color: #f59e0b; margin-bottom: 5px; }
+  .layout-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 5px; }
+  .layout-desc { font-size: 12px; color: #666; line-height: 1.5; }
+
+  .note {
+    text-align: center;
+    margin-top: 32px;
+    font-size: 12px;
+    color: #555;
+    font-style: italic;
+  }
+
+  .selected-indicator {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #f59e0b;
+    color: #080808;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 20px;
+    border-radius: 99px;
+    display: none;
+    z-index: 100;
+  }
+  .selected-indicator.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="eyebrow">Estilo D — Clean & Minimal · My Way Olivos</div>
+  <h1>¿Qué secciones tiene la landing?</h1>
+  <p>Cada layout es una propuesta de contenido. Podés elegir el que más se adapta a lo que querés mostrarle al cliente.</p>
+</div>
+
+<div class="layouts">
+
+  <!-- A: Enfoque en pedidos -->
+  <div class="layout-card" data-choice="a" onclick="selectCard(this)">
+    <div class="layout-preview">
+      <div class="wf-section wf-hero"><span class="dot"></span> HERO — Nombre, tagline, botón "Pedir ahora"</div>
+      <div class="wf-section wf-menu"><span class="dot"></span> Menú destacado (categorías + productos top)</div>
+      <div class="wf-section wf-delivery"><span class="dot"></span> CTA Delivery — pedido a domicilio</div>
+      <div class="wf-section wf-tracking"><span class="dot"></span> Seguimiento en vivo del pedido</div>
+      <div class="wf-section wf-cta"><span class="dot"></span> Footer — horarios, dirección, redes</div>
+    </div>
+    <div class="layout-info">
+      <div class="layout-letter">Opción A</div>
+      <div class="layout-title">Orientado a pedidos</div>
+      <div class="layout-desc">Todo enfocado en convertir: menú, delivery y tracking. Sin distracciones. Ideal si querés que el cliente pida rápido.</div>
+    </div>
+  </div>
+
+  <!-- B: Completa con identidad -->
+  <div class="layout-card" data-choice="b" onclick="selectCard(this)">
+    <div class="layout-preview">
+      <div class="wf-section wf-hero"><span class="dot"></span> HERO — Animado, video o imagen del bar</div>
+      <div class="wf-section wf-about"><span class="dot"></span> Nosotros — historia, ambiente, fotos</div>
+      <div class="wf-section wf-menu"><span class="dot"></span> Menú interactivo (con filtros)</div>
+      <div class="wf-section wf-delivery"><span class="dot"></span> Delivery — formulario y seguimiento</div>
+      <div class="wf-section wf-hours"><span class="dot"></span> Horarios y ubicación (mapa)</div>
+      <div class="wf-section wf-cta"><span class="dot"></span> Footer completo</div>
+    </div>
+    <div class="layout-info">
+      <div class="layout-letter">Opción B</div>
+      <div class="layout-title">Landing completa</div>
+      <div class="layout-desc">Muestra la identidad del bar + funcionalidad. Más larga, más contenido. Ideal para atraer clientes nuevos.</div>
+    </div>
+  </div>
+
+  <!-- C: One page app -->
+  <div class="layout-card" data-choice="c" onclick="selectCard(this)">
+    <div class="layout-preview">
+      <div class="wf-section wf-hero"><span class="dot"></span> HERO fullscreen — animación de entrada</div>
+      <div class="wf-section wf-delivery"><span class="dot"></span> Pedido delivery (inline, sin salir de la página)</div>
+      <div class="wf-section wf-tracking"><span class="dot"></span> Tracking en tiempo real integrado</div>
+      <div class="wf-section wf-hours"><span class="dot"></span> Horarios · Dirección · Instagram</div>
+    </div>
+    <div class="layout-info">
+      <div class="layout-letter">Opción C</div>
+      <div class="layout-title">One-page minimalista</div>
+      <div class="layout-desc">Pocas secciones, mucho impacto. El delivery y el tracking están integrados en la misma pantalla. Ultra moderno.</div>
+    </div>
+  </div>
+
+  <!-- D: Hub separado -->
+  <div class="layout-card" data-choice="d" onclick="selectCard(this)">
+    <div class="layout-preview">
+      <div class="wf-section wf-hero"><span class="dot"></span> HERO — 3 botones grandes de acceso</div>
+      <div class="wf-section wf-menu" style="padding-left:24px"><span class="dot"></span> → Ver menú</div>
+      <div class="wf-section wf-delivery" style="padding-left:24px"><span class="dot"></span> → Pedir delivery</div>
+      <div class="wf-section wf-tracking" style="padding-left:24px"><span class="dot"></span> → Rastrear mi pedido</div>
+      <div class="wf-section wf-about"><span class="dot"></span> Info del bar (colapsable)</div>
+      <div class="wf-section wf-cta"><span class="dot"></span> Footer</div>
+    </div>
+    <div class="layout-info">
+      <div class="layout-letter">Opción D</div>
+      <div class="layout-title">Hub de accesos rápidos</div>
+      <div class="layout-desc">La landing es un punto de entrada. El usuario elige adónde ir. Simple, claro, funcional. Como una app.</div>
+    </div>
+  </div>
+
+</div>
+
+<p class="note">Podés elegir una opción o pedirme que combine secciones de varias.</p>
+
+<div class="selected-indicator" id="indicator">✓ Opción guardada</div>
+
+<script>
+function selectCard(el) {
+  document.querySelectorAll('.layout-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('indicator').classList.add('show');
+  const ev = { type: 'click', choice: el.dataset.choice, text: el.querySelector('.layout-title').textContent, timestamp: Date.now() };
+  fetch('/__event', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(ev) }).catch(()=>{});
+}
+</script>
+
+</body>
+</html>

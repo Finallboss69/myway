@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Way — Tracking Design</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #080808; color: #f0f0f0; font-family: 'Segoe UI', system-ui, sans-serif; padding: 40px 20px 80px; }
+
+  .page-header { text-align: center; margin-bottom: 48px; }
+  .page-header .eyebrow { font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: #f59e0b; margin-bottom: 10px; }
+  .page-header h1 { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  .page-header p { font-size: 13px; color: #666; max-width: 500px; margin: 0 auto; line-height: 1.6; }
+
+  .phones {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 40px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .phone-label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #f59e0b; text-align: center; }
+  .phone-desc { font-size: 12px; color: #555; text-align: center; max-width: 280px; line-height: 1.5; }
+
+  .phone {
+    width: 300px;
+    border-radius: 32px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 40px 80px rgba(0,0,0,0.7);
+    background: #050505;
+  }
+
+  /* ── TRACKING PAGE (cliente) ── */
+  .track-header {
+    padding: 16px 18px 12px;
+    background: #080808;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .track-header .th-logo { font-size: 16px; font-weight: 900; letter-spacing: 0.2em; color: #f59e0b; }
+  .track-header .th-order { font-size: 10px; color: #444; }
+
+  .map-area {
+    height: 200px; background: #0f1a0f;
+    position: relative; overflow: hidden;
+  }
+  .map-area::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 29px, rgba(255,255,255,0.03) 29px, rgba(255,255,255,0.03) 30px),
+      repeating-linear-gradient(90deg, transparent, transparent 29px, rgba(255,255,255,0.03) 29px, rgba(255,255,255,0.03) 30px),
+      #0c1a0c;
+  }
+  .map-road { position: absolute; background: rgba(255,255,255,0.06); }
+  .map-road.h { height: 6px; left: 0; right: 0; }
+  .map-road.v { width: 6px; top: 0; bottom: 0; }
+  .map-road.h1 { top: 60px; } .map-road.h2 { top: 130px; }
+  .map-road.v1 { left: 80px; } .map-road.v2 { left: 200px; }
+
+  .map-pin { position: absolute; right: 60px; top: 40px; display: flex; flex-direction: column; align-items: center; z-index: 2; }
+  .map-pin-dot { width: 18px; height: 18px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #ef4444; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(239,68,68,0.5); }
+  .map-pin-label { font-size: 8px; color: #ef4444; margin-top: 4px; font-weight: 700; }
+
+  .map-rep { position: absolute; left: 100px; top: 100px; z-index: 3; display: flex; flex-direction: column; align-items: center; }
+  .map-rep-pulse { position: relative; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+  .map-rep-pulse::before { content: ''; position: absolute; width: 36px; height: 36px; border-radius: 50%; background: rgba(16,185,129,0.15); animation: pulse-ring 1.5s ease-out infinite; }
+  @keyframes pulse-ring { 0%{transform:scale(0.5);opacity:1} 100%{transform:scale(1.4);opacity:0} }
+  .map-rep-dot { width: 18px; height: 18px; border-radius: 50%; background: #10b981; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(16,185,129,0.6); position: relative; z-index: 1; }
+  .map-rep-label { font-size: 8px; color: #10b981; margin-top: 4px; font-weight: 700; background: rgba(0,0,0,0.7); padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
+  .map-route { position: absolute; left: 110px; top: 108px; width: 90px; height: 2px; background: linear-gradient(90deg, #10b981, rgba(239,68,68,0.5)); border-radius: 2px; z-index: 1; opacity: 0.5; }
+
+  .map-eta { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 6px 16px; display: flex; align-items: center; gap: 8px; z-index: 4; backdrop-filter: blur(8px); white-space: nowrap; }
+  .map-eta-dot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981; animation: blink 1s ease-in-out infinite alternate; }
+  @keyframes blink { from{opacity:0.4} to{opacity:1} }
+  .map-eta-text { font-size: 11px; color: #ccc; }
+  .map-eta-time { font-size: 13px; font-weight: 700; color: #10b981; }
+
+  .status-card { padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .status-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .status-name { font-size: 14px; font-weight: 700; color: #fff; }
+  .status-badge { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; padding: 3px 10px; border-radius: 99px; background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.25); text-transform: uppercase; }
+
+  .steps { display: flex; align-items: center; position: relative; }
+  .step-line { position: absolute; top: 9px; left: 9px; right: 9px; height: 2px; background: rgba(255,255,255,0.06); z-index: 0; }
+  .step-line-fill { position: absolute; top: 9px; left: 9px; height: 2px; width: 55%; background: linear-gradient(90deg, #10b981, #f59e0b); z-index: 1; border-radius: 2px; }
+  .step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .step-dot { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; z-index: 2; position: relative; }
+  .step-dot.done { background: #10b981; border: 2px solid #10b981; }
+  .step-dot.done::after { content: '✓'; color: #fff; font-size: 9px; font-weight: 700; }
+  .step-dot.active { background: #f59e0b; border: 2px solid #f59e0b; box-shadow: 0 0 10px rgba(245,158,11,0.5); }
+  .step-dot.active::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+  .step-dot.pending { background: #111; border: 2px solid rgba(255,255,255,0.1); }
+  .step-label { font-size: 8px; color: #444; text-align: center; }
+  .step-label.done { color: #10b981; } .step-label.active { color: #f59e0b; }
+
+  .order-mini { padding: 14px 18px; background: rgba(255,255,255,0.02); }
+  .order-mini-title { font-size: 9px; color: #444; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 10px; }
+  .order-mini-item { display: flex; justify-content: space-between; padding: 3px 0; }
+  .order-mini-item span { font-size: 11px; color: #888; }
+  .order-mini-item .price { color: #ccc; }
+  .order-mini-total { display: flex; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); }
+  .order-mini-total span { font-size: 12px; font-weight: 700; color: #f59e0b; }
+
+  /* ── REPARTIDOR ── */
+  .rep-header { padding: 20px 18px 16px; background: #080808; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; }
+  .rep-logo { font-size: 18px; font-weight: 900; letter-spacing: 0.25em; color: #f59e0b; }
+  .rep-sub { font-size: 9px; color: #444; letter-spacing: 0.2em; text-transform: uppercase; margin-top: 2px; }
+
+  .rep-order-card { margin: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 14px; }
+  .rep-order-tag { font-size: 9px; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 8px; }
+  .rep-order-name { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .rep-order-addr { font-size: 12px; color: #666; margin-bottom: 2px; }
+  .rep-order-phone { font-size: 11px; color: #444; }
+  .rep-divider { height: 1px; background: rgba(255,255,255,0.05); margin: 8px 0; }
+  .rep-items { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+  .rep-item { font-size: 11px; color: #666; } .rep-item span { color: #888; font-weight: 600; }
+
+  .rep-gps-card { margin: 0 16px 14px; border-radius: 14px; overflow: hidden; }
+  .rep-gps-off { background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.15); padding: 18px; text-align: center; border-radius: 14px; }
+  .gps-icon { width: 44px; height: 44px; border-radius: 50%; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; }
+  .gps-icon svg { width: 20px; height: 20px; stroke: #f59e0b; fill: none; stroke-width: 1.5; }
+  .rep-gps-off h3 { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .rep-gps-off p { font-size: 11px; color: #666; line-height: 1.4; margin-bottom: 14px; }
+  .btn-start { display: block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #080808; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; padding: 13px; border-radius: 10px; text-align: center; text-transform: uppercase; box-shadow: 0 6px 20px rgba(245,158,11,0.35); }
+
+  .rep-status-section { padding: 0 16px 16px; }
+  .rep-status-title { font-size: 9px; color: #444; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 10px; }
+  .rep-status-btns { display: flex; flex-direction: column; gap: 6px; }
+  .rep-status-btn { padding: 12px 16px; border-radius: 10px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 10px; border: 1px solid; cursor: pointer; }
+  .rep-status-btn.done { background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.15); color: #10b981; }
+  .rep-status-btn.active { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); color: #f59e0b; }
+  .rep-status-btn.pending { background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.06); color: #444; }
+  .rep-status-btn-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .rep-status-btn.done .rep-status-btn-dot { background: #10b981; }
+  .rep-status-btn.active .rep-status-btn-dot { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.6); }
+  .rep-status-btn.pending .rep-status-btn-dot { background: #333; }
+
+  .nav-note { margin: 0 16px 16px; background: rgba(59,130,246,0.06); border: 1px solid rgba(59,130,246,0.15); border-radius: 12px; padding: 12px; display: flex; align-items: center; gap: 10px; }
+  .nav-note svg { width: 18px; height: 18px; stroke: #60a5fa; fill: none; stroke-width: 1.5; flex-shrink: 0; }
+  .nav-note p { font-size: 11px; color: #60a5fa; line-height: 1.4; }
+
+  /* Notes grid */
+  .design-notes { max-width: 800px; margin: 48px auto 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .dn-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 18px; }
+  .dn-tag { font-size: 9px; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.2em; margin-bottom: 6px; }
+  .dn-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  .dn-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .dn-list li { font-size: 12px; color: #666; padding-left: 12px; position: relative; line-height: 1.4; }
+  .dn-list li::before { content: '—'; position: absolute; left: 0; color: #333; }
+
+  /* Approve button */
+  .approve-section { max-width: 800px; margin: 32px auto 0; text-align: center; }
+  .btn-approve { display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #080808; font-size: 13px; font-weight: 800; letter-spacing: 0.1em; padding: 14px 36px; border-radius: 12px; text-transform: uppercase; cursor: pointer; box-shadow: 0 8px 24px rgba(245,158,11,0.3); transition: all 0.2s; }
+  .btn-approve:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(245,158,11,0.4); }
+  .approve-sub { font-size: 12px; color: #444; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="eyebrow">Diseño aprobado — My Way Olivos</div>
+  <h1>Tracking GPS — Cliente y Repartidor</h1>
+  <p>Dos pantallas separadas. El repartidor activa el GPS, el cliente ve el punto verde moviéndose en el mapa cada 5 segundos.</p>
+</div>
+
+<div class="phones">
+
+  <!-- CLIENTE -->
+  <div class="phone-wrap">
+    <div class="phone-label">Cliente — /track/[orderId]</div>
+    <div class="phone">
+      <div class="track-header">
+        <div class="th-logo">MY WAY</div>
+        <div class="th-order">Pedido #MW-0042</div>
+      </div>
+      <div class="map-area">
+        <div class="map-road h h1"></div>
+        <div class="map-road h h2"></div>
+        <div class="map-road v v1"></div>
+        <div class="map-road v v2"></div>
+        <div class="map-route"></div>
+        <div class="map-rep">
+          <div class="map-rep-pulse"><div class="map-rep-dot"></div></div>
+          <div class="map-rep-label">Repartidor</div>
+        </div>
+        <div class="map-pin">
+          <div class="map-pin-dot"></div>
+          <div class="map-pin-label">Tu casa</div>
+        </div>
+        <div class="map-eta">
+          <div class="map-eta-dot"></div>
+          <div class="map-eta-text">Llega en</div>
+          <div class="map-eta-time">~12 min</div>
+        </div>
+      </div>
+      <div class="status-card">
+        <div class="status-row">
+          <div class="status-name">En camino a tu puerta</div>
+          <div class="status-badge">En camino</div>
+        </div>
+        <div class="steps" style="position:relative">
+          <div class="step-line"></div>
+          <div class="step-line-fill"></div>
+          <div class="step"><div class="step-dot done"></div><div class="step-label done">Recibido</div></div>
+          <div class="step"><div class="step-dot done"></div><div class="step-label done">Preparando</div></div>
+          <div class="step"><div class="step-dot active"></div><div class="step-label active">En camino</div></div>
+          <div class="step"><div class="step-dot pending"></div><div class="step-label">Entregado</div></div>
+        </div>
+      </div>
+      <div class="order-mini">
+        <div class="order-mini-title">Tu pedido</div>
+        <div class="order-mini-item"><span>2x Burger My Way</span><span class="price">$11.600</span></div>
+        <div class="order-mini-item"><span>1x Agua s/gas</span><span class="price">$800</span></div>
+        <div class="order-mini-item"><span>1x Mojito</span><span class="price">$4.200</span></div>
+        <div class="order-mini-total"><span>Total</span><span>$16.600</span></div>
+      </div>
+    </div>
+    <div class="phone-desc">El cliente recibe un link. Ve el punto verde del repartidor moviéndose en el mapa en tiempo real.</div>
+  </div>
+
+  <!-- REPARTIDOR -->
+  <div class="phone-wrap">
+    <div class="phone-label">Repartidor — /repartidor/[orderId]</div>
+    <div class="phone">
+      <div class="rep-header">
+        <div class="rep-logo">MY WAY</div>
+        <div class="rep-sub">Panel del repartidor</div>
+      </div>
+      <div class="rep-order-card">
+        <div class="rep-order-tag">Pedido #MW-0042</div>
+        <div class="rep-order-name">Juan Pérez</div>
+        <div class="rep-order-addr">Maipú 1245, Olivos</div>
+        <div class="rep-order-phone">+54 11 5555-1234</div>
+        <div class="rep-divider"></div>
+        <div class="rep-items">
+          <div class="rep-item"><span>2×</span> Burger My Way</div>
+          <div class="rep-item"><span>1×</span> Agua s/gas</div>
+          <div class="rep-item"><span>1×</span> Mojito</div>
+        </div>
+      </div>
+      <div class="rep-gps-card">
+        <div class="rep-gps-off">
+          <div class="gps-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-dasharray="4 2"/></svg>
+          </div>
+          <h3>Iniciar seguimiento GPS</h3>
+          <p>El cliente verá tu ubicación en tiempo real. Mantené el browser abierto mientras hacés la entrega.</p>
+          <div class="btn-start">Activar GPS</div>
+        </div>
+      </div>
+      <div class="rep-status-section">
+        <div class="rep-status-title">Estado del pedido</div>
+        <div class="rep-status-btns">
+          <div class="rep-status-btn done"><div class="rep-status-btn-dot"></div>Pedido recibido</div>
+          <div class="rep-status-btn done"><div class="rep-status-btn-dot"></div>En preparación</div>
+          <div class="rep-status-btn active"><div class="rep-status-btn-dot"></div>En camino — activo ahora</div>
+          <div class="rep-status-btn pending"><div class="rep-status-btn-dot"></div>Marcar como entregado</div>
+        </div>
+      </div>
+      <div class="nav-note">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <p>El admin comparte este link con el repartidor por WhatsApp desde el panel de delivery.</p>
+      </div>
+    </div>
+    <div class="phone-desc">Toca "Activar GPS", el browser pide permiso y empieza a mandar coordenadas cada 8 segundos.</div>
+  </div>
+
+</div>
+
+<div class="design-notes">
+  <div class="dn-card">
+    <div class="dn-tag">Páginas nuevas</div>
+    <div class="dn-title">Lo que vamos a construir</div>
+    <ul class="dn-list">
+      <li><code>/</code> — Landing con video intro, galería, menú, delivery</li>
+      <li><code>/delivery</code> — Menú + carrito + formulario de pedido</li>
+      <li><code>/track/[orderId]</code> — Mapa en vivo para el cliente</li>
+      <li><code>/repartidor/[orderId]</code> — Panel GPS del repartidor</li>
+    </ul>
+  </div>
+  <div class="dn-card">
+    <div class="dn-tag">Cambios técnicos</div>
+    <div class="dn-title">DB + API</div>
+    <ul class="dn-list">
+      <li>Campo <code>repartidorLat / repartidorLng</code> en DeliveryOrder</li>
+      <li><code>PATCH /api/delivery/[id]/location</code> — repartidor sube GPS</li>
+      <li><code>GET /api/delivery/[id]/tracking</code> — cliente consulta posición</li>
+      <li>Leaflet.js + OpenStreetMap — gratis, sin API key</li>
+      <li>Link del repartidor visible en <code>/admin/delivery</code></li>
+    </ul>
+  </div>
+</div>
+
+<div class="approve-section">
+  <div class="btn-approve" onclick="approve()">Todo bien — arranquemos</div>
+  <div class="approve-sub">Hacé click para confirmar el diseño y pasar a la implementación</div>
+</div>
+
+<script>
+function approve() {
+  const ev = { type: 'click', choice: 'approved', text: 'Diseño aprobado — arrancar implementación', timestamp: Date.now() };
+  fetch('/__event', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(ev) })
+    .catch(()=>{});
+  document.querySelector('.btn-approve').textContent = 'Aprobado';
+  document.querySelector('.btn-approve').style.background = '#10b981';
+  document.querySelector('.approve-sub').textContent = 'Confirmado. Avisame en el chat para arrancar.';
+}
+</script>
+
+</body>
+</html>
