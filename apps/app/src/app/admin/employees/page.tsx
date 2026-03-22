@@ -1,542 +1,645 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  UtensilsCrossed,
-  Users,
-  Bike,
-  BarChart3,
-  BookOpen,
-  Plus,
-  Pencil,
-  Trash2,
-  Check,
-  X,
-} from "lucide-react";
-import type { Staff, StaffRole } from "@/lib/types";
+import { UserPlus, Eye, Edit2, UserX, Clock, Calendar } from "lucide-react";
+import type { Staff } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
 
-// ─── Admin sidebar ────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const NAV_ITEMS = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/menu", label: "Menú", icon: UtensilsCrossed },
-  { href: "/admin/employees", label: "Personal", icon: Users },
-  { href: "/admin/delivery", label: "Delivery", icon: Bike },
-  { href: "/admin/analytics", label: "Analíticas", icon: BarChart3 },
-  { href: "/admin/accounting", label: "Contabilidad", icon: BookOpen },
+const ROLE_LABELS: Record<string, string> = {
+	cashier: "Cajero",
+	waiter: "Mozo",
+	kitchen: "Cocina",
+	bar: "Barra",
+	admin: "Admin",
+};
+
+const ROLE_COLORS: Record<
+	string,
+	{ avatar: string; badge: string; num: string }
+> = {
+	admin: {
+		avatar:
+			"rgba(245,158,11,0.25) border border-[rgba(245,158,11,0.4)] text-[#f59e0b]",
+		badge: "rgba(245,158,11,0.1)",
+		num: "#f59e0b",
+	},
+	waiter: {
+		avatar: "rgba(59,130,246,0.25)",
+		badge: "rgba(59,130,246,0.1)",
+		num: "#3b82f6",
+	},
+	kitchen: {
+		avatar: "rgba(16,185,129,0.25)",
+		badge: "rgba(16,185,129,0.1)",
+		num: "#10b981",
+	},
+	bar: {
+		avatar: "rgba(139,92,246,0.25)",
+		badge: "rgba(139,92,246,0.1)",
+		num: "#8b5cf6",
+	},
+	cashier: {
+		avatar: "rgba(245,158,11,0.25)",
+		badge: "rgba(245,158,11,0.1)",
+		num: "#f59e0b",
+	},
+};
+
+const ROLE_ACCENT: Record<
+	string,
+	{
+		avatarBg: string;
+		avatarBorder: string;
+		textColor: string;
+		badgeBg: string;
+		badgeBorder: string;
+	}
+> = {
+	admin: {
+		avatarBg: "rgba(245,158,11,0.25)",
+		avatarBorder: "rgba(245,158,11,0.4)",
+		textColor: "#f59e0b",
+		badgeBg: "rgba(245,158,11,0.1)",
+		badgeBorder: "rgba(245,158,11,0.2)",
+	},
+	waiter: {
+		avatarBg: "rgba(59,130,246,0.25)",
+		avatarBorder: "rgba(59,130,246,0.4)",
+		textColor: "#3b82f6",
+		badgeBg: "rgba(59,130,246,0.1)",
+		badgeBorder: "rgba(59,130,246,0.2)",
+	},
+	kitchen: {
+		avatarBg: "rgba(16,185,129,0.25)",
+		avatarBorder: "rgba(16,185,129,0.4)",
+		textColor: "#10b981",
+		badgeBg: "rgba(16,185,129,0.1)",
+		badgeBorder: "rgba(16,185,129,0.2)",
+	},
+	bar: {
+		avatarBg: "rgba(139,92,246,0.25)",
+		avatarBorder: "rgba(139,92,246,0.4)",
+		textColor: "#8b5cf6",
+		badgeBg: "rgba(139,92,246,0.1)",
+		badgeBorder: "rgba(139,92,246,0.2)",
+	},
+	cashier: {
+		avatarBg: "rgba(245,158,11,0.25)",
+		avatarBorder: "rgba(245,158,11,0.4)",
+		textColor: "#f59e0b",
+		badgeBg: "rgba(245,158,11,0.1)",
+		badgeBorder: "rgba(245,158,11,0.2)",
+	},
+};
+
+const DEFAULT_ACCENT = {
+	avatarBg: "var(--s2)",
+	avatarBorder: "var(--s4)",
+	textColor: "#888",
+	badgeBg: "var(--s2)",
+	badgeBorder: "var(--s4)",
+};
+
+// Static shift data
+const SHIFT_SLOTS = [
+	{
+		label: "Turno tarde",
+		time: "16:00 – 22:00",
+		color: "#8b5cf6",
+		roles: ["cashier", "waiter"],
+	},
+	{
+		label: "Turno noche",
+		time: "18:00 – 02:00",
+		color: "#f59e0b",
+		roles: ["bar", "waiter", "admin"],
+	},
+	{
+		label: "Turno cierre",
+		time: "20:00 – 04:00",
+		color: "#3b82f6",
+		roles: ["kitchen"],
+	},
 ];
 
-function AdminSidebar() {
-  const pathname = usePathname();
-  return (
-    <nav className="sidebar" style={{ width: 220 }}>
-      <div
-        style={{
-          padding: "22px 20px 18px",
-          borderBottom: "1px solid var(--s3)",
-        }}
-      >
-        <div
-          className="font-kds text-brand-500"
-          style={{ fontSize: 26, letterSpacing: "0.2em", lineHeight: 1 }}
-        >
-          MY WAY
-        </div>
-        <div
-          className="font-display text-ink-disabled uppercase"
-          style={{ fontSize: 9, letterSpacing: "0.35em", marginTop: 3 }}
-        >
-          Administración
-        </div>
-      </div>
-      <div className="flex flex-col gap-0.5 p-2 flex-1 mt-1">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            item.href === "/admin"
-              ? pathname === "/admin"
-              : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`sidebar-item ${isActive ? "active" : ""}`}
-            >
-              <Icon size={15} />
-              {item.label}
-            </Link>
-          );
-        })}
-      </div>
-      <div style={{ padding: "14px 16px", borderTop: "1px solid var(--s3)" }}>
-        <Link
-          href="/pos/salon"
-          className="sidebar-item"
-          style={{ padding: "8px 10px", fontSize: 10 }}
-        >
-          <LayoutDashboard size={13} />
-          Ir al POS
-        </Link>
-      </div>
-    </nav>
-  );
+// ─── Stats row ────────────────────────────────────────────────────────────────
+
+function StatsRow({ staff }: { staff: Staff[] }) {
+	const roleEntries = Object.entries(ROLE_LABELS).map(([role, label]) => ({
+		role,
+		label,
+		count: staff.filter((s) => s.role === role).length,
+	}));
+
+	return (
+		<div
+			className="grid gap-3"
+			style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr" }}
+		>
+			{/* Total active */}
+			<div
+				className="stat-card"
+				style={{
+					position: "relative",
+					overflow: "hidden",
+					borderColor: "rgba(245,158,11,0.25)",
+					boxShadow: "0 0 12px rgba(245,158,11,0.06)",
+				}}
+			>
+				<div
+					style={{
+						position: "absolute",
+						inset: 0,
+						background:
+							"radial-gradient(ellipse 300px 200px at 50% 0%, rgba(245,158,11,0.06) 0%, transparent 60%)",
+						pointerEvents: "none",
+					}}
+				/>
+				<div style={{ position: "relative", zIndex: 1 }}>
+					<div
+						className="font-display text-ink-disabled uppercase mb-3"
+						style={{ fontSize: 9, letterSpacing: "0.25em" }}
+					>
+						Personal activo
+					</div>
+					<div className="flex items-end gap-3">
+						<span
+							className="font-kds text-brand-500"
+							style={{ fontSize: 42, lineHeight: 1 }}
+						>
+							{staff.length}
+						</span>
+						<div style={{ paddingBottom: 4 }}>
+							<div
+								className="font-body text-ink-disabled"
+								style={{ fontSize: 12 }}
+							>
+								empleados
+							</div>
+							<div className="flex items-center gap-1.5 mt-0.5">
+								<div
+									style={{
+										width: 6,
+										height: 6,
+										borderRadius: "50%",
+										background: "#10b981",
+									}}
+								/>
+								<span
+									className="font-body"
+									style={{ fontSize: 10, color: "#10b981" }}
+								>
+									Todos activos
+								</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{roleEntries.map(({ role, label, count }) => {
+				const c = ROLE_ACCENT[role] ?? DEFAULT_ACCENT;
+				return (
+					<div key={role} className="stat-card flex flex-col gap-2">
+						<span
+							style={{
+								display: "inline-flex",
+								padding: "2px 8px",
+								borderRadius: 6,
+								border: `1px solid ${c.badgeBorder}`,
+								background: c.badgeBg,
+								color: c.textColor,
+								fontFamily: "var(--font-syne)",
+								fontSize: 9,
+								fontWeight: 700,
+								letterSpacing: "0.12em",
+								textTransform: "uppercase",
+							}}
+						>
+							{label}
+						</span>
+						<span
+							className="font-kds"
+							style={{ fontSize: 36, lineHeight: 1, color: c.textColor }}
+						>
+							{count}
+						</span>
+					</div>
+				);
+			})}
+		</div>
+	);
 }
 
-// ─── Role config ──────────────────────────────────────────────────────────────
+// ─── Staff table ──────────────────────────────────────────────────────────────
 
-const ROLE_LABELS: Record<StaffRole, string> = {
-  waiter: "Mozo",
-  bar: "Bartender",
-  kitchen: "Cocina",
-  cashier: "Cajero",
-  admin: "Admin",
-};
+function StaffTable({ staff }: { staff: Staff[] }) {
+	return (
+		<div className="card" style={{ padding: 0, overflow: "hidden" }}>
+			<div
+				style={{
+					padding: "16px 20px",
+					borderBottom: "1px solid var(--s3)",
+					background: "var(--s2)",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "space-between",
+				}}
+			>
+				<div>
+					<h3
+						className="font-display text-ink-primary"
+						style={{ fontSize: 13, fontWeight: 700 }}
+					>
+						Equipo
+					</h3>
+					<div
+						className="font-body text-ink-disabled mt-0.5"
+						style={{ fontSize: 11 }}
+					>
+						Personal del local
+					</div>
+				</div>
+			</div>
 
-const ROLE_COLORS: Record<StaffRole, string> = {
-  waiter: "#10b981",
-  bar: "#3b82f6",
-  kitchen: "#f59e0b",
-  cashier: "#8b5cf6",
-  admin: "#ef4444",
-};
+			<table style={{ width: "100%", borderCollapse: "collapse" }}>
+				<thead>
+					<tr style={{ borderBottom: "1px solid var(--s3)" }}>
+						{["Empleado", "Rol", "Estado", "Turno actual", "Acciones"].map(
+							(h) => (
+								<th
+									key={h}
+									className="font-display text-ink-disabled uppercase"
+									style={{
+										fontSize: 9,
+										letterSpacing: "0.2em",
+										padding: "12px 20px",
+										textAlign: "left",
+										fontWeight: 600,
+									}}
+								>
+									{h}
+								</th>
+							),
+						)}
+					</tr>
+				</thead>
+				<tbody>
+					{staff.length === 0 ? (
+						<tr>
+							<td
+								colSpan={5}
+								className="text-center font-body text-ink-disabled"
+								style={{ padding: "40px 20px", fontSize: 13 }}
+							>
+								No hay empleados registrados
+							</td>
+						</tr>
+					) : (
+						staff.map((s) => {
+							const c = ROLE_ACCENT[s.role] ?? DEFAULT_ACCENT;
+							return (
+								<tr key={s.id} style={{ borderBottom: "1px solid var(--s3)" }}>
+									{/* Avatar + Name */}
+									<td style={{ padding: "14px 20px" }}>
+										<div className="flex items-center gap-3">
+											<div
+												style={{
+													width: 36,
+													height: 36,
+													borderRadius: "50%",
+													border: `1px solid ${c.avatarBorder}`,
+													background: c.avatarBg,
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+													flexShrink: 0,
+												}}
+											>
+												<span
+													className="font-kds"
+													style={{
+														fontSize: 14,
+														lineHeight: 1,
+														color: c.textColor,
+													}}
+												>
+													{s.avatar}
+												</span>
+											</div>
+											<div>
+												<div
+													className="font-display text-ink-primary"
+													style={{
+														fontSize: 13,
+														fontWeight: 600,
+														lineHeight: 1.2,
+													}}
+												>
+													{s.name}
+												</div>
+												<div
+													className="font-body text-ink-disabled"
+													style={{ fontSize: 10 }}
+												>
+													ID #{s.id.slice(0, 8)}
+												</div>
+											</div>
+										</div>
+									</td>
 
-const ALL_ROLES: StaffRole[] = ["waiter", "bar", "kitchen", "cashier", "admin"];
+									{/* Role */}
+									<td style={{ padding: "14px 20px" }}>
+										<span
+											style={{
+												display: "inline-flex",
+												alignItems: "center",
+												padding: "4px 10px",
+												borderRadius: 8,
+												border: `1px solid ${c.badgeBorder}`,
+												background: c.badgeBg,
+												color: c.textColor,
+												fontFamily: "var(--font-syne)",
+												fontSize: 11,
+												fontWeight: 700,
+											}}
+										>
+											{ROLE_LABELS[s.role] ?? s.role}
+										</span>
+									</td>
 
-// ─── Staff form ───────────────────────────────────────────────────────────────
+									{/* Status */}
+									<td style={{ padding: "14px 20px" }}>
+										<div className="flex items-center gap-2">
+											<div
+												style={{
+													width: 6,
+													height: 6,
+													borderRadius: "50%",
+													background: "#10b981",
+												}}
+											/>
+											<span
+												className="font-display"
+												style={{
+													fontSize: 12,
+													fontWeight: 600,
+													color: "#10b981",
+												}}
+											>
+												Activo
+											</span>
+										</div>
+									</td>
 
-interface StaffDraft {
-  name: string;
-  role: StaffRole;
-  avatar: string;
+									{/* Shift */}
+									<td style={{ padding: "14px 20px" }}>
+										<div className="flex items-center gap-2">
+											<Clock
+												size={12}
+												style={{ color: "#555", flexShrink: 0 }}
+											/>
+											<span
+												className="font-body text-ink-secondary"
+												style={{ fontSize: 12, fontFamily: "monospace" }}
+											>
+												18:00 – 02:00
+											</span>
+										</div>
+									</td>
+
+									{/* Actions */}
+									<td style={{ padding: "14px 20px" }}>
+										<div className="flex items-center justify-end gap-1">
+											<button
+												className="btn-ghost"
+												style={{ padding: "6px 10px", fontSize: 11 }}
+											>
+												<Eye size={13} />
+												Ver perfil
+											</button>
+											<button
+												className="btn-ghost"
+												style={{ padding: "6px 8px" }}
+											>
+												<Edit2 size={13} />
+											</button>
+											<button
+												className="btn-ghost"
+												style={{ padding: "6px 8px", color: "#ef4444" }}
+											>
+												<UserX size={13} />
+											</button>
+										</div>
+									</td>
+								</tr>
+							);
+						})
+					)}
+				</tbody>
+			</table>
+		</div>
+	);
 }
 
-const emptyDraft = (): StaffDraft => ({
-  name: "",
-  role: "waiter",
-  avatar: "",
-});
+// ─── Shifts section ───────────────────────────────────────────────────────────
 
-function StaffForm({
-  draft,
-  onChange,
-  onSave,
-  onCancel,
-  saving,
-  editId,
-}: {
-  draft: StaffDraft;
-  onChange: (d: StaffDraft) => void;
-  onSave: () => void;
-  onCancel: () => void;
-  saving: boolean;
-  editId: string | null;
-}) {
-  const initials = draft.name
-    .split(" ")
-    .map((w) => w[0] ?? "")
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+function ShiftsSection({ staff }: { staff: Staff[] }) {
+	const [date, setDate] = useState("");
 
-  return (
-    <div
-      className="card-sm animate-slide-up"
-      style={{ padding: 20, marginBottom: 16 }}
-    >
-      <div
-        className="font-display text-ink-disabled uppercase mb-4"
-        style={{ fontSize: 10, letterSpacing: "0.25em" }}
-      >
-        {editId ? "Editar empleado" : "Nuevo empleado"}
-      </div>
-      <div className="grid gap-3" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
-        <div>
-          <label
-            className="font-display text-ink-disabled uppercase block mb-1"
-            style={{ fontSize: 9, letterSpacing: "0.2em" }}
-          >
-            Nombre
-          </label>
-          <input
-            className="input-base"
-            value={draft.name}
-            onChange={(e) => onChange({ ...draft, name: e.target.value })}
-            placeholder="Ej: Juan Pérez"
-          />
-        </div>
-        <div>
-          <label
-            className="font-display text-ink-disabled uppercase block mb-1"
-            style={{ fontSize: 9, letterSpacing: "0.2em" }}
-          >
-            Rol
-          </label>
-          <select
-            className="input-base"
-            value={draft.role}
-            onChange={(e) =>
-              onChange({ ...draft, role: e.target.value as StaffRole })
-            }
-            style={{ cursor: "pointer" }}
-          >
-            {ALL_ROLES.map((r) => (
-              <option key={r} value={r}>
-                {ROLE_LABELS[r]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label
-            className="font-display text-ink-disabled uppercase block mb-1"
-            style={{ fontSize: 9, letterSpacing: "0.2em" }}
-          >
-            Avatar (URL o emoji)
-          </label>
-          <input
-            className="input-base"
-            value={draft.avatar}
-            onChange={(e) => onChange({ ...draft, avatar: e.target.value })}
-            placeholder={initials || "👤"}
-          />
-        </div>
-      </div>
-      <div className="flex items-center gap-2 mt-4">
-        <button
-          className="btn-primary"
-          onClick={onSave}
-          disabled={saving || !draft.name}
-        >
-          <Check size={14} />
-          {saving ? "Guardando..." : editId ? "Guardar cambios" : "Crear empleado"}
-        </button>
-        <button className="btn-ghost" onClick={onCancel}>
-          <X size={14} />
-          Cancelar
-        </button>
-      </div>
-    </div>
-  );
-}
+	useEffect(() => {
+		const now = new Date();
+		setDate(
+			now.toLocaleDateString("es-AR", {
+				weekday: "long",
+				day: "numeric",
+				month: "long",
+			}),
+		);
+	}, []);
 
-// ─── Staff avatar ─────────────────────────────────────────────────────────────
+	return (
+		<div className="card" style={{ padding: 24 }}>
+			<div className="flex items-center gap-2.5 mb-5">
+				<Calendar size={15} style={{ color: "#f59e0b" }} />
+				<h3
+					className="font-display text-ink-primary"
+					style={{ fontSize: 13, fontWeight: 700 }}
+				>
+					Turnos de hoy
+				</h3>
+				<span
+					className="font-body text-ink-disabled"
+					style={{ fontSize: 12, textTransform: "capitalize" }}
+					suppressHydrationWarning
+				>
+					{date}
+				</span>
+			</div>
 
-function StaffAvatar({
-  staff,
-  size = 40,
-}: {
-  staff: Staff;
-  size?: number;
-}) {
-  const color = ROLE_COLORS[staff.role];
-  const initials = staff.name
-    .split(" ")
-    .map((w) => w[0] ?? "")
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-
-  const isUrl =
-    staff.avatar.startsWith("http") || staff.avatar.startsWith("/");
-
-  return (
-    <div
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        background: `${color}20`,
-        border: `2px solid ${color}40`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-        overflow: "hidden",
-        fontSize: size * 0.35,
-      }}
-    >
-      {isUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={staff.avatar}
-          alt={staff.name}
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        />
-      ) : staff.avatar ? (
-        staff.avatar
-      ) : (
-        <span
-          style={{
-            fontFamily: "var(--font-syne)",
-            fontWeight: 700,
-            fontSize: size * 0.3,
-            color,
-          }}
-        >
-          {initials}
-        </span>
-      )}
-    </div>
-  );
+			<div
+				className="grid gap-4"
+				style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+			>
+				{SHIFT_SLOTS.map((slot) => {
+					const members = staff.filter((s) => slot.roles.includes(s.role));
+					return (
+						<div
+							key={slot.label}
+							style={{
+								padding: 16,
+								borderRadius: 12,
+								background: "var(--s2)",
+								border: `1px solid var(--s3)`,
+								borderTop: `2px solid ${slot.color}`,
+							}}
+						>
+							<div
+								className="font-display text-ink-primary mb-1"
+								style={{ fontSize: 12, fontWeight: 700 }}
+							>
+								{slot.label}
+							</div>
+							<div className="flex items-center gap-1.5 mb-4">
+								<Clock size={11} style={{ color: "#555" }} />
+								<span
+									className="font-body text-ink-disabled"
+									style={{ fontSize: 10, fontFamily: "monospace" }}
+								>
+									{slot.time}
+								</span>
+							</div>
+							<div
+								style={{ display: "flex", flexDirection: "column", gap: 10 }}
+							>
+								{members.length === 0 ? (
+									<div
+										className="font-body text-ink-disabled"
+										style={{ fontSize: 11 }}
+									>
+										Sin personal asignado
+									</div>
+								) : (
+									members.map((m) => {
+										const c = ROLE_ACCENT[m.role] ?? DEFAULT_ACCENT;
+										return (
+											<div key={m.id} className="flex items-center gap-2.5">
+												<div
+													style={{
+														width: 24,
+														height: 24,
+														borderRadius: "50%",
+														border: `1px solid ${c.avatarBorder}`,
+														background: c.avatarBg,
+														display: "flex",
+														alignItems: "center",
+														justifyContent: "center",
+														flexShrink: 0,
+													}}
+												>
+													<span
+														className="font-kds"
+														style={{
+															fontSize: 10,
+															lineHeight: 1,
+															color: c.textColor,
+														}}
+													>
+														{m.avatar}
+													</span>
+												</div>
+												<div style={{ flex: 1, minWidth: 0 }}>
+													<div
+														className="font-display text-ink-primary"
+														style={{
+															fontSize: 12,
+															fontWeight: 600,
+															overflow: "hidden",
+															textOverflow: "ellipsis",
+															whiteSpace: "nowrap",
+														}}
+													>
+														{m.name.split(" ")[0]}
+													</div>
+												</div>
+												<span
+													style={{
+														display: "inline-flex",
+														padding: "1px 6px",
+														borderRadius: 4,
+														border: `1px solid ${c.badgeBorder}`,
+														background: c.badgeBg,
+														color: c.textColor,
+														fontFamily: "var(--font-syne)",
+														fontSize: 9,
+														fontWeight: 700,
+														flexShrink: 0,
+													}}
+												>
+													{ROLE_LABELS[m.role]}
+												</span>
+											</div>
+										);
+									})
+								)}
+							</div>
+						</div>
+					);
+				})}
+			</div>
+		</div>
+	);
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function EmployeesPage() {
-  const [staff, setStaff] = useState<Staff[]>([]);
-  const [roleFilter, setRoleFilter] = useState<StaffRole | "all">("all");
-  const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<StaffDraft>(emptyDraft());
-  const [saving, setSaving] = useState(false);
+	const [staff, setStaff] = useState<Staff[]>([]);
 
-  const fetchStaff = useCallback(async () => {
-    try {
-      const data = await apiFetch<Staff[]>("/api/staff");
-      setStaff(data);
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
+	const fetchStaff = useCallback(async () => {
+		try {
+			const data = await apiFetch<Staff[]>("/api/staff");
+			setStaff(data);
+		} catch (e) {
+			console.error(e);
+		}
+	}, []);
 
-  useEffect(() => {
-    fetchStaff();
-  }, [fetchStaff]);
+	useEffect(() => {
+		fetchStaff();
+	}, [fetchStaff]);
 
-  const openNew = () => {
-    setEditId(null);
-    setDraft(emptyDraft());
-    setShowForm(true);
-  };
+	return (
+		<div style={{ minHeight: "100vh", padding: 28 }}>
+			{/* Header */}
+			<div className="flex items-center justify-between mb-7">
+				<div>
+					<h1
+						className="font-display text-ink-primary"
+						style={{ fontSize: 20, fontWeight: 700 }}
+					>
+						Empleados
+					</h1>
+					<div
+						className="font-body text-ink-disabled mt-1"
+						style={{ fontSize: 12 }}
+					>
+						{staff.length} activos hoy
+					</div>
+				</div>
+				<button className="btn-primary" style={{ padding: "10px 20px" }}>
+					<UserPlus size={13} />
+					Agregar empleado
+				</button>
+			</div>
 
-  const openEdit = (s: Staff) => {
-    setEditId(s.id);
-    setDraft({ name: s.name, role: s.role, avatar: s.avatar });
-    setShowForm(true);
-  };
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      const body = {
-        name: draft.name,
-        role: draft.role,
-        avatar: draft.avatar || draft.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2),
-      };
-      if (editId) {
-        await apiFetch(`/api/staff/${editId}`, {
-          method: "PATCH",
-          body: JSON.stringify(body),
-        });
-      } else {
-        await apiFetch("/api/staff", {
-          method: "POST",
-          body: JSON.stringify(body),
-        });
-      }
-      setShowForm(false);
-      setEditId(null);
-      await fetchStaff();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const deleteStaff = async (id: string) => {
-    if (!confirm("¿Eliminar este empleado?")) return;
-    try {
-      await apiFetch(`/api/staff/${id}`, { method: "DELETE" });
-      setStaff((prev) => prev.filter((s) => s.id !== id));
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const filtered =
-    roleFilter === "all" ? staff : staff.filter((s) => s.role === roleFilter);
-
-  const countByRole = (role: StaffRole) =>
-    staff.filter((s) => s.role === role).length;
-
-  return (
-    <div className="min-h-screen bg-surface-0" style={{ display: "flex" }}>
-      <AdminSidebar />
-
-      <div
-        style={{ marginLeft: 220, flex: 1, minHeight: "100vh", padding: 28 }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-7">
-          <div>
-            <h1
-              className="font-display text-ink-primary"
-              style={{ fontSize: 20, fontWeight: 700 }}
-            >
-              Personal
-            </h1>
-            <div
-              className="font-body text-ink-disabled mt-1"
-              style={{ fontSize: 12 }}
-            >
-              Gestión de empleados
-            </div>
-          </div>
-          <button className="btn-primary" onClick={openNew}>
-            <Plus size={14} />
-            Nuevo empleado
-          </button>
-        </div>
-
-        {/* Role filter */}
-        <div className="flex items-center gap-2 mb-5 flex-wrap">
-          <button
-            onClick={() => setRoleFilter("all")}
-            style={{
-              padding: "6px 14px",
-              borderRadius: 8,
-              border:
-                roleFilter === "all"
-                  ? "1px solid rgba(245,158,11,0.3)"
-                  : "1px solid var(--s3)",
-              background:
-                roleFilter === "all" ? "rgba(245,158,11,0.1)" : "transparent",
-              color: roleFilter === "all" ? "#f59e0b" : "#555",
-              fontFamily: "var(--font-syne)",
-              fontWeight: 600,
-              fontSize: 10,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              cursor: "pointer",
-              transition: "all 0.15s",
-            }}
-          >
-            Todos ({staff.length})
-          </button>
-          {ALL_ROLES.map((role) => {
-            const color = ROLE_COLORS[role];
-            const isActive = roleFilter === role;
-            return (
-              <button
-                key={role}
-                onClick={() => setRoleFilter(role)}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: 8,
-                  border: isActive
-                    ? `1px solid ${color}40`
-                    : "1px solid var(--s3)",
-                  background: isActive ? `${color}15` : "transparent",
-                  color: isActive ? color : "#555",
-                  fontFamily: "var(--font-syne)",
-                  fontWeight: 600,
-                  fontSize: 10,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                }}
-              >
-                {ROLE_LABELS[role]} ({countByRole(role)})
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Form */}
-        {showForm && (
-          <StaffForm
-            draft={draft}
-            onChange={setDraft}
-            onSave={save}
-            onCancel={() => {
-              setShowForm(false);
-              setEditId(null);
-            }}
-            saving={saving}
-            editId={editId}
-          />
-        )}
-
-        {/* Staff grid */}
-        {filtered.length === 0 ? (
-          <div
-            className="text-center py-16 text-ink-disabled font-body"
-            style={{ fontSize: 13 }}
-          >
-            No hay empleados en esta categoría
-          </div>
-        ) : (
-          <div
-            className="grid gap-4"
-            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
-          >
-            {filtered.map((s) => {
-              const color = ROLE_COLORS[s.role];
-              return (
-                <div
-                  key={s.id}
-                  className="card-sm animate-fade-in"
-                  style={{ padding: 20 }}
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <StaffAvatar staff={s} size={44} />
-                    <div style={{ flex: 1 }}>
-                      <div
-                        className="font-body text-ink-primary"
-                        style={{ fontSize: 15, fontWeight: 600 }}
-                      >
-                        {s.name}
-                      </div>
-                      <span
-                        style={{
-                          fontSize: 9,
-                          padding: "2px 8px",
-                          borderRadius: 99,
-                          fontFamily: "var(--font-syne)",
-                          fontWeight: 700,
-                          letterSpacing: "0.12em",
-                          textTransform: "uppercase",
-                          color,
-                          background: `${color}15`,
-                          border: `1px solid ${color}30`,
-                        }}
-                      >
-                        {ROLE_LABELS[s.role]}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      className="btn-ghost flex-1 justify-center"
-                      style={{ fontSize: 11, padding: "7px 0" }}
-                      onClick={() => openEdit(s)}
-                    >
-                      <Pencil size={12} />
-                      Editar
-                    </button>
-                    <button
-                      className="btn-ghost"
-                      style={{
-                        padding: "7px 10px",
-                        color: "#ef4444",
-                      }}
-                      onClick={() => deleteStaff(s.id)}
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+			<div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+				<StatsRow staff={staff} />
+				<StaffTable staff={staff} />
+				<ShiftsSection staff={staff} />
+			</div>
+		</div>
+	);
 }
