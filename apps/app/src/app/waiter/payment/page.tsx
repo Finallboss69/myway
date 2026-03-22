@@ -395,7 +395,7 @@ function PaymentContent() {
 										key={key}
 										onClick={() => setMethod(key)}
 										className={clsx(
-											"flex flex-col items-center gap-2 py-4 rounded-xl border transition-all",
+											"flex flex-col items-center gap-2.5 rounded-xl border transition-all active:scale-95",
 											method === key
 												? "border-brand-500/60 bg-brand-500/10"
 												: "border-surface-3 bg-surface-2 hover:border-brand-500/30",
@@ -409,7 +409,7 @@ function PaymentContent() {
 										/>
 										<span
 											className={clsx(
-												"font-display text-[10px] font-bold uppercase tracking-wider",
+												"font-display font-bold uppercase tracking-wider",
 												method === key ? "text-brand-500" : "text-ink-tertiary",
 											)}
 										>

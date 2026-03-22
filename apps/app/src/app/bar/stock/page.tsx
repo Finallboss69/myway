@@ -15,6 +15,7 @@ import {
 	FlaskConical,
 	Zap,
 	ArrowRight,
+	Sliders,
 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
@@ -54,49 +55,78 @@ function formatUnit(value: number, unit: string): string {
 	return `${value} ${unit}`;
 }
 
-// ─── Bar sidebar nav ──────────────────────────────────────────────────────────
+// ─── Bar nav — responsive: sidebar on desktop, top bar on mobile ──────────────
 
 function BarNav() {
 	return (
-		<aside className="w-56 shrink-0 flex flex-col gap-1 py-6 px-3 bg-surface-1 border-r border-surface-3 min-h-screen sticky top-0 self-start h-screen overflow-y-auto">
-			<div className="flex items-center gap-2.5 px-3 mb-6">
-				<div className="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-lg leading-none">
-					🍸
+		<>
+			{/* Desktop sidebar */}
+			<aside className="hidden lg:flex w-56 shrink-0 flex-col gap-1 py-6 px-3 bg-surface-1 border-r border-surface-3 min-h-screen sticky top-0 self-start h-screen overflow-y-auto">
+				<div className="flex items-center gap-2.5 px-3 mb-6">
+					<div className="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-lg leading-none">
+						🍸
+					</div>
+					<div>
+						<p className="font-display text-xs font-bold uppercase tracking-widest text-brand-500">
+							Bar
+						</p>
+						<p className="font-body text-xs text-ink-tertiary">My Way</p>
+					</div>
 				</div>
-				<div>
-					<p className="font-display text-xs font-bold uppercase tracking-widest text-brand-500">
-						Bar
-					</p>
-					<p className="font-body text-xs text-ink-tertiary">My Way</p>
-				</div>
-			</div>
 
-			<Link
-				href="/bar"
-				className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-semibold transition-all text-ink-secondary hover:bg-surface-2 hover:text-ink-primary"
-			>
-				<Zap className="w-4 h-4" />
-				Pedidos
-				<ChevronRight className="w-3 h-3 ml-auto opacity-40" />
-			</Link>
-			<Link
-				href="/bar/stock"
-				className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-semibold transition-all bg-brand-500/10 text-brand-500 border border-brand-500/20"
-			>
-				<Package className="w-4 h-4" />
-				Stock
-				<ArrowRight className="w-3 h-3 ml-auto" />
-			</Link>
-
-			<div className="mt-auto pt-6 px-3 border-t border-surface-3">
 				<Link
-					href="/"
-					className="flex items-center gap-2 text-xs text-ink-tertiary hover:text-ink-secondary transition-colors font-display uppercase tracking-widest"
+					href="/bar"
+					className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-semibold transition-all text-ink-secondary hover:bg-surface-2 hover:text-ink-primary"
 				>
-					← Todas las apps
+					<Zap className="w-4 h-4" />
+					Pedidos
+					<ChevronRight className="w-3 h-3 ml-auto opacity-40" />
 				</Link>
-			</div>
-		</aside>
+				<Link
+					href="/bar/stock"
+					className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-semibold transition-all bg-brand-500/10 text-brand-500 border border-brand-500/20"
+				>
+					<Package className="w-4 h-4" />
+					Stock
+					<ArrowRight className="w-3 h-3 ml-auto" />
+				</Link>
+
+				<div className="mt-auto pt-6 px-3 border-t border-surface-3">
+					<Link
+						href="/"
+						className="flex items-center gap-2 text-xs text-ink-tertiary hover:text-ink-secondary transition-colors font-display uppercase tracking-widest"
+					>
+						← Todas las apps
+					</Link>
+				</div>
+			</aside>
+
+			{/* Mobile top nav bar */}
+			<nav className="lg:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-surface-1/95 backdrop-blur-md border-b border-surface-3">
+				<div className="flex items-center gap-2 mr-auto">
+					<div className="w-8 h-8 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-base leading-none">
+						🍸
+					</div>
+					<span className="font-display text-xs font-bold uppercase tracking-widest text-brand-500">
+						Bar
+					</span>
+				</div>
+				<Link
+					href="/bar"
+					className="flex items-center gap-2 px-3 min-h-[40px] rounded-xl text-xs font-display font-semibold text-ink-secondary bg-surface-2 border border-surface-3"
+				>
+					<Zap className="w-3.5 h-3.5" />
+					Pedidos
+				</Link>
+				<Link
+					href="/bar/stock"
+					className="flex items-center gap-2 px-3 min-h-[40px] rounded-xl text-xs font-display font-semibold bg-brand-500/10 text-brand-500 border border-brand-500/20"
+				>
+					<Package className="w-3.5 h-3.5" />
+					Stock
+				</Link>
+			</nav>
+		</>
 	);
 }
 
@@ -145,6 +175,98 @@ function StockBar({ pct, status }: { pct: number; status: IngStatus }) {
 	);
 }
 
+// ─── Ingredient card (mobile/tablet card view) ────────────────────────────────
+
+function IngredientCard({
+	ing,
+	onAdjust,
+}: {
+	ing: Ingredient;
+	onAdjust: (ing: Ingredient) => void;
+}) {
+	const status = getStatus(ing);
+	const pct = stockPct(ing);
+
+	return (
+		<div
+			className={clsx(
+				"flex flex-col gap-3 p-4 rounded-2xl border transition-colors",
+				status === "critical"
+					? "bg-red-500/[0.04] border-red-500/25 hover:bg-red-500/[0.07]"
+					: status === "low"
+						? "bg-amber-500/[0.03] border-amber-500/20 hover:bg-amber-500/[0.06]"
+						: "bg-surface-1 border-surface-3 hover:bg-surface-2/50",
+			)}
+		>
+			{/* Header row */}
+			<div className="flex items-start justify-between gap-2">
+				<div className="flex items-center gap-2.5 min-w-0">
+					{status === "critical" && (
+						<AlertTriangle size={14} className="text-red-400 shrink-0" />
+					)}
+					{status === "low" && (
+						<TrendingDown size={14} className="text-amber-400 shrink-0" />
+					)}
+					{status === "ok" && (
+						<CheckCircle2 size={14} className="text-emerald-400/50 shrink-0" />
+					)}
+					<span className="font-display text-sm font-bold text-ink-primary truncate">
+						{ing.name}
+					</span>
+				</div>
+				<StatusChip status={status} />
+			</div>
+
+			{/* Stock value + bar */}
+			<div className="flex flex-col gap-1.5">
+				<div className="flex items-baseline justify-between">
+					<span
+						className={clsx(
+							"font-mono font-bold text-sm",
+							status === "critical"
+								? "text-red-400"
+								: status === "low"
+									? "text-amber-400"
+									: "text-ink-primary",
+						)}
+					>
+						{ing.stockCurrent.toLocaleString("es-AR")}
+					</span>
+					<span className="text-ink-tertiary text-xs font-body">
+						{ing.unit}
+					</span>
+				</div>
+				<StockBar pct={pct} status={status} />
+				<div className="flex items-center justify-between text-xs">
+					<span className="font-body text-ink-tertiary">
+						Umbral: {ing.alertThreshold.toLocaleString("es-AR")} {ing.unit}
+					</span>
+					<span className="font-body text-ink-tertiary">
+						{ing.costPerUnit > 0 && (
+							<>
+								$
+								{ing.costPerUnit.toLocaleString("es-AR", {
+									minimumFractionDigits: 2,
+								})}
+								/{ing.unit}
+							</>
+						)}
+					</span>
+				</div>
+			</div>
+
+			{/* Action button */}
+			<button
+				className="flex items-center justify-center gap-2 min-h-[44px] rounded-xl border border-surface-3 bg-surface-2 text-ink-secondary text-xs font-display font-bold uppercase tracking-wide hover:text-brand-500 hover:border-brand-500/30 transition-all active:scale-95"
+				onClick={() => onAdjust(ing)}
+			>
+				<Sliders size={14} />
+				Ajustar Stock
+			</button>
+		</div>
+	);
+}
+
 // ─── Stat card ────────────────────────────────────────────────────────────────
 
 function StatCard({
@@ -168,21 +290,28 @@ function StatCard({
 		}[accent ?? "gold"] ?? "text-ink-primary";
 
 	return (
-		<div className="card-sm p-4 flex flex-col gap-2.5">
+		<div className="card-sm p-3 sm:p-4 flex flex-col gap-2 sm:gap-2.5">
 			<div className="flex items-center justify-between">
-				<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary">
+				<span className="font-display text-[9px] sm:text-[10px] uppercase tracking-widest text-ink-tertiary">
 					{label}
 				</span>
-				<div className="w-8 h-8 rounded-lg bg-surface-2 border border-surface-3 flex items-center justify-center text-ink-secondary">
+				<div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-surface-2 border border-surface-3 flex items-center justify-center text-ink-secondary">
 					{icon}
 				</div>
 			</div>
 			<div>
-				<span className={clsx("font-kds text-4xl leading-none", valueColor)}>
+				<span
+					className={clsx(
+						"font-kds text-3xl sm:text-4xl leading-none",
+						valueColor,
+					)}
+				>
 					{value}
 				</span>
 				{sub && (
-					<div className="text-ink-tertiary font-body text-xs mt-1">{sub}</div>
+					<div className="text-ink-tertiary font-body text-xs mt-1 hidden sm:block">
+						{sub}
+					</div>
 				)}
 			</div>
 		</div>
@@ -214,12 +343,12 @@ function AdjustModal({
 
 	return (
 		<div
-			className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
+			className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in px-4"
 			style={{ background: "rgba(8,8,8,0.85)", backdropFilter: "blur(8px)" }}
 			onClick={onClose}
 		>
 			<div
-				className="card p-6 w-80 flex flex-col gap-4 animate-slide-up"
+				className="card p-6 w-full max-w-sm flex flex-col gap-4 animate-slide-up"
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="flex items-center justify-between">
@@ -228,7 +357,7 @@ function AdjustModal({
 					</h3>
 					<button
 						onClick={onClose}
-						className="text-ink-tertiary hover:text-ink-primary text-lg leading-none"
+						className="text-ink-tertiary hover:text-ink-primary text-lg leading-none min-w-[32px] min-h-[32px] flex items-center justify-center"
 					>
 						×
 					</button>
@@ -256,14 +385,14 @@ function AdjustModal({
 				<div className="flex gap-2">
 					<button
 						onClick={onClose}
-						className="btn-ghost flex-1 justify-center text-xs py-2.5"
+						className="btn-ghost flex-1 justify-center text-xs min-h-[44px]"
 					>
 						Cancelar
 					</button>
 					<button
 						onClick={handleSave}
 						disabled={saving}
-						className="btn-primary flex-1 justify-center text-xs py-2.5"
+						className="btn-primary flex-1 justify-center text-xs min-h-[44px]"
 					>
 						{saving ? "Guardando..." : "Guardar"}
 					</button>
@@ -337,18 +466,18 @@ export default function BarStockPage() {
 	}
 
 	return (
-		<div className="flex min-h-screen bg-surface-0">
+		<div className="flex min-h-screen bg-surface-0 flex-col lg:flex-row">
 			<BarNav />
 
 			<div className="flex-1 flex flex-col min-w-0">
 				{/* ── Page header ── */}
-				<div className="sticky top-0 z-20 flex items-center justify-between px-8 py-5 border-b border-surface-3 bg-surface-1/95 backdrop-blur-md">
+				<div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-surface-3 bg-surface-1/95 backdrop-blur-md">
 					<div>
 						<div className="flex items-center gap-2.5 mb-0.5">
 							<div className="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-lg leading-none">
 								🍶
 							</div>
-							<h1 className="font-display text-xl font-bold text-ink-primary uppercase tracking-wide">
+							<h1 className="font-display text-lg sm:text-xl font-bold text-ink-primary uppercase tracking-wide">
 								Stock del Bar
 							</h1>
 						</div>
@@ -364,8 +493,8 @@ export default function BarStockPage() {
 						</p>
 					</div>
 
-					<div className="flex items-center gap-3">
-						<div className="relative hidden sm:block">
+					<div className="flex items-center gap-3 w-full sm:w-auto">
+						<div className="relative flex-1 sm:flex-none">
 							<Search
 								size={14}
 								className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-tertiary"
@@ -373,19 +502,19 @@ export default function BarStockPage() {
 							<input
 								type="text"
 								placeholder="Buscar ingrediente..."
-								className="input-base pl-9 w-56 text-sm"
+								className="input-base pl-9 w-full sm:w-56 text-sm"
 								value={query}
 								onChange={(e) => setQuery(e.target.value)}
 							/>
 						</div>
-						<button className="btn-primary text-xs px-4 py-2.5">
+						<button className="btn-primary text-xs px-4 min-h-[44px] shrink-0">
 							<Plus size={14} />
 							Nuevo ítem
 						</button>
 					</div>
 				</div>
 
-				<div className="flex-1 p-8 space-y-6">
+				<div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
 					{/* ── Critical alert ── */}
 					{criticalIngredients.length > 0 && (
 						<div
@@ -400,7 +529,7 @@ export default function BarStockPage() {
 							</div>
 							<div className="flex-1 min-w-0">
 								<p className="font-display font-bold text-red-400 text-sm uppercase tracking-wider">
-									⚠ Ingredientes críticos — requieren reposición inmediata
+									Ingredientes críticos — requieren reposición inmediata
 								</p>
 								<div className="mt-2 flex flex-wrap gap-2">
 									{criticalIngredients.map((ing) => (
@@ -483,9 +612,9 @@ export default function BarStockPage() {
 						/>
 					</div>
 
-					{/* ── Ingredients table ── */}
+					{/* ── Ingredient list header ── */}
 					<div className="card rounded-2xl overflow-hidden">
-						<div className="px-5 py-4 border-b border-surface-3 flex items-center justify-between bg-surface-2/20">
+						<div className="px-4 sm:px-5 py-4 border-b border-surface-3 flex items-center justify-between bg-surface-2/20">
 							<div className="flex items-center gap-2">
 								<FlaskConical size={15} className="text-brand-500" />
 								<h2 className="font-display font-bold text-sm uppercase tracking-wider text-ink-primary">
@@ -493,7 +622,7 @@ export default function BarStockPage() {
 								</h2>
 							</div>
 							<div className="flex items-center gap-3">
-								<span className="text-ink-tertiary font-body text-xs">
+								<span className="text-ink-tertiary font-body text-xs hidden sm:block">
 									{filteredIngredients.length} registros
 								</span>
 								<button
@@ -514,7 +643,35 @@ export default function BarStockPage() {
 							</div>
 						</div>
 
-						<div className="overflow-x-auto">
+						{/* Card grid on mobile/tablet */}
+						<div className="block lg:hidden p-4">
+							{filteredIngredients.length === 0 ? (
+								<p className="font-body text-sm text-ink-tertiary text-center py-8">
+									{loading
+										? "Cargando..."
+										: `No se encontraron ingredientes para "${query}"`}
+								</p>
+							) : (
+								<div
+									className="grid gap-3"
+									style={{
+										gridTemplateColumns:
+											"repeat(auto-fill, minmax(min(100%, 200px), 1fr))",
+									}}
+								>
+									{filteredIngredients.map((ing) => (
+										<IngredientCard
+											key={ing.id}
+											ing={ing}
+											onAdjust={setAdjusting}
+										/>
+									))}
+								</div>
+							)}
+						</div>
+
+						{/* Table on large screens */}
+						<div className="hidden lg:block overflow-x-auto">
 							<table className="w-full">
 								<thead>
 									<tr className="border-b border-surface-3 bg-surface-2/20">
@@ -530,7 +687,7 @@ export default function BarStockPage() {
 										<th className="text-center px-4 py-3 font-display font-bold text-[10px] uppercase tracking-wider text-ink-tertiary">
 											Estado
 										</th>
-										<th className="text-right px-4 py-3 font-display font-bold text-[10px] uppercase tracking-wider text-ink-tertiary hidden lg:table-cell">
+										<th className="text-right px-4 py-3 font-display font-bold text-[10px] uppercase tracking-wider text-ink-tertiary">
 											Costo/u
 										</th>
 										<th className="text-right px-5 py-3 font-display font-bold text-[10px] uppercase tracking-wider text-ink-tertiary">
@@ -614,7 +771,7 @@ export default function BarStockPage() {
 													<StatusChip status={status} />
 												</td>
 												{/* Cost */}
-												<td className="px-4 py-3.5 text-right hidden lg:table-cell">
+												<td className="px-4 py-3.5 text-right">
 													<span className="font-mono text-xs text-ink-secondary">
 														$
 														{ing.costPerUnit.toLocaleString("es-AR", {
@@ -666,7 +823,7 @@ export default function BarStockPage() {
 							}}
 						>
 							<div
-								className="px-5 py-4 border-b flex items-center justify-between"
+								className="px-4 sm:px-5 py-4 border-b flex items-center justify-between"
 								style={{
 									borderColor: "rgba(239,68,68,0.15)",
 									background: "rgba(239,68,68,0.05)",
@@ -691,7 +848,7 @@ export default function BarStockPage() {
 									{criticalIngredients.length}
 								</span>
 							</div>
-							<div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+							<div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 								{criticalIngredients.map((ing) => {
 									const pct = stockPct(ing);
 									const deficit = ing.alertThreshold - ing.stockCurrent;
@@ -738,7 +895,7 @@ export default function BarStockPage() {
 												</span>
 											</div>
 											<button
-												className="btn-primary w-full justify-center text-xs py-2"
+												className="btn-primary w-full justify-center text-xs min-h-[48px] rounded-xl"
 												onClick={() => setAdjusting(ing)}
 											>
 												<Plus size={13} />
@@ -752,7 +909,7 @@ export default function BarStockPage() {
 					)}
 
 					{/* ── Footer ── */}
-					<div className="flex items-center justify-between text-ink-tertiary text-xs font-body pb-4">
+					<div className="flex items-center justify-between text-ink-tertiary text-xs font-body pb-4 flex-wrap gap-2">
 						<div className="flex items-center gap-1.5">
 							<RefreshCw size={11} />
 							<span>Última sincronización: hoy · Sistema My Way</span>

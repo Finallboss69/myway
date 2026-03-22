@@ -437,9 +437,9 @@ export default function AccountingPage() {
 	};
 
 	return (
-		<div style={{ padding: 28 }}>
+		<div className="p-5 md:p-7">
 			{/* Header */}
-			<div className="flex items-center justify-between mb-7">
+			<div className="flex flex-wrap items-start justify-between gap-4 mb-7">
 				<div>
 					<h1
 						className="font-display text-ink-primary"

@@ -59,51 +59,80 @@ function formatUnit(value: number, unit: string): string {
 	return `${value} ${unit}`;
 }
 
-// ─── Kitchen sidebar nav ──────────────────────────────────────────────────────
+// ─── Kitchen nav — responsive: sidebar on desktop, top bar on mobile ──────────
 
 function KitchenNav() {
 	return (
-		<aside className="w-56 shrink-0 flex flex-col gap-1 py-6 px-3 bg-surface-1 border-r border-surface-3 min-h-screen sticky top-0 self-start h-screen overflow-y-auto">
-			{/* Logo */}
-			<div className="flex items-center gap-2.5 px-3 mb-6">
-				<div className="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
-					<ChefHat className="w-4 h-4 text-brand-500" />
+		<>
+			{/* Desktop sidebar */}
+			<aside className="hidden lg:flex w-56 shrink-0 flex-col gap-1 py-6 px-3 bg-surface-1 border-r border-surface-3 min-h-screen sticky top-0 self-start h-screen overflow-y-auto">
+				{/* Logo */}
+				<div className="flex items-center gap-2.5 px-3 mb-6">
+					<div className="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
+						<ChefHat className="w-4 h-4 text-brand-500" />
+					</div>
+					<div>
+						<p className="font-display text-xs font-bold uppercase tracking-widest text-brand-500">
+							Cocina
+						</p>
+						<p className="font-body text-xs text-ink-tertiary">My Way</p>
+					</div>
 				</div>
-				<div>
-					<p className="font-display text-xs font-bold uppercase tracking-widest text-brand-500">
-						Cocina
-					</p>
-					<p className="font-body text-xs text-ink-tertiary">My Way</p>
-				</div>
-			</div>
 
-			{/* Nav links */}
-			<Link
-				href="/kitchen"
-				className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-semibold transition-all text-ink-secondary hover:bg-surface-2 hover:text-ink-primary"
-			>
-				<UtensilsCrossed className="w-4 h-4" />
-				KDS — Pedidos
-				<ChevronRight className="w-3 h-3 ml-auto opacity-40" />
-			</Link>
-			<Link
-				href="/kitchen/stock"
-				className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-semibold transition-all bg-brand-500/10 text-brand-500 border border-brand-500/20"
-			>
-				<Package className="w-4 h-4" />
-				Stock
-				<ArrowRight className="w-3 h-3 ml-auto" />
-			</Link>
-
-			<div className="mt-auto pt-6 px-3 border-t border-surface-3">
+				{/* Nav links */}
 				<Link
-					href="/"
-					className="flex items-center gap-2 text-xs text-ink-tertiary hover:text-ink-secondary transition-colors font-display uppercase tracking-widest"
+					href="/kitchen"
+					className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-semibold transition-all text-ink-secondary hover:bg-surface-2 hover:text-ink-primary"
 				>
-					← Todas las apps
+					<UtensilsCrossed className="w-4 h-4" />
+					KDS — Pedidos
+					<ChevronRight className="w-3 h-3 ml-auto opacity-40" />
 				</Link>
-			</div>
-		</aside>
+				<Link
+					href="/kitchen/stock"
+					className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-display font-semibold transition-all bg-brand-500/10 text-brand-500 border border-brand-500/20"
+				>
+					<Package className="w-4 h-4" />
+					Stock
+					<ArrowRight className="w-3 h-3 ml-auto" />
+				</Link>
+
+				<div className="mt-auto pt-6 px-3 border-t border-surface-3">
+					<Link
+						href="/"
+						className="flex items-center gap-2 text-xs text-ink-tertiary hover:text-ink-secondary transition-colors font-display uppercase tracking-widest"
+					>
+						← Todas las apps
+					</Link>
+				</div>
+			</aside>
+
+			{/* Mobile top nav bar */}
+			<nav className="lg:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-surface-1/95 backdrop-blur-md border-b border-surface-3">
+				<div className="flex items-center gap-2 mr-auto">
+					<div className="w-8 h-8 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
+						<ChefHat className="w-4 h-4 text-brand-500" />
+					</div>
+					<span className="font-display text-xs font-bold uppercase tracking-widest text-brand-500">
+						Cocina
+					</span>
+				</div>
+				<Link
+					href="/kitchen"
+					className="flex items-center gap-2 px-3 min-h-[40px] rounded-xl text-xs font-display font-semibold text-ink-secondary bg-surface-2 border border-surface-3"
+				>
+					<UtensilsCrossed className="w-3.5 h-3.5" />
+					Pedidos
+				</Link>
+				<Link
+					href="/kitchen/stock"
+					className="flex items-center gap-2 px-3 min-h-[40px] rounded-xl text-xs font-display font-semibold bg-brand-500/10 text-brand-500 border border-brand-500/20"
+				>
+					<Package className="w-3.5 h-3.5" />
+					Stock
+				</Link>
+			</nav>
+		</>
 	);
 }
 
@@ -133,6 +162,119 @@ function StockBar({
 	);
 }
 
+// ─── Ingredient card (replaces table row on mobile) ───────────────────────────
+
+function IngredientCard({
+	ingredient,
+	onAdjust,
+}: {
+	ingredient: Ingredient;
+	onAdjust: (ing: Ingredient) => void;
+}) {
+	const critical = isCritical(ingredient);
+	const low = isLow(ingredient);
+	const pct = stockPct(ingredient);
+
+	return (
+		<div
+			className={clsx(
+				"flex flex-col gap-3 p-4 rounded-2xl border transition-colors",
+				critical
+					? "bg-red-500/[0.04] border-red-500/25 hover:bg-red-500/[0.07]"
+					: low
+						? "bg-amber-500/[0.03] border-amber-500/20 hover:bg-amber-500/[0.06]"
+						: "bg-surface-1 border-surface-3 hover:bg-surface-2/50",
+			)}
+		>
+			{/* Header: name + status badge */}
+			<div className="flex items-start justify-between gap-2">
+				<div className="flex items-center gap-2.5 min-w-0">
+					<div
+						className={clsx(
+							"w-2.5 h-2.5 rounded-full shrink-0 mt-0.5",
+							critical
+								? "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.7)] animate-pulse"
+								: low
+									? "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.5)]"
+									: "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.4)]",
+						)}
+					/>
+					<span className="font-display text-sm font-bold text-ink-primary truncate">
+						{ingredient.name}
+					</span>
+				</div>
+				{critical ? (
+					<span className="badge badge-cancelled shrink-0">
+						<span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+						Crítico
+					</span>
+				) : low ? (
+					<span className="badge badge-pending shrink-0">
+						<TrendingDown className="w-2.5 h-2.5" />
+						Bajo
+					</span>
+				) : (
+					<span className="badge badge-ready shrink-0">
+						<CheckCircle2 className="w-2.5 h-2.5" />
+						OK
+					</span>
+				)}
+			</div>
+
+			{/* Stock value + bar */}
+			<div className="flex flex-col gap-1.5">
+				<div className="flex items-baseline justify-between">
+					<span
+						className={clsx(
+							"font-mono text-sm font-bold",
+							critical
+								? "text-red-400"
+								: low
+									? "text-amber-400"
+									: "text-ink-primary",
+						)}
+					>
+						{formatUnit(ingredient.stockCurrent, ingredient.unit)}
+					</span>
+					<span className="font-body text-xs text-ink-tertiary">
+						Umbral: {formatUnit(ingredient.alertThreshold, ingredient.unit)}
+					</span>
+				</div>
+				<StockBar pct={pct} critical={critical} low={low} />
+				<div className="flex items-center justify-between">
+					<span
+						className={clsx(
+							"font-kds text-xl leading-none",
+							pct <= 25
+								? "text-red-400"
+								: pct <= 50
+									? "text-amber-400"
+									: "text-emerald-400",
+						)}
+					>
+						{pct}
+						<span className="text-xs font-body text-ink-tertiary ml-0.5">
+							%
+						</span>
+					</span>
+					<span className="font-body text-xs text-ink-tertiary">
+						{ingredient.unit}
+					</span>
+				</div>
+			</div>
+
+			{/* Action */}
+			<button
+				className="flex items-center justify-center gap-2 min-h-[44px] rounded-xl border border-surface-3 bg-surface-2 text-ink-secondary text-xs font-display font-bold uppercase tracking-wide hover:text-brand-500 hover:border-brand-500/30 transition-all active:scale-95"
+				onClick={() => onAdjust(ingredient)}
+			>
+				<Sliders className="w-3.5 h-3.5" />
+				Ajustar Stock
+			</button>
+		</div>
+	);
+}
+
 // ─── Adjust modal ─────────────────────────────────────────────────────────────
 
 function AdjustModal({
@@ -158,12 +300,12 @@ function AdjustModal({
 
 	return (
 		<div
-			className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in"
+			className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in px-4"
 			style={{ background: "rgba(8,8,8,0.85)", backdropFilter: "blur(8px)" }}
 			onClick={onClose}
 		>
 			<div
-				className="card p-6 w-80 flex flex-col gap-4 animate-slide-up"
+				className="card p-6 w-full max-w-sm flex flex-col gap-4 animate-slide-up"
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="flex items-center justify-between">
@@ -172,7 +314,7 @@ function AdjustModal({
 					</h3>
 					<button
 						onClick={onClose}
-						className="text-ink-tertiary hover:text-ink-primary text-lg leading-none"
+						className="text-ink-tertiary hover:text-ink-primary text-lg leading-none min-w-[32px] min-h-[32px] flex items-center justify-center"
 					>
 						×
 					</button>
@@ -200,132 +342,20 @@ function AdjustModal({
 				<div className="flex gap-2">
 					<button
 						onClick={onClose}
-						className="btn-ghost flex-1 justify-center text-xs py-2.5"
+						className="btn-ghost flex-1 justify-center text-xs min-h-[44px]"
 					>
 						Cancelar
 					</button>
 					<button
 						onClick={handleSave}
 						disabled={saving}
-						className="btn-primary flex-1 justify-center text-xs py-2.5"
+						className="btn-primary flex-1 justify-center text-xs min-h-[44px]"
 					>
 						{saving ? "Guardando..." : "Guardar"}
 					</button>
 				</div>
 			</div>
 		</div>
-	);
-}
-
-// ─── Ingredient table row ─────────────────────────────────────────────────────
-
-function IngredientRow({
-	ingredient,
-	onAdjust,
-}: {
-	ingredient: Ingredient;
-	onAdjust: (ing: Ingredient) => void;
-}) {
-	const critical = isCritical(ingredient);
-	const low = isLow(ingredient);
-	const pct = stockPct(ingredient);
-
-	return (
-		<tr
-			className={`border-b border-surface-3 transition-colors ${
-				critical ? "bg-red-500/5 hover:bg-red-500/8" : "hover:bg-surface-2/50"
-			}`}
-		>
-			{/* Name */}
-			<td className="px-5 py-4">
-				<div className="flex items-center gap-3">
-					<div
-						className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-							critical
-								? "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.7)] animate-pulse"
-								: low
-									? "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.5)]"
-									: "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.4)]"
-						}`}
-					/>
-					<span className="font-display text-sm font-semibold text-ink-primary">
-						{ingredient.name}
-					</span>
-				</div>
-			</td>
-
-			{/* Stock + bar */}
-			<td className="px-5 py-4 w-56">
-				<div className="flex flex-col gap-1.5">
-					<span
-						className={`font-mono text-sm font-bold ${
-							critical
-								? "text-red-400"
-								: low
-									? "text-amber-400"
-									: "text-ink-primary"
-						}`}
-					>
-						{formatUnit(ingredient.stockCurrent, ingredient.unit)}
-					</span>
-					<StockBar pct={pct} critical={critical} low={low} />
-				</div>
-			</td>
-
-			{/* Threshold */}
-			<td className="px-5 py-4">
-				<span className="font-mono text-sm text-ink-secondary">
-					{formatUnit(ingredient.alertThreshold, ingredient.unit)}
-				</span>
-			</td>
-
-			{/* Status badge */}
-			<td className="px-5 py-4">
-				{critical ? (
-					<span className="badge badge-cancelled">
-						<span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-						Crítico
-					</span>
-				) : low ? (
-					<span className="badge badge-pending">
-						<TrendingDown className="w-2.5 h-2.5" />
-						Bajo
-					</span>
-				) : (
-					<span className="badge badge-ready">
-						<CheckCircle2 className="w-2.5 h-2.5" />
-						OK
-					</span>
-				)}
-			</td>
-
-			{/* % level */}
-			<td className="px-5 py-4 hidden lg:table-cell">
-				<span
-					className={`font-kds text-2xl leading-none ${
-						pct <= 25
-							? "text-red-400"
-							: pct <= 50
-								? "text-amber-400"
-								: "text-emerald-400"
-					}`}
-				>
-					{pct}
-					<span className="text-xs font-body text-ink-tertiary ml-0.5">%</span>
-				</span>
-			</td>
-
-			{/* Actions */}
-			<td className="px-5 py-4">
-				<button
-					className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5 hover:text-brand-500 hover:border-brand-500/30 border border-transparent rounded-lg"
-					onClick={() => onAdjust(ingredient)}
-				>
-					<Sliders className="w-3.5 h-3.5" />
-					Ajustar
-				</button>
-			</td>
-		</tr>
 	);
 }
 
@@ -392,7 +422,7 @@ function CriticalCard({
 			</div>
 
 			<button
-				className="btn-primary w-full justify-center text-xs py-2.5"
+				className="btn-primary w-full justify-center text-xs min-h-[48px] rounded-xl"
 				onClick={() => onAdjust(ingredient)}
 			>
 				<Plus className="w-3.5 h-3.5" />
@@ -459,19 +489,19 @@ export default function KitchenStockPage() {
 	}
 
 	return (
-		<div className="flex min-h-screen bg-surface-0">
+		<div className="flex min-h-screen bg-surface-0 flex-col lg:flex-row">
 			<KitchenNav />
 
 			<div className="flex-1 flex flex-col min-w-0">
 				{/* ── Page header ── */}
-				<div className="sticky top-0 z-20 flex items-center justify-between px-8 py-5 border-b border-surface-3 bg-surface-1/95 backdrop-blur-md">
+				<div className="sticky top-0 lg:top-0 z-20 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 lg:px-8 py-4 sm:py-5 border-b border-surface-3 bg-surface-1/95 backdrop-blur-md">
 					<div>
 						<div className="flex items-center gap-2.5 mb-0.5">
 							<div className="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
 								<Package className="w-4 h-4 text-brand-500" />
 							</div>
-							<h1 className="font-display text-xl font-bold text-ink-primary uppercase tracking-wide">
-								📦 Stock de Cocina
+							<h1 className="font-display text-lg sm:text-xl font-bold text-ink-primary uppercase tracking-wide">
+								Stock de Cocina
 							</h1>
 						</div>
 						<p className="font-body text-sm text-ink-tertiary ml-11">
@@ -486,42 +516,42 @@ export default function KitchenStockPage() {
 						</p>
 					</div>
 
-					<div className="flex items-center gap-3">
-						<div className="relative">
+					<div className="flex items-center gap-3 w-full sm:w-auto">
+						<div className="relative flex-1 sm:flex-none">
 							<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-tertiary" />
 							<input
 								type="text"
 								placeholder="Buscar ingrediente..."
-								className="input-base pl-9 w-56 text-sm"
+								className="input-base pl-9 w-full sm:w-56 text-sm"
 								value={query}
 								onChange={(e) => setQuery(e.target.value)}
 							/>
 						</div>
-						<button className="btn-primary flex items-center gap-2 text-xs">
+						<button className="btn-primary flex items-center gap-2 text-xs min-h-[44px] shrink-0">
 							<Plus className="w-3.5 h-3.5" />
 							Agregar
 						</button>
 					</div>
 				</div>
 
-				<div className="flex-1 p-8 space-y-6">
+				<div className="flex-1 p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
 					{/* ── Alert banner ── */}
 					{criticalCount > 0 && (
-						<div className="flex items-center gap-4 px-5 py-4 rounded-2xl bg-amber-500/8 border border-amber-500/25">
+						<div className="flex items-start sm:items-center gap-4 px-4 sm:px-5 py-4 rounded-2xl bg-amber-500/8 border border-amber-500/25">
 							<div className="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center shrink-0">
 								<AlertTriangle className="w-5 h-5 text-amber-400" />
 							</div>
-							<div className="flex-1">
+							<div className="flex-1 min-w-0">
 								<p className="font-display text-sm font-bold text-amber-400 uppercase tracking-wide">
-									⚠ Ingredientes críticos — {criticalCount} item
+									Ingredientes críticos — {criticalCount} item
 									{criticalCount !== 1 ? "s" : ""}
 								</p>
-								<p className="font-body text-xs text-ink-secondary mt-0.5">
+								<p className="font-body text-xs text-ink-secondary mt-0.5 truncate">
 									{criticalItems.map((i) => i.name).join(", ")} — Reabastecer
 									antes del próximo servicio
 								</p>
 							</div>
-							<div className="flex items-center gap-2 text-amber-400 text-xs font-display font-bold uppercase tracking-wide shrink-0">
+							<div className="hidden sm:flex items-center gap-2 text-amber-400 text-xs font-display font-bold uppercase tracking-wide shrink-0">
 								<TrendingDown className="w-4 h-4" />
 								Acción requerida
 							</div>
@@ -530,50 +560,50 @@ export default function KitchenStockPage() {
 
 					{/* ── Summary chips ── */}
 					<div className="grid grid-cols-3 gap-3">
-						<div className="card-sm p-4 flex items-center gap-3">
-							<div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
+						<div className="card-sm p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+							<div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
 								<AlertTriangle className="w-4 h-4 text-red-400" />
 							</div>
 							<div>
-								<p className="font-display text-[10px] uppercase tracking-wider text-ink-tertiary">
+								<p className="font-display text-[9px] sm:text-[10px] uppercase tracking-wider text-ink-tertiary">
 									Críticos
 								</p>
-								<p className="font-kds text-3xl leading-none text-red-400">
+								<p className="font-kds text-2xl sm:text-3xl leading-none text-red-400">
 									{criticalCount}
 								</p>
 							</div>
 						</div>
-						<div className="card-sm p-4 flex items-center gap-3">
-							<div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+						<div className="card-sm p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+							<div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
 								<TrendingDown className="w-4 h-4 text-amber-400" />
 							</div>
 							<div>
-								<p className="font-display text-[10px] uppercase tracking-wider text-ink-tertiary">
+								<p className="font-display text-[9px] sm:text-[10px] uppercase tracking-wider text-ink-tertiary">
 									Bajos
 								</p>
-								<p className="font-kds text-3xl leading-none text-amber-400">
+								<p className="font-kds text-2xl sm:text-3xl leading-none text-amber-400">
 									{lowItems.length}
 								</p>
 							</div>
 						</div>
-						<div className="card-sm p-4 flex items-center gap-3">
-							<div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+						<div className="card-sm p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+							<div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
 								<CheckCircle2 className="w-4 h-4 text-emerald-400" />
 							</div>
 							<div>
-								<p className="font-display text-[10px] uppercase tracking-wider text-ink-tertiary">
+								<p className="font-display text-[9px] sm:text-[10px] uppercase tracking-wider text-ink-tertiary">
 									OK
 								</p>
-								<p className="font-kds text-3xl leading-none text-emerald-400">
+								<p className="font-kds text-2xl sm:text-3xl leading-none text-emerald-400">
 									{okItems.length}
 								</p>
 							</div>
 						</div>
 					</div>
 
-					{/* ── Ingredients table ── */}
+					{/* ── Ingredient cards grid (mobile) / table (desktop) ── */}
 					<div className="card overflow-hidden">
-						<div className="flex items-center justify-between px-5 py-4 border-b border-surface-3 bg-surface-2/20">
+						<div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-surface-3 bg-surface-2/20">
 							<h2 className="font-display text-sm font-bold uppercase tracking-widest text-ink-secondary">
 								Todos los ingredientes
 							</h2>
@@ -594,7 +624,35 @@ export default function KitchenStockPage() {
 							</button>
 						</div>
 
-						<div className="overflow-x-auto">
+						{/* Card grid on mobile/tablet, table on large screens */}
+						<div className="block lg:hidden p-4">
+							{filtered.length === 0 ? (
+								<p className="font-body text-sm text-ink-tertiary text-center py-8">
+									{loading
+										? "Cargando..."
+										: `No se encontraron ingredientes para "${query}"`}
+								</p>
+							) : (
+								<div
+									className="grid gap-3"
+									style={{
+										gridTemplateColumns:
+											"repeat(auto-fill, minmax(min(100%, 200px), 1fr))",
+									}}
+								>
+									{filtered.map((ingredient) => (
+										<IngredientCard
+											key={ingredient.id}
+											ingredient={ingredient}
+											onAdjust={setAdjusting}
+										/>
+									))}
+								</div>
+							)}
+						</div>
+
+						{/* Table on large screens */}
+						<div className="hidden lg:block overflow-x-auto">
 							<table className="w-full">
 								<thead>
 									<tr className="border-b border-surface-3 bg-surface-2/30">
@@ -610,7 +668,7 @@ export default function KitchenStockPage() {
 										<th className="px-5 py-3 text-left font-display text-[10px] font-bold uppercase tracking-widest text-ink-tertiary">
 											Estado
 										</th>
-										<th className="px-5 py-3 text-left font-display text-[10px] font-bold uppercase tracking-widest text-ink-tertiary hidden lg:table-cell">
+										<th className="px-5 py-3 text-left font-display text-[10px] font-bold uppercase tracking-widest text-ink-tertiary">
 											Nivel
 										</th>
 										<th className="px-5 py-3 text-left font-display text-[10px] font-bold uppercase tracking-widest text-ink-tertiary">
@@ -619,13 +677,114 @@ export default function KitchenStockPage() {
 									</tr>
 								</thead>
 								<tbody>
-									{filtered.map((ingredient) => (
-										<IngredientRow
-											key={ingredient.id}
-											ingredient={ingredient}
-											onAdjust={setAdjusting}
-										/>
-									))}
+									{filtered.map((ingredient) => {
+										const critical = isCritical(ingredient);
+										const low = isLow(ingredient);
+										const pct = stockPct(ingredient);
+										return (
+											<tr
+												key={ingredient.id}
+												className={`border-b border-surface-3 transition-colors ${
+													critical
+														? "bg-red-500/5 hover:bg-red-500/8"
+														: "hover:bg-surface-2/50"
+												}`}
+											>
+												{/* Name */}
+												<td className="px-5 py-4">
+													<div className="flex items-center gap-3">
+														<div
+															className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+																critical
+																	? "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.7)] animate-pulse"
+																	: low
+																		? "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.5)]"
+																		: "bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.4)]"
+															}`}
+														/>
+														<span className="font-display text-sm font-semibold text-ink-primary">
+															{ingredient.name}
+														</span>
+													</div>
+												</td>
+												{/* Stock + bar */}
+												<td className="px-5 py-4 w-56">
+													<div className="flex flex-col gap-1.5">
+														<span
+															className={`font-mono text-sm font-bold ${
+																critical
+																	? "text-red-400"
+																	: low
+																		? "text-amber-400"
+																		: "text-ink-primary"
+															}`}
+														>
+															{formatUnit(
+																ingredient.stockCurrent,
+																ingredient.unit,
+															)}
+														</span>
+														<StockBar pct={pct} critical={critical} low={low} />
+													</div>
+												</td>
+												{/* Threshold */}
+												<td className="px-5 py-4">
+													<span className="font-mono text-sm text-ink-secondary">
+														{formatUnit(
+															ingredient.alertThreshold,
+															ingredient.unit,
+														)}
+													</span>
+												</td>
+												{/* Status badge */}
+												<td className="px-5 py-4">
+													{critical ? (
+														<span className="badge badge-cancelled">
+															<span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+															Crítico
+														</span>
+													) : low ? (
+														<span className="badge badge-pending">
+															<TrendingDown className="w-2.5 h-2.5" />
+															Bajo
+														</span>
+													) : (
+														<span className="badge badge-ready">
+															<CheckCircle2 className="w-2.5 h-2.5" />
+															OK
+														</span>
+													)}
+												</td>
+												{/* % level */}
+												<td className="px-5 py-4">
+													<span
+														className={`font-kds text-2xl leading-none ${
+															pct <= 25
+																? "text-red-400"
+																: pct <= 50
+																	? "text-amber-400"
+																	: "text-emerald-400"
+														}`}
+													>
+														{pct}
+														<span className="text-xs font-body text-ink-tertiary ml-0.5">
+															%
+														</span>
+													</span>
+												</td>
+												{/* Actions */}
+												<td className="px-5 py-4">
+													<button
+														className="btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5 hover:text-brand-500 hover:border-brand-500/30 border border-transparent rounded-lg"
+														onClick={() => setAdjusting(ingredient)}
+													>
+														<Sliders className="w-3.5 h-3.5" />
+														Ajustar
+													</button>
+												</td>
+											</tr>
+										);
+									})}
 									{filtered.length === 0 && (
 										<tr>
 											<td colSpan={6} className="px-5 py-10 text-center">
@@ -645,7 +804,7 @@ export default function KitchenStockPage() {
 					{/* ── Critical section ── */}
 					{criticalCount > 0 && (
 						<div className="card border-red-500/15 overflow-hidden">
-							<div className="flex items-center gap-3 px-5 py-4 border-b border-red-500/15 bg-red-500/[0.04]">
+							<div className="flex items-center gap-3 px-4 sm:px-5 py-4 border-b border-red-500/15 bg-red-500/[0.04]">
 								<div className="w-9 h-9 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center">
 									<AlertTriangle className="w-4 h-4 text-red-400" />
 								</div>
@@ -662,7 +821,7 @@ export default function KitchenStockPage() {
 								</span>
 							</div>
 
-							<div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+							<div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
 								{criticalItems.map((ingredient) => (
 									<CriticalCard
 										key={ingredient.id}
@@ -676,12 +835,12 @@ export default function KitchenStockPage() {
 				</div>
 
 				{/* ── Footer ── */}
-				<div className="flex items-center justify-between px-8 py-4 border-t border-surface-3 bg-surface-1/50">
+				<div className="flex items-center justify-between px-4 sm:px-8 py-4 border-t border-surface-3 bg-surface-1/50 flex-wrap gap-2">
 					<div className="flex items-center gap-2 text-ink-tertiary">
 						<RefreshCw className="w-3.5 h-3.5" />
 						<span className="font-body text-xs">Última actualización: hoy</span>
 					</div>
-					<div className="flex items-center gap-4 text-xs font-display uppercase tracking-widest text-ink-tertiary">
+					<div className="flex items-center gap-4 text-xs font-display uppercase tracking-widest text-ink-tertiary flex-wrap">
 						<span>
 							Total:{" "}
 							<span className="text-ink-secondary font-bold">

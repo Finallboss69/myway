@@ -77,8 +77,9 @@ export default function AdminRepartidoresPage() {
 			style={{
 				display: "flex",
 				flexDirection: "column",
-				height: "100%",
+				height: "100vh",
 				gap: 0,
+				minHeight: 0,
 			}}
 		>
 			{/* Header */}
@@ -140,8 +141,9 @@ export default function AdminRepartidoresPage() {
 				</div>
 			</div>
 
-			{/* Body */}
+			{/* Body — row on desktop, column on mobile */}
 			<div
+				className="flex-col md:flex-row"
 				style={{
 					flex: 1,
 					display: "flex",
@@ -150,7 +152,7 @@ export default function AdminRepartidoresPage() {
 				}}
 			>
 				{/* Map */}
-				<div style={{ flex: 1, position: "relative", minWidth: 0 }}>
+				<div style={{ flex: 1, position: "relative", minWidth: 0, minHeight: 300 }}>
 					{orders.length === 0 ? (
 						<div
 							style={{
@@ -183,15 +185,19 @@ export default function AdminRepartidoresPage() {
 					)}
 				</div>
 
-				{/* Sidebar list */}
+				{/* Sidebar list — right rail on desktop, scrollable section on mobile */}
 				<div
 					style={{
-						width: 280,
-						borderLeft: "1px solid var(--s3)",
+						width: "100%",
+						maxWidth: "100%",
+						borderLeft: "none",
+						borderTop: "1px solid var(--s3)",
 						overflowY: "auto",
 						flexShrink: 0,
-						background: "var(--surface-1)",
+						background: "var(--s1)",
+						maxHeight: 280,
 					}}
+					className="md:!border-t-0 md:!border-l md:!max-h-none md:!w-[280px]"
 				>
 					<div
 						style={{

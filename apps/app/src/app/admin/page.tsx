@@ -115,9 +115,9 @@ export default function AdminDashboard() {
 	};
 
 	return (
-		<div style={{ padding: 28 }}>
+		<div style={{ padding: "20px 20px 28px" }} className="md:p-7">
 			{/* Page header */}
-			<div className="flex items-center justify-between mb-7">
+			<div className="flex items-center justify-between mb-6">
 				<div>
 					<h1
 						className="font-display text-ink-primary"
@@ -137,11 +137,8 @@ export default function AdminDashboard() {
 				</div>
 			</div>
 
-			{/* KPI stats */}
-			<div
-				className="grid gap-4 mb-7"
-				style={{ gridTemplateColumns: "repeat(4, 1fr)" }}
-			>
+			{/* KPI stats — 2 cols mobile, 4 cols desktop */}
+			<div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
 				<StatCard
 					label="Pedidos activos"
 					value={activeOrders.length}
@@ -172,7 +169,7 @@ export default function AdminDashboard() {
 				/>
 			</div>
 
-			<div className="grid gap-5" style={{ gridTemplateColumns: "1fr 1fr" }}>
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 				{/* Active orders table */}
 				<div className="card" style={{ padding: 0, overflow: "hidden" }}>
 					<div

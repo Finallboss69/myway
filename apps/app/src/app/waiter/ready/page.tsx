@@ -81,12 +81,18 @@ function ReadyItemRow({
 	}
 
 	return (
-		<div className="flex items-center gap-3 px-4 py-3">
-			<span className="font-kds text-3xl leading-none text-brand-500 w-8 text-center shrink-0">
+		<div
+			className="flex items-center gap-3"
+			style={{ padding: "12px 16px", minHeight: 64 }}
+		>
+			<div
+				className="font-kds text-brand-500 leading-none text-center shrink-0"
+				style={{ fontSize: 28, width: 32 }}
+			>
 				{item.qty}
-			</span>
+			</div>
 			<div className="flex-1 min-w-0">
-				<p className="font-display text-sm font-semibold text-ink-primary truncate">
+				<p className="font-display text-sm font-semibold text-ink-primary leading-tight">
 					{item.name}
 				</p>
 				<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest mt-0.5">
@@ -96,13 +102,15 @@ function ReadyItemRow({
 			<button
 				onClick={handleDeliver}
 				disabled={loading}
-				className="shrink-0 btn-green text-[11px] px-3 py-2 rounded-xl shadow-green-sm"
+				className="shrink-0 btn-green rounded-xl shadow-green-sm active:scale-95"
+				style={{
+					minWidth: 90,
+					minHeight: 44,
+					fontSize: 12,
+					padding: "10px 14px",
+				}}
 			>
-				{loading ? (
-					<Loader2 className="w-3.5 h-3.5 animate-spin" />
-				) : (
-					"Entregar ✓"
-				)}
+				{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Entregar ✓"}
 			</button>
 		</div>
 	);
@@ -217,10 +225,11 @@ export default function ReadyPage() {
 			</header>
 
 			{/* Content */}
-			<main className="flex-1 p-4 pb-safe">
+			<main className="flex-1 p-3 pb-safe">
 				{!rawOrders ? (
-					<div className="flex justify-center pt-16">
-						<Loader2 className="w-6 h-6 text-brand-500 animate-spin" />
+					<div className="flex flex-col items-center gap-3 pt-20">
+						<div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+						<p className="font-display text-xs text-ink-disabled uppercase tracking-widest">Cargando...</p>
 					</div>
 				) : groupedByTable.length === 0 ? (
 					<div className="flex flex-col items-center gap-4 pt-20">

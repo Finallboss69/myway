@@ -325,17 +325,17 @@ function OrderCard({
 							</div>
 						</div>
 
-						{/* Toggle */}
+						{/* Toggle — large touch target on mobile */}
 						{item.status !== "delivered" && item.status !== "cancelled" && (
 							<button
 								onClick={() => handleItemToggle(item.id, item.status)}
 								className={clsx(
-									"shrink-0 px-3 py-1.5 rounded-lg text-xs font-display font-bold uppercase tracking-wide transition-all active:scale-95",
+									"shrink-0 min-h-[44px] px-3 py-2 rounded-xl text-xs font-display font-bold uppercase tracking-wide transition-all active:scale-95",
 									item.status === "ready"
 										? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 hover:bg-emerald-500/30"
 										: item.status === "preparing"
-											? "btn-green text-xs px-3 py-1.5 rounded-lg shadow-[0_0_12px_rgba(16,185,129,0.3)]"
-											: "btn-blue text-xs px-3 py-1.5 rounded-lg shadow-[0_0_12px_rgba(59,130,246,0.3)]",
+											? "btn-green text-xs px-3 rounded-xl shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+											: "btn-blue text-xs px-3 rounded-xl shadow-[0_0_12px_rgba(59,130,246,0.3)]",
 								)}
 							>
 								{item.status === "ready"
@@ -349,32 +349,32 @@ function OrderCard({
 				))}
 			</div>
 
-			{/* Card footer */}
+			{/* Card footer — full-width action button */}
 			<div className="flex gap-2 px-4 py-3 bg-surface-2/60 border-t border-surface-3">
 				{derived === "pending" && (
 					<button
 						onClick={handleAllStart}
-						className="btn-blue flex-1 justify-center text-xs py-2.5 rounded-xl"
+						className="btn-blue flex-1 justify-center min-h-[48px] text-sm rounded-xl"
 					>
-						<Flame className="w-3.5 h-3.5" />
+						<Flame className="w-4 h-4" />
 						INICIAR TODO
 					</button>
 				)}
 				{derived === "preparing" && (
 					<button
 						onClick={handleAllReady}
-						className="btn-green flex-1 justify-center text-xs py-2.5 rounded-xl shadow-[0_0_16px_rgba(16,185,129,0.2)]"
+						className="btn-green flex-1 justify-center min-h-[48px] text-sm rounded-xl shadow-[0_0_16px_rgba(16,185,129,0.2)]"
 					>
-						<CheckCircle2 className="w-3.5 h-3.5" />
+						<CheckCircle2 className="w-4 h-4" />
 						TODO LISTO ✓
 					</button>
 				)}
 				{derived === "ready" && (
 					<button
 						onClick={handleAllDelivered}
-						className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-surface-3 text-ink-secondary border border-surface-4 font-display font-bold text-xs uppercase tracking-widest hover:bg-surface-4 transition-all"
+						className="flex-1 flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-surface-3 text-ink-secondary border border-surface-4 font-display font-bold text-sm uppercase tracking-widest hover:bg-surface-4 transition-all"
 					>
-						<UtensilsCrossed className="w-3.5 h-3.5" />
+						<UtensilsCrossed className="w-4 h-4" />
 						ENTREGADO
 					</button>
 				)}
@@ -502,26 +502,26 @@ export default function KitchenKDSPage() {
 		<div className="min-h-screen bg-surface-0 flex flex-col noise-overlay">
 			{/* ── Header ── */}
 			<header className="sticky top-0 z-40 bg-surface-1/95 backdrop-blur-md border-b border-surface-3 shadow-[0_1px_0_rgba(255,255,255,0.04)]">
-				<div className="flex items-center px-6 py-3 gap-4">
+				<div className="flex items-center px-4 sm:px-6 py-3 gap-3">
 					{/* Left: Brand */}
 					<div className="flex items-center gap-3 min-w-0 flex-1">
-						<div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-brand-500/10 border border-brand-500/25 shadow-gold-sm">
-							<ChefHat className="w-6 h-6 text-brand-500" />
+						<div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-brand-500/10 border border-brand-500/25 shadow-gold-sm shrink-0">
+							<ChefHat className="w-5 h-5 sm:w-6 sm:h-6 text-brand-500" />
 						</div>
-						<div>
+						<div className="min-w-0">
 							<div className="flex items-baseline gap-2">
-								<span className="font-kds text-5xl leading-none text-brand-500 tracking-widest">
-									🍳 COCINA
+								<span className="font-kds text-3xl sm:text-5xl leading-none text-brand-500 tracking-widest">
+									COCINA
 								</span>
 							</div>
-							<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-[0.2em] mt-0.5">
+							<p className="font-display text-[9px] sm:text-[10px] text-ink-tertiary uppercase tracking-[0.2em] mt-0.5 hidden sm:block">
 								My Way · Kitchen Display System
 							</p>
 						</div>
 					</div>
 
-					{/* Center: Live clock */}
-					<div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+					{/* Center: Live clock — hidden on small phones */}
+					<div className="hidden md:flex absolute left-1/2 -translate-x-1/2 flex-col items-center">
 						<span
 							className="font-kds text-4xl leading-none text-ink-secondary tracking-[0.1em]"
 							suppressHydrationWarning
@@ -534,7 +534,7 @@ export default function KitchenKDSPage() {
 					</div>
 
 					{/* Right: Badge + Staff */}
-					<div className="flex items-center gap-3 flex-1 justify-end">
+					<div className="flex items-center gap-2 sm:gap-3 flex-1 justify-end">
 						<div
 							className="flex items-center justify-center min-w-[44px] h-11 px-3 rounded-2xl bg-brand-500 shadow-gold-sm"
 							title="Órdenes activas"
@@ -544,7 +544,7 @@ export default function KitchenKDSPage() {
 							</span>
 						</div>
 						<div className="flex items-center gap-2.5 px-3 py-2 bg-surface-2 border border-surface-3 rounded-2xl">
-							<div className="w-8 h-8 rounded-xl bg-brand-500/20 border border-brand-500/30 flex items-center justify-center">
+							<div className="w-8 h-8 rounded-xl bg-brand-500/20 border border-brand-500/30 flex items-center justify-center shrink-0">
 								<span className="font-display text-xs font-bold text-brand-500">
 									{kitchenStaff?.avatar ?? "CH"}
 								</span>
@@ -561,8 +561,8 @@ export default function KitchenKDSPage() {
 					</div>
 				</div>
 
-				{/* Filter tabs */}
-				<div className="flex items-center gap-2 px-6 pb-3 pt-0 border-t border-surface-3/50 bg-surface-2/20 mt-0">
+				{/* Filter tabs — scrollable on mobile */}
+				<div className="flex items-center gap-2 px-4 sm:px-6 pb-3 pt-2 border-t border-surface-3/50 bg-surface-2/20 overflow-x-auto">
 					{FILTER_TABS.map((tab) => {
 						const count =
 							tab.key === "all"
@@ -578,7 +578,8 @@ export default function KitchenKDSPage() {
 								key={tab.key}
 								onClick={() => setActiveFilter(tab.key)}
 								className={clsx(
-									"relative flex items-center gap-2 px-5 py-2.5 rounded-xl font-display text-xs font-bold uppercase tracking-widest transition-all",
+									"relative flex items-center gap-2 px-4 sm:px-5 rounded-xl font-display text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap shrink-0",
+									"min-h-[44px]",
 									isActive
 										? "bg-brand-500 text-surface-0 shadow-gold-sm"
 										: "bg-surface-2 text-ink-secondary border border-surface-3 hover:border-brand-500/30 hover:text-ink-primary",
@@ -598,7 +599,7 @@ export default function KitchenKDSPage() {
 							</button>
 						);
 					})}
-					<div className="ml-auto flex items-center gap-1.5 text-xs text-ink-tertiary font-display">
+					<div className="ml-auto flex items-center gap-1.5 text-xs text-ink-tertiary font-display shrink-0 pl-2">
 						<Package className="w-3.5 h-3.5" />
 						<span>
 							{filteredOrders.length} orden
@@ -609,7 +610,7 @@ export default function KitchenKDSPage() {
 			</header>
 
 			{/* ── Orders grid ── */}
-			<main className="flex-1 p-4 pb-20">
+			<main className="flex-1 p-3 sm:p-4 pb-24">
 				{filteredOrders.length === 0 ? (
 					<div className="flex flex-col items-center justify-center h-64 gap-5">
 						<div className="w-20 h-20 rounded-3xl bg-surface-2 border border-surface-3 flex items-center justify-center">
@@ -625,7 +626,13 @@ export default function KitchenKDSPage() {
 						</div>
 					</div>
 				) : (
-					<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+					<div
+						className="grid gap-3 sm:gap-4"
+						style={{
+							gridTemplateColumns:
+								"repeat(auto-fill, minmax(min(100%, 280px), 1fr))",
+						}}
+					>
 						{filteredOrders.map((order) => (
 							<OrderCard
 								key={order.id}
@@ -638,11 +645,11 @@ export default function KitchenKDSPage() {
 			</main>
 
 			{/* ── Stats bar (fixed bottom) ── */}
-			<footer className="fixed bottom-0 inset-x-0 z-30 border-t border-surface-3 bg-surface-1/95 backdrop-blur-md px-6 py-3">
-				<div className="flex items-center gap-5 flex-wrap">
-					<div className="flex items-center gap-2">
-						<span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_6px_#f59e0b]" />
-						<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary">
+			<footer className="fixed bottom-0 inset-x-0 z-30 border-t border-surface-3 bg-surface-1/95 backdrop-blur-md px-4 sm:px-6 py-3">
+				<div className="flex items-center gap-3 sm:gap-5 overflow-x-auto">
+					<div className="flex items-center gap-2 shrink-0">
+						<span className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_6px_#f59e0b]" />
+						<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary hidden sm:block">
 							Pendientes
 						</span>
 						<span className="font-kds text-3xl leading-none text-amber-400 ml-1">
@@ -650,11 +657,11 @@ export default function KitchenKDSPage() {
 						</span>
 					</div>
 
-					<div className="w-px h-5 bg-surface-3" />
+					<div className="w-px h-5 bg-surface-3 shrink-0" />
 
-					<div className="flex items-center gap-2">
-						<span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_6px_#3b82f6]" />
-						<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary">
+					<div className="flex items-center gap-2 shrink-0">
+						<span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_6px_#3b82f6]" />
+						<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary hidden sm:block">
 							Preparando
 						</span>
 						<span className="font-kds text-3xl leading-none text-blue-400 ml-1">
@@ -662,11 +669,11 @@ export default function KitchenKDSPage() {
 						</span>
 					</div>
 
-					<div className="w-px h-5 bg-surface-3" />
+					<div className="w-px h-5 bg-surface-3 shrink-0" />
 
-					<div className="flex items-center gap-2">
-						<span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]" />
-						<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary">
+					<div className="flex items-center gap-2 shrink-0">
+						<span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]" />
+						<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary hidden sm:block">
 							Listos
 						</span>
 						<span className="font-kds text-3xl leading-none text-emerald-400 ml-1">
@@ -674,11 +681,11 @@ export default function KitchenKDSPage() {
 						</span>
 					</div>
 
-					<div className="w-px h-5 bg-surface-3" />
+					<div className="w-px h-5 bg-surface-3 shrink-0" />
 
-					<div className="flex items-center gap-2">
+					<div className="flex items-center gap-2 shrink-0">
 						<Clock className="w-3.5 h-3.5 text-ink-tertiary" />
-						<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary">
+						<span className="font-display text-[10px] uppercase tracking-widest text-ink-tertiary hidden sm:block">
 							Tiempo promedio
 						</span>
 						<span className="font-kds text-3xl leading-none text-brand-500 ml-1">
@@ -689,7 +696,7 @@ export default function KitchenKDSPage() {
 						</span>
 					</div>
 
-					<div className="ml-auto flex items-center gap-2 text-ink-tertiary">
+					<div className="ml-auto flex items-center gap-2 text-ink-tertiary shrink-0 hidden sm:flex">
 						<span className="font-display text-[10px] uppercase tracking-widest">
 							KDS — My Way Bar &amp; Pool
 						</span>

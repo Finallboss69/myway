@@ -509,9 +509,9 @@ export default function MenuPage() {
 		categories.find((c) => c.id === catId)?.name ?? "Sin cat.";
 
 	return (
-		<div style={{ padding: 28 }}>
+		<div className="p-5 md:p-7">
 			{/* Header */}
-			<div className="flex items-center justify-between mb-7">
+			<div className="flex flex-wrap items-center justify-between gap-3 mb-7">
 				<div>
 					<h1
 						className="font-display text-ink-primary"

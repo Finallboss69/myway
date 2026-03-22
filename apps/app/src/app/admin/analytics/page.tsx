@@ -166,10 +166,7 @@ function KpiRow({
 	];
 
 	return (
-		<div
-			className="grid gap-4"
-			style={{ gridTemplateColumns: "repeat(4, 1fr)" }}
-		>
+		<div className="grid gap-4 grid-cols-2 md:grid-cols-4">
 			{kpis.map(({ label, value, delta, icon: Icon, accent }) => (
 				<div
 					key={label}
@@ -1025,9 +1022,9 @@ export default function AnalyticsPage() {
 	const data = getPeriodData(period, todayRevenue, todayOrderCount);
 
 	return (
-		<div style={{ minHeight: "100vh", padding: 28 }}>
+		<div style={{ minHeight: "100vh" }} className="p-5 md:p-7">
 			{/* Header with period tabs */}
-			<div className="flex items-center justify-between mb-7">
+			<div className="flex flex-wrap items-center justify-between gap-3 mb-7">
 				<div>
 					<h1
 						className="font-display text-ink-primary"
@@ -1089,10 +1086,7 @@ export default function AnalyticsPage() {
 					/>
 				)}
 				{period === "Esta semana" && (
-					<div
-						className="grid gap-6"
-						style={{ gridTemplateColumns: "1fr 1fr" }}
-					>
+					<div className="grid gap-6 grid-cols-1 md:grid-cols-2">
 						<WeeklyRevenueChart />
 						<RevenueByCategoryDonut />
 					</div>
@@ -1100,10 +1094,7 @@ export default function AnalyticsPage() {
 				{period === "Este mes" && <MonthlyTrendChart />}
 
 				{period === "Hoy" && (
-					<div
-						className="grid gap-4"
-						style={{ gridTemplateColumns: "1fr 1fr" }}
-					>
+					<div className="grid gap-4 grid-cols-1 md:grid-cols-2">
 						<RevenueByCategoryDonut />
 						<WeeklyRevenueChart />
 					</div>

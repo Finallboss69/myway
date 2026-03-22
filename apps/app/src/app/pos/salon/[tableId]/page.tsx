@@ -442,8 +442,9 @@ export default function TableDetailPage({
 
 	if (!table) {
 		return (
-			<div className="min-h-screen bg-surface-0 flex items-center justify-center">
-				<div className="text-ink-tertiary font-body">Cargando mesa...</div>
+			<div className="min-h-screen bg-surface-0 flex flex-col items-center justify-center gap-3">
+				<div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+				<div className="text-ink-disabled font-display text-xs uppercase tracking-widest">Cargando mesa...</div>
 			</div>
 		);
 	}

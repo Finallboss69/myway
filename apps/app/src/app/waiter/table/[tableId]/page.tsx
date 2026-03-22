@@ -370,8 +370,11 @@ function AgregarTab({
 
 	if (loadingProducts) {
 		return (
-			<div className="flex justify-center pt-16">
-				<Loader2 className="w-6 h-6 text-brand-500 animate-spin" />
+			<div className="flex flex-col items-center gap-3 pt-16">
+				<div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+				<p className="font-display text-xs text-ink-disabled uppercase tracking-widest">
+					Cargando menú...
+				</p>
 			</div>
 		);
 	}
@@ -379,42 +382,50 @@ function AgregarTab({
 	return (
 		<div className="flex flex-col">
 			{/* Category chips */}
-			<div className="flex gap-2 px-4 py-3 overflow-x-auto border-b border-surface-3">
+			<div
+				className="flex gap-2 px-4 py-3 overflow-x-auto border-b border-surface-3"
+				style={{ scrollbarWidth: "none" }}
+			>
 				{categories.map((cat) => (
 					<button
 						key={cat.id}
 						onClick={() => setActiveCategoryId(cat.id)}
 						className={clsx(
-							"shrink-0 px-3 py-1.5 rounded-xl font-display text-xs font-bold uppercase tracking-wider transition-all",
+							"shrink-0 px-4 py-2 rounded-xl font-display text-xs font-bold uppercase tracking-wider transition-all active:scale-95",
 							activeCategoryId === cat.id
-								? "bg-brand-500 text-surface-0"
+								? "bg-brand-500 text-surface-0 shadow-gold-sm"
 								: "bg-surface-2 text-ink-secondary border border-surface-3 hover:border-brand-500/30",
 						)}
+						style={{ minHeight: 44 }}
 					>
 						{cat.name}
 					</button>
 				))}
 			</div>
 
-			{/* Product grid */}
-			<div className="p-4 grid grid-cols-1 gap-2">
+			{/* Product list */}
+			<div className="p-3 flex flex-col gap-2">
 				{filteredProducts.map((product) => {
 					const inCart = cart.get(product.id);
 					return (
 						<div
 							key={product.id}
 							className={clsx(
-								"flex items-center gap-3 p-3 rounded-xl border transition-all",
+								"flex items-center gap-3 rounded-xl border transition-all",
 								inCart
-									? "border-brand-500/40 bg-brand-500/05"
+									? "border-brand-500/40 bg-brand-500/06"
 									: "border-surface-3 bg-surface-1",
 							)}
+							style={{ padding: "12px 14px", minHeight: 64 }}
 						>
 							<div className="flex-1 min-w-0">
-								<p className="font-display text-sm font-semibold text-ink-primary truncate">
+								<p className="font-display text-sm font-semibold text-ink-primary leading-tight">
 									{product.name}
 								</p>
-								<p className="font-display text-xs text-ink-tertiary mt-0.5">
+								<p
+									className="font-kds text-brand-500 mt-0.5 leading-none"
+									style={{ fontSize: 16 }}
+								>
 									{formatCurrency(product.price)}
 								</p>
 							</div>
@@ -423,26 +434,32 @@ function AgregarTab({
 								<div className="flex items-center gap-2 shrink-0">
 									<button
 										onClick={() => removeFromCart(product.id)}
-										className="w-8 h-8 rounded-lg bg-surface-3 border border-surface-4 flex items-center justify-center text-ink-secondary hover:bg-surface-4 transition-all active:scale-95"
+										className="rounded-xl bg-surface-3 border border-surface-4 flex items-center justify-center text-ink-secondary hover:bg-surface-4 transition-all active:scale-90"
+										style={{ width: 44, height: 44 }}
 									>
-										<Minus className="w-3 h-3" />
+										<Minus className="w-4 h-4" />
 									</button>
-									<span className="font-kds text-2xl leading-none text-brand-500 w-6 text-center">
+									<span
+										className="font-kds text-brand-500 text-center leading-none"
+										style={{ width: 28, fontSize: 26 }}
+									>
 										{inCart.qty}
 									</span>
 									<button
 										onClick={() => addToCart(product)}
-										className="w-8 h-8 rounded-lg bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-500 hover:bg-brand-500/25 transition-all active:scale-95"
+										className="rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-500 hover:bg-brand-500/25 transition-all active:scale-90"
+										style={{ width: 44, height: 44 }}
 									>
-										<Plus className="w-3 h-3" />
+										<Plus className="w-4 h-4" />
 									</button>
 								</div>
 							) : (
 								<button
 									onClick={() => addToCart(product)}
-									className="shrink-0 w-8 h-8 rounded-lg bg-surface-3 border border-surface-4 flex items-center justify-center text-ink-secondary hover:bg-brand-500/15 hover:border-brand-500/30 hover:text-brand-500 transition-all active:scale-95"
+									className="shrink-0 rounded-xl bg-surface-3 border border-surface-4 flex items-center justify-center text-ink-secondary hover:bg-brand-500/15 hover:border-brand-500/30 hover:text-brand-500 transition-all active:scale-90"
+									style={{ width: 44, height: 44 }}
 								>
-									<Plus className="w-3.5 h-3.5" />
+									<Plus className="w-5 h-5" />
 								</button>
 							)}
 						</div>
@@ -452,27 +469,46 @@ function AgregarTab({
 
 			{/* Cart summary + send */}
 			{cart.size > 0 && (
-				<div className="sticky bottom-16 mx-4 mb-4 card-gold p-4 flex items-center justify-between gap-4 animate-slide-up">
-					<div>
-						<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
-							{cartCount} {cartCount === 1 ? "item" : "items"} ·{" "}
-							{formatCurrency(cartTotal)}
-						</p>
+				<div
+					className="sticky bottom-16 mx-3 mb-3 card-gold animate-slide-up"
+					style={{ padding: "14px 16px" }}
+				>
+					<div className="flex items-center justify-between gap-4">
+						<div>
+							<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
+								Pedido pendiente
+							</p>
+							<p
+								className="font-kds text-brand-500 leading-none mt-0.5"
+								style={{ fontSize: 22 }}
+							>
+								{formatCurrency(cartTotal)}
+							</p>
+							<p className="font-display text-[10px] text-ink-disabled mt-0.5">
+								{cartCount} {cartCount === 1 ? "item" : "items"}
+							</p>
+						</div>
+						<button
+							onClick={handleSend}
+							disabled={sending}
+							className="btn-primary shrink-0"
+							style={{
+								paddingTop: 14,
+								paddingBottom: 14,
+								paddingLeft: 20,
+								paddingRight: 20,
+							}}
+						>
+							{sending ? (
+								<Loader2 className="w-4 h-4 animate-spin" />
+							) : (
+								<>
+									<Send className="w-4 h-4" />
+									Enviar pedido
+								</>
+							)}
+						</button>
 					</div>
-					<button
-						onClick={handleSend}
-						disabled={sending}
-						className="btn-primary shrink-0"
-					>
-						{sending ? (
-							<Loader2 className="w-4 h-4 animate-spin" />
-						) : (
-							<>
-								<Send className="w-4 h-4" />
-								Enviar
-							</>
-						)}
-					</button>
 				</div>
 			)}
 		</div>

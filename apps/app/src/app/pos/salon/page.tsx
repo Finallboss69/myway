@@ -282,9 +282,19 @@ export default function SalonPage() {
 			<POSSidebar activePath="salon" />
 
 			<div
-				className="flex flex-col"
+				className="pos-main-content flex flex-col"
 				style={{ marginLeft: 220, flex: 1, minHeight: "100vh" }}
 			>
+				<style>{`
+        @media (max-width: 900px) {
+          .pos-main-content { margin-left: 0 !important; }
+          nav.sidebar { display: none; }
+          .pos-right-panel { display: none; }
+        }
+        @media (max-width: 1100px) {
+          .pos-right-panel { width: 220px !important; }
+        }
+      `}</style>
 				{/* Top bar */}
 				<header
 					style={{
@@ -527,6 +537,7 @@ export default function SalonPage() {
 
 					{/* Right panel */}
 					<aside
+						className="pos-right-panel"
 						style={{
 							width: 280,
 							borderLeft: "1px solid var(--s3)",
@@ -717,3 +728,6 @@ export default function SalonPage() {
 		</div>
 	);
 }
+
+// Responsive overrides injected via style — keeps the sidebar collapsible on narrow viewports
+// without touching the useRef/useCallback logic

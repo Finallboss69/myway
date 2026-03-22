@@ -73,20 +73,28 @@ function usePolling<T>(url: string, interval = 5000) {
 	return data;
 }
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
+// ─── Status dot ───────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: string }) {
-	const cls = clsx("badge", {
-		"badge-available": status === "available",
-		"badge-occupied": status === "occupied",
-		"badge-reserved": status === "reserved",
-	});
-	const labels: Record<string, string> = {
-		available: "Libre",
-		occupied: "Ocupada",
-		reserved: "Reservada",
+function StatusDot({ status }: { status: string }) {
+	const colors: Record<string, string> = {
+		available: "#10b981",
+		occupied: "#f59e0b",
+		reserved: "#8b5cf6",
 	};
-	return <span className={cls}>{labels[status] ?? status}</span>;
+	const color = colors[status] ?? "#6b7280";
+	return (
+		<span
+			style={{
+				display: "inline-block",
+				width: 8,
+				height: 8,
+				borderRadius: "50%",
+				background: color,
+				boxShadow: `0 0 6px ${color}`,
+				flexShrink: 0,
+			}}
+		/>
+	);
 }
 
 // ─── Table card ───────────────────────────────────────────────────────────────
@@ -114,54 +122,106 @@ function TableCard({
 
 	const borderColor =
 		table.status === "available"
-			? "rgba(16,185,129,0.3)"
+			? "rgba(16,185,129,0.35)"
 			: table.status === "occupied"
-				? "rgba(245,158,11,0.35)"
-				: "rgba(139,92,246,0.35)";
+				? "rgba(245,158,11,0.4)"
+				: "rgba(139,92,246,0.4)";
 
 	const bgColor =
 		table.status === "available"
 			? "rgba(16,185,129,0.04)"
 			: table.status === "occupied"
-				? "rgba(245,158,11,0.05)"
-				: "rgba(139,92,246,0.05)";
+				? "rgba(245,158,11,0.06)"
+				: "rgba(139,92,246,0.06)";
+
+	const statusLabels: Record<string, string> = {
+		available: "Libre",
+		occupied: "Ocupada",
+		reserved: "Reservada",
+	};
+
+	const statusTextColor =
+		table.status === "available"
+			? "#10b981"
+			: table.status === "occupied"
+				? "#f59e0b"
+				: "#8b5cf6";
 
 	return (
 		<button
 			onClick={() => router.push(`/waiter/table/${table.id}`)}
-			className="flex flex-col p-4 rounded-2xl border transition-all duration-150 active:scale-95 text-left w-full"
+			className="flex flex-col rounded-2xl border transition-all duration-150 active:scale-95 text-left w-full"
 			style={{
 				background: bgColor,
 				borderColor: borderColor,
+				padding: "14px 14px 12px",
+				minHeight: 120,
 			}}
 		>
-			{/* Top row: number + type icon */}
+			{/* Top row: number + status */}
 			<div className="flex items-start justify-between w-full mb-2">
-				<div className="flex items-baseline gap-2">
-					<span className="font-kds text-5xl leading-none text-ink-primary">
+				<div className="flex items-baseline gap-1.5">
+					<span
+						className="font-kds leading-none text-ink-primary"
+						style={{ fontSize: "clamp(36px,8vw,52px)" }}
+					>
 						{table.number}
 					</span>
-					<span className="text-xl" title={table.type}>
-						{table.type === "pool" ? "🎱" : table.type === "bar" ? "🍺" : ""}
+					{table.type === "pool" && (
+						<span className="text-base" title="Mesa de pool">
+							🎱
+						</span>
+					)}
+				</div>
+				<div className="flex items-center gap-1.5 mt-0.5">
+					<StatusDot status={table.status} />
+					<span
+						className="font-display font-bold uppercase tracking-widest"
+						style={{
+							fontSize: 9,
+							color: statusTextColor,
+							letterSpacing: "0.3em",
+						}}
+					>
+						{statusLabels[table.status] ?? table.status}
 					</span>
 				</div>
-				<StatusBadge status={table.status} />
 			</div>
 
-			{/* Seats */}
-			<div className="flex items-center gap-1.5 mb-2">
-				<Users className="w-3 h-3 text-ink-tertiary" />
-				<span className="font-display text-[10px] text-ink-tertiary uppercase tracking-wide">
-					{table.seats} lugares
-				</span>
+			{/* Zone badge + seats */}
+			<div className="flex items-center gap-2 mb-auto">
+				<div
+					className="font-display uppercase tracking-widest rounded-lg px-2 py-0.5"
+					style={{
+						fontSize: 9,
+						letterSpacing: "0.25em",
+						color: "#6b6b6b",
+						background: "rgba(255,255,255,0.04)",
+						border: "1px solid rgba(255,255,255,0.07)",
+					}}
+				>
+					{table.zone?.name ?? "Salón"}
+				</div>
+				<div className="flex items-center gap-1">
+					<Users className="w-3 h-3 text-ink-disabled" />
+					<span className="font-display text-[10px] text-ink-disabled">
+						{table.seats}
+					</span>
+				</div>
 			</div>
 
 			{/* Occupied details */}
 			{table.status === "occupied" && oldestOrder && (
-				<div className="mt-auto pt-2 border-t border-surface-3 w-full flex items-center justify-between">
+				<div
+					className="mt-3 pt-2.5 border-t w-full flex items-center justify-between"
+					style={{ borderColor: "rgba(245,158,11,0.2)" }}
+				>
 					<div className="flex items-center gap-1.5">
 						<Clock className="w-3 h-3 text-brand-500" />
-						<span className="font-kds text-lg leading-none text-brand-500">
+						<span
+							className="font-kds text-brand-500 leading-none"
+							style={{ fontSize: 18 }}
+						>
 							{elapsed}
 							<span className="text-[10px] font-body text-ink-tertiary ml-0.5">
 								min
@@ -169,7 +229,10 @@ function TableCard({
 						</span>
 					</div>
 					{total > 0 && (
-						<span className="font-kds text-lg leading-none text-ink-secondary">
+						<span
+							className="font-kds text-ink-secondary leading-none"
+							style={{ fontSize: 16 }}
+						>
 							{formatCurrency(total)}
 						</span>
 					)}
@@ -178,7 +241,10 @@ function TableCard({
 
 			{/* Reserved time */}
 			{table.status === "reserved" && oldestOrder && (
-				<div className="mt-auto pt-2 border-t border-surface-3 w-full">
+				<div
+					className="mt-3 pt-2.5 border-t w-full"
+					style={{ borderColor: "rgba(139,92,246,0.2)" }}
+				>
 					<span className="font-display text-[10px] text-purple-400 uppercase tracking-wide">
 						{formatTime(oldestOrder.createdAt)}
 					</span>
@@ -228,6 +294,13 @@ export default function WaiterTablesPage() {
 		return tables.filter((t) => t.zoneId === activeZoneId);
 	}, [tables, activeZoneId]);
 
+	const availableCount = filteredTables.filter(
+		(t) => t.status === "available",
+	).length;
+	const occupiedCount = filteredTables.filter(
+		(t) => t.status === "occupied",
+	).length;
+
 	function getOrdersForTable(tableId: string): Order[] {
 		if (!orders) return [];
 		return orders.filter(
@@ -245,9 +318,10 @@ export default function WaiterTablesPage() {
 		>
 			{/* Header */}
 			<header
-				className="sticky top-0 z-40 flex items-center justify-between px-4 py-3"
+				className="sticky top-0 z-40 flex items-center justify-between px-4"
 				style={{
-					background: "rgba(10,10,10,0.92)",
+					height: 56,
+					background: "rgba(8,8,8,0.94)",
 					backdropFilter: "blur(20px)",
 					borderBottom: "1px solid var(--s3)",
 				}}
@@ -255,44 +329,87 @@ export default function WaiterTablesPage() {
 				<div className="flex items-center gap-3">
 					<div
 						className="font-kds text-brand-500 select-none"
-						style={{ fontSize: 28, letterSpacing: "0.15em", lineHeight: 1 }}
+						style={{ fontSize: 26, letterSpacing: "0.15em", lineHeight: 1 }}
 					>
 						MY WAY
 					</div>
-					<div className="h-5 w-px bg-surface-4" />
+					<div className="h-4 w-px bg-surface-4" />
 					<div className="flex flex-col">
-						<span className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
+						<span className="font-display text-[9px] text-ink-disabled uppercase tracking-widest">
 							Hola,
 						</span>
-						<span className="font-display text-sm font-semibold text-ink-primary leading-tight">
+						<span className="font-display text-xs font-semibold text-ink-primary leading-tight">
 							{waiterName}
 						</span>
 					</div>
 				</div>
 
-				<button
-					className="btn-ghost p-2 rounded-xl"
-					aria-label="Notificaciones"
-				>
-					<Bell className="w-5 h-5 text-ink-tertiary" />
-				</button>
+				<div className="flex items-center gap-2">
+					{/* Quick stats */}
+					<div className="hidden sm:flex items-center gap-3 mr-2">
+						<div className="flex items-center gap-1.5">
+							<span
+								style={{
+									width: 6,
+									height: 6,
+									borderRadius: "50%",
+									background: "#10b981",
+									boxShadow: "0 0 5px #10b981",
+									display: "inline-block",
+								}}
+							/>
+							<span className="font-display text-[10px] text-ink-tertiary uppercase tracking-wide">
+								{availableCount} libres
+							</span>
+						</div>
+						<div className="flex items-center gap-1.5">
+							<span
+								style={{
+									width: 6,
+									height: 6,
+									borderRadius: "50%",
+									background: "#f59e0b",
+									boxShadow: "0 0 5px #f59e0b",
+									display: "inline-block",
+								}}
+							/>
+							<span className="font-display text-[10px] text-ink-tertiary uppercase tracking-wide">
+								{occupiedCount} ocupadas
+							</span>
+						</div>
+					</div>
+					<button
+						className="btn-ghost p-2 rounded-xl relative"
+						aria-label="Notificaciones"
+					>
+						<Bell className="w-4 h-4 text-ink-tertiary" />
+						{readyCount > 0 && (
+							<span className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-brand-500 text-surface-0 font-kds text-[9px] leading-none flex items-center justify-center">
+								{readyCount}
+							</span>
+						)}
+					</button>
+				</div>
 			</header>
 
 			{/* Zone tabs */}
 			{zones.length > 0 && (
 				<div
-					className="flex gap-2 px-4 py-3 overflow-x-auto"
-					style={{ borderBottom: "1px solid var(--s3)" }}
+					className="flex gap-2 px-4 py-2.5 overflow-x-auto"
+					style={{
+						borderBottom: "1px solid var(--s3)",
+						scrollbarWidth: "none",
+					}}
 				>
 					{zones.map((zone) => (
 						<button
 							key={zone.id}
 							onClick={() => setActiveZoneId(zone.id)}
 							className={clsx(
-								"shrink-0 px-4 py-2 rounded-xl font-display text-xs font-bold uppercase tracking-widest transition-all",
+								"shrink-0 px-4 py-2 rounded-xl font-display text-[11px] font-bold uppercase tracking-widest transition-all",
 								activeZoneId === zone.id
 									? "bg-brand-500 text-surface-0 shadow-gold-sm"
-									: "bg-surface-2 text-ink-secondary border border-surface-3 hover:border-brand-500/30 hover:text-ink-primary",
+									: "bg-surface-2 text-ink-secondary border border-surface-3 hover:border-brand-500/30 hover:text-ink-primary active:scale-95",
 							)}
 						>
 							{zone.name}
@@ -302,20 +419,31 @@ export default function WaiterTablesPage() {
 			)}
 
 			{/* Tables grid */}
-			<main className="flex-1 p-4 pb-safe">
+			<main className="flex-1 p-3 pb-safe">
 				{!tables ? (
-					<div className="flex justify-center pt-16">
-						<div className="w-6 h-6 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+					<div className="flex flex-col items-center gap-3 pt-20">
+						<div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+						<p className="font-display text-xs text-ink-disabled uppercase tracking-widest">
+							Cargando mesas...
+						</p>
 					</div>
 				) : filteredTables.length === 0 ? (
 					<div className="flex flex-col items-center gap-3 pt-20">
-						<span className="text-4xl">🍽️</span>
+						<div
+							className="w-16 h-16 rounded-2xl flex items-center justify-center"
+							style={{ background: "var(--s2)", border: "1px solid var(--s3)" }}
+						>
+							<Users className="w-8 h-8 text-ink-disabled" />
+						</div>
 						<p className="font-display text-sm text-ink-tertiary">
 							No hay mesas en esta zona
 						</p>
 					</div>
 				) : (
-					<div className="grid grid-cols-2 gap-3">
+					<div
+						className="grid gap-3"
+						style={{ gridTemplateColumns: "repeat(2, 1fr)" }}
+					>
 						{filteredTables.map((table) => (
 							<TableCard
 								key={table.id}
@@ -349,6 +477,15 @@ export default function WaiterTablesPage() {
 					Cuenta
 				</Link>
 			</nav>
+
+			<style>{`
+        @media (min-width: 640px) {
+          main .grid { grid-template-columns: repeat(3, 1fr) !important; }
+        }
+        @media (min-width: 900px) {
+          main .grid { grid-template-columns: repeat(4, 1fr) !important; }
+        }
+      `}</style>
 		</div>
 	);
 }

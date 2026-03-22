@@ -134,13 +134,10 @@ function StatsRow({ staff }: { staff: Staff[] }) {
 	}));
 
 	return (
-		<div
-			className="grid gap-3"
-			style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr" }}
-		>
+		<div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
 			{/* Total active */}
 			<div
-				className="stat-card"
+				className="stat-card col-span-2 md:col-span-2"
 				style={{
 					position: "relative",
 					overflow: "hidden",
@@ -479,10 +476,7 @@ function ShiftsSection({ staff }: { staff: Staff[] }) {
 				</span>
 			</div>
 
-			<div
-				className="grid gap-4"
-				style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
-			>
+			<div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
 				{SHIFT_SLOTS.map((slot) => {
 					const members = staff.filter((s) => slot.roles.includes(s.role));
 					return (
@@ -612,7 +606,7 @@ export default function EmployeesPage() {
 	}, [fetchStaff]);
 
 	return (
-		<div style={{ minHeight: "100vh", padding: 28 }}>
+		<div style={{ minHeight: "100vh" }} className="p-5 md:p-7">
 			{/* Header */}
 			<div className="flex items-center justify-between mb-7">
 				<div>

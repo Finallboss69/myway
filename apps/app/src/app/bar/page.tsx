@@ -144,21 +144,21 @@ function BarOrderCard({
 	> = {
 		pending: {
 			label: "PREPARANDO →",
-			icon: <ArrowRight size={14} />,
+			icon: <ArrowRight size={16} />,
 			next: "preparing",
-			cls: "btn-blue text-xs py-2.5 rounded-xl w-full justify-center",
+			cls: "btn-blue text-sm min-h-[48px] rounded-xl w-full justify-center",
 		},
 		preparing: {
 			label: "LISTO ✓",
-			icon: <CheckCircle2 size={14} />,
+			icon: <CheckCircle2 size={16} />,
 			next: "ready",
-			cls: "btn-green text-xs py-2.5 rounded-xl w-full justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)]",
+			cls: "btn-green text-sm min-h-[48px] rounded-xl w-full justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)]",
 		},
 		ready: {
 			label: "ENTREGADO",
-			icon: <CheckCircle2 size={14} />,
+			icon: <CheckCircle2 size={16} />,
 			next: "delivered",
-			cls: "flex items-center justify-center gap-2 py-2.5 rounded-xl bg-surface-3 text-ink-secondary border border-surface-4 font-display font-bold text-xs uppercase tracking-widest hover:bg-surface-4 transition-all w-full",
+			cls: "flex items-center justify-center gap-2 min-h-[48px] rounded-xl bg-surface-3 text-ink-secondary border border-surface-4 font-display font-bold text-sm uppercase tracking-widest hover:bg-surface-4 transition-all w-full active:scale-95",
 		},
 	};
 
@@ -174,12 +174,13 @@ function BarOrderCard({
 				column === "ready" && "ring-ok",
 			)}
 		>
-			{/* Table + elapsed */}
+			{/* Table number + elapsed time */}
 			<div className="flex items-center justify-between">
 				<div className="flex items-baseline gap-2">
 					<span
 						className={clsx(
-							"font-kds text-5xl leading-none tracking-wider",
+							"font-kds leading-none tracking-wider",
+							"text-6xl sm:text-7xl",
 							isUrgent ? "text-red-400" : "text-ink-primary",
 						)}
 					>
@@ -195,20 +196,20 @@ function BarOrderCard({
 			{/* Divider */}
 			<div className="divider" />
 
-			{/* Items */}
-			<div className="flex flex-col gap-2">
+			{/* Items list */}
+			<div className="flex flex-col gap-2.5">
 				{order.items.map((item) => (
 					<div
 						key={item.id}
 						className="flex items-center justify-between gap-2"
 					>
-						<div className="flex items-center gap-2 min-w-0">
+						<div className="flex items-center gap-2.5 min-w-0">
 							{column === "ready" ? (
-								<CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+								<CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
 							) : (
 								<span
 									className={clsx(
-										"w-2 h-2 rounded-full shrink-0",
+										"w-2.5 h-2.5 rounded-full shrink-0",
 										item.status === "preparing"
 											? "bg-blue-400 animate-pulse"
 											: item.status === "pending"
@@ -221,7 +222,8 @@ function BarOrderCard({
 								{item.name}
 							</span>
 						</div>
-						<span className="font-kds text-2xl text-brand-500 leading-none shrink-0">
+						{/* Qty badge — large for visibility */}
+						<span className="font-kds text-2xl sm:text-3xl text-brand-500 leading-none shrink-0 bg-brand-500/10 px-2 py-0.5 rounded-lg border border-brand-500/20">
 							×{item.qty}
 						</span>
 					</div>
@@ -260,19 +262,16 @@ function KanbanColumn({
 				"bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.15)]",
 			dot: "bg-amber-500 shadow-[0_0_8px_#f59e0b]",
 			title: "text-amber-400",
-			bar: "bg-amber-500/40",
 		},
 		preparing: {
 			badge: "bg-blue-500/20 text-blue-400 border border-blue-500/30",
 			dot: "bg-blue-500 shadow-[0_0_8px_#3b82f6]",
 			title: "text-blue-400",
-			bar: "bg-blue-500/40",
 		},
 		ready: {
 			badge: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30",
 			dot: "bg-emerald-500 shadow-[0_0_8px_#10b981]",
 			title: "text-emerald-400",
-			bar: "bg-emerald-500/40",
 		},
 	}[column];
 
@@ -306,8 +305,8 @@ function KanbanColumn({
 				</span>
 			</div>
 
-			{/* Cards */}
-			<div className="flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-300px)] pr-0.5">
+			{/* Cards — scrollable within the column */}
+			<div className="flex flex-col gap-3 overflow-y-auto max-h-[calc(100vh-260px)] pr-0.5">
 				{orders.length === 0 ? (
 					<div className="flex flex-col items-center justify-center py-14 gap-3 text-ink-tertiary card rounded-2xl">
 						<CheckCircle2 size={32} className="opacity-20" />
@@ -454,6 +453,12 @@ export default function BarDisplayPage() {
 	const pendingCount = pending.length;
 	const allOrders = ordersWithColumn;
 
+	// For mobile single-column filtered view
+	const filteredOrders =
+		activeFilter === "all"
+			? allOrders
+			: allOrders.filter((o) => o.column === activeFilter);
+
 	async function handleAction(
 		orderId: string,
 		itemIds: string[],
@@ -489,18 +494,18 @@ export default function BarDisplayPage() {
 		<div className="noise-overlay min-h-screen bg-surface-0 flex flex-col pb-10">
 			{/* ── Header ── */}
 			<header className="sticky top-0 z-10 bg-surface-1/95 backdrop-blur-md border-b border-surface-3 shadow-[0_1px_0_rgba(255,255,255,0.04)]">
-				<div className="flex items-center justify-between px-6 py-3">
+				<div className="flex items-center justify-between px-4 sm:px-6 py-3">
 					{/* Left: BAR brand */}
 					<div className="flex items-center gap-3">
-						<span className="font-kds text-5xl text-brand-500 leading-none tracking-widest">
-							🍸 BAR
+						<span className="font-kds text-4xl sm:text-5xl text-brand-500 leading-none tracking-widest">
+							BAR
 						</span>
 					</div>
 
-					{/* Center: live clock */}
-					<div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
+					{/* Center: live clock — hidden on small phones */}
+					<div className="hidden sm:flex absolute left-1/2 -translate-x-1/2 flex-col items-center">
 						<span
-							className="font-kds text-4xl text-ink-secondary leading-none tracking-[0.1em]"
+							className="font-kds text-3xl sm:text-4xl text-ink-secondary leading-none tracking-[0.1em]"
 							suppressHydrationWarning
 						>
 							{currentTime}
@@ -511,11 +516,11 @@ export default function BarDisplayPage() {
 					</div>
 
 					{/* Right: pending badge + staff */}
-					<div className="flex items-center gap-4">
+					<div className="flex items-center gap-3">
 						{pendingCount > 0 && (
 							<div className="flex items-center gap-2">
 								<div className="relative">
-									<div className="w-9 h-9 rounded-2xl bg-red-500 flex items-center justify-center animate-pulse">
+									<div className="w-10 h-10 rounded-2xl bg-red-500 flex items-center justify-center animate-pulse">
 										<span className="font-kds text-2xl leading-none text-white">
 											{pendingCount}
 										</span>
@@ -557,8 +562,8 @@ export default function BarDisplayPage() {
 					</div>
 				</div>
 
-				{/* Filter tabs */}
-				<div className="flex items-center gap-2 px-6 pb-3 border-t border-surface-3/50 bg-surface-2/20 pt-2">
+				{/* Filter tabs — scrollable on mobile, aligned with kanban on desktop */}
+				<div className="flex items-center gap-2 px-4 sm:px-6 pb-3 border-t border-surface-3/50 bg-surface-2/20 pt-2 overflow-x-auto">
 					{FILTER_TABS.map((tab) => {
 						const count =
 							tab.key === "all"
@@ -574,7 +579,8 @@ export default function BarDisplayPage() {
 								key={tab.key}
 								onClick={() => setActiveFilter(tab.key)}
 								className={clsx(
-									"flex items-center gap-2 px-4 py-2 rounded-xl font-display text-xs font-bold uppercase tracking-widest transition-all",
+									"flex items-center gap-2 px-4 rounded-xl font-display text-xs font-bold uppercase tracking-widest transition-all whitespace-nowrap shrink-0",
+									"min-h-[44px]",
 									isActive
 										? "bg-brand-500 text-surface-0 shadow-gold-sm"
 										: "bg-surface-2 text-ink-secondary border border-surface-3 hover:border-brand-500/30 hover:text-ink-primary",
@@ -595,17 +601,160 @@ export default function BarDisplayPage() {
 						);
 					})}
 					{pendingCount > 0 && (
-						<div className="ml-auto flex items-center gap-1.5 text-xs font-display text-red-400 uppercase tracking-wider animate-blink">
+						<div className="ml-auto flex items-center gap-1.5 text-xs font-display text-red-400 uppercase tracking-wider animate-blink shrink-0 pl-2">
 							<AlertCircle className="w-3.5 h-3.5" />
-							{pendingCount} orden{pendingCount !== 1 ? "es" : ""} esperando
+							<span className="hidden sm:inline">
+								{pendingCount} orden{pendingCount !== 1 ? "es" : ""} esperando
+							</span>
+							<span className="sm:hidden">{pendingCount}</span>
 						</div>
 					)}
 				</div>
 			</header>
 
-			{/* ── Main: 3-column kanban ── */}
-			<main className="flex-1 px-4 pt-5 pb-6">
-				<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+			{/* ── Main content ── */}
+			<main className="flex-1 px-3 sm:px-4 pt-4 sm:pt-5 pb-6">
+				{/*
+				  Mobile/tablet portrait: single column filtered view
+				  Tablet landscape / desktop: 3-column kanban
+				  We use CSS grid with breakpoints to switch layouts.
+				*/}
+
+				{/* Mobile filtered list (shown when a specific tab is active) */}
+				<div className="lg:hidden">
+					{activeFilter === "all" ? (
+						/* "All" on mobile: stack columns with headers */
+						<div className="flex flex-col gap-6">
+							{pending.length > 0 && (
+								<div className="flex flex-col gap-3">
+									<div className="flex items-center justify-between">
+										<span className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 font-kds text-xl tracking-widest">
+											<span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]" />
+											PENDIENTE
+										</span>
+										<span className="font-kds text-2xl leading-none px-3 py-1 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+											{pending.length}
+										</span>
+									</div>
+									<div
+										className="grid gap-3"
+										style={{
+											gridTemplateColumns:
+												"repeat(auto-fill, minmax(min(100%, 280px), 1fr))",
+										}}
+									>
+										{pending.map((order) => (
+											<BarOrderCard
+												key={order.id}
+												order={order}
+												column="pending"
+												onAction={handleAction}
+											/>
+										))}
+									</div>
+								</div>
+							)}
+							{preparing.length > 0 && (
+								<div className="flex flex-col gap-3">
+									<div className="flex items-center justify-between">
+										<span className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30 font-kds text-xl tracking-widest">
+											<span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_#3b82f6]" />
+											PREPARANDO
+										</span>
+										<span className="font-kds text-2xl leading-none px-3 py-1 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
+											{preparing.length}
+										</span>
+									</div>
+									<div
+										className="grid gap-3"
+										style={{
+											gridTemplateColumns:
+												"repeat(auto-fill, minmax(min(100%, 280px), 1fr))",
+										}}
+									>
+										{preparing.map((order) => (
+											<BarOrderCard
+												key={order.id}
+												order={order}
+												column="preparing"
+												onAction={handleAction}
+											/>
+										))}
+									</div>
+								</div>
+							)}
+							{ready.length > 0 && (
+								<div className="flex flex-col gap-3">
+									<div className="flex items-center justify-between">
+										<span className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-kds text-xl tracking-widest">
+											<span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+											LISTO
+										</span>
+										<span className="font-kds text-2xl leading-none px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+											{ready.length}
+										</span>
+									</div>
+									<div
+										className="grid gap-3"
+										style={{
+											gridTemplateColumns:
+												"repeat(auto-fill, minmax(min(100%, 280px), 1fr))",
+										}}
+									>
+										{ready.map((order) => (
+											<BarOrderCard
+												key={order.id}
+												order={order}
+												column="ready"
+												onAction={handleAction}
+											/>
+										))}
+									</div>
+								</div>
+							)}
+							{allOrders.length === 0 && (
+								<div className="flex flex-col items-center justify-center h-64 gap-4 text-ink-tertiary">
+									<CheckCircle2 size={40} className="opacity-20" />
+									<span className="font-display text-sm uppercase tracking-widest opacity-40">
+										Sin pedidos activos
+									</span>
+								</div>
+							)}
+						</div>
+					) : (
+						/* Specific tab on mobile: single filtered grid */
+						<div>
+							{filteredOrders.length === 0 ? (
+								<div className="flex flex-col items-center justify-center h-64 gap-4 text-ink-tertiary">
+									<CheckCircle2 size={40} className="opacity-20" />
+									<span className="font-display text-sm uppercase tracking-widest opacity-40">
+										Sin pedidos
+									</span>
+								</div>
+							) : (
+								<div
+									className="grid gap-3"
+									style={{
+										gridTemplateColumns:
+											"repeat(auto-fill, minmax(min(100%, 280px), 1fr))",
+									}}
+								>
+									{filteredOrders.map((order) => (
+										<BarOrderCard
+											key={order.id}
+											order={order}
+											column={order.column}
+											onAction={handleAction}
+										/>
+									))}
+								</div>
+							)}
+						</div>
+					)}
+				</div>
+
+				{/* Desktop: always 3-column kanban */}
+				<div className="hidden lg:grid lg:grid-cols-3 gap-4">
 					<KanbanColumn
 						title="PENDIENTE"
 						orders={pending}

@@ -333,10 +333,12 @@ function Hero() {
 	);
 }
 
-// ── Gallery ───────────────────────────────────────────────────────────────────
+// ── useScrollFadeIn ────────────────────────────────────────────────────────────
+// Reusable hook: returns a ref + visible state. Once the element scrolls into
+// view (10% threshold) it fires once and the observer disconnects.
 
-function Gallery() {
-	const ref = useRef<HTMLDivElement>(null);
+function useScrollFadeIn() {
+	const ref = useRef<HTMLElement>(null);
 	const [visible, setVisible] = useState(false);
 
 	useEffect(() => {
@@ -344,13 +346,26 @@ function Gallery() {
 		if (!el) return;
 		const obs = new IntersectionObserver(
 			([entry]) => {
-				if (entry.isIntersecting) setVisible(true);
+				if (entry.isIntersecting) {
+					setVisible(true);
+					obs.disconnect();
+				}
 			},
 			{ threshold: 0.1 },
 		);
 		obs.observe(el);
 		return () => obs.disconnect();
 	}, []);
+
+	return { ref, visible };
+}
+
+// ── Gallery ───────────────────────────────────────────────────────────────────
+
+function Gallery() {
+	const { ref, visible } = useScrollFadeIn();
+	const [activePhoto, setActivePhoto] = useState(0);
+	const [hoveredPhoto, setHoveredPhoto] = useState<number | null>(null);
 
 	const photos = [
 		{ src: "/media/cheers.jpg", alt: "Brindis" },
@@ -361,11 +376,36 @@ function Gallery() {
 		{ src: "/media/wrap-hands.jpg", alt: "Wrap" },
 	];
 
+	// Auto-cycle: every 3.5 s advance to the next featured photo
+	useEffect(() => {
+		const id = setInterval(() => {
+			setActivePhoto((prev) => (prev + 1) % photos.length);
+		}, 3500);
+		return () => clearInterval(id);
+	}, [photos.length]);
+
 	return (
 		<section
-			style={{ padding: "80px 24px", maxWidth: 1100, margin: "0 auto" }}
-			ref={ref}
+			ref={ref as React.RefObject<HTMLElement>}
+			style={{
+				padding: "80px 24px",
+				maxWidth: 1100,
+				margin: "0 auto",
+				opacity: visible ? 1 : 0,
+				transform: visible ? "translateY(0)" : "translateY(24px)",
+				transition: "opacity 0.6s ease, transform 0.6s ease",
+			}}
 		>
+			{/* Animation CSS */}
+			<style>{`
+				.gallery-photo {
+					transition: transform 0.4s ease;
+				}
+				.gallery-photo:hover {
+					transform: scale(1.04) !important;
+				}
+			`}</style>
+
 			<div style={{ marginBottom: 40 }}>
 				<p
 					style={{
@@ -389,6 +429,69 @@ function Gallery() {
 					Viví la experiencia
 				</h2>
 			</div>
+
+			{/* Featured cycling photo */}
+			<div
+				style={{
+					position: "relative",
+					borderRadius: 20,
+					overflow: "hidden",
+					aspectRatio: "21/9",
+					marginBottom: 12,
+				}}
+			>
+				{photos.map((photo, i) => (
+					<div
+						key={photo.src}
+						style={{
+							position: "absolute",
+							inset: 0,
+							opacity: i === activePhoto ? 1 : 0,
+							transition: "opacity 0.9s ease",
+						}}
+					>
+						<Image
+							src={photo.src}
+							alt={photo.alt}
+							fill
+							style={{ objectFit: "cover" }}
+						/>
+					</div>
+				))}
+				{/* Dot indicators */}
+				<div
+					style={{
+						position: "absolute",
+						bottom: 14,
+						left: "50%",
+						transform: "translateX(-50%)",
+						display: "flex",
+						gap: 6,
+						zIndex: 2,
+					}}
+				>
+					{photos.map((_, i) => (
+						<button
+							key={i}
+							onClick={() => setActivePhoto(i)}
+							aria-label={`Foto ${i + 1}`}
+							style={{
+								width: i === activePhoto ? 18 : 6,
+								height: 6,
+								borderRadius: 99,
+								border: "none",
+								background:
+									i === activePhoto ? "#f59e0b" : "rgba(255,255,255,0.35)",
+								cursor: "pointer",
+								padding: 0,
+								transition: "width 0.3s ease, background 0.3s ease",
+							}}
+						/>
+					))}
+				</div>
+			</div>
+
+			{/* Grid of thumbnails */}
 			<div
 				style={{
 					display: "grid",
@@ -399,15 +502,29 @@ function Gallery() {
 				{photos.map((photo, i) => (
 					<div
 						key={photo.src}
+						className="gallery-photo"
+						onMouseEnter={() => setHoveredPhoto(i)}
+						onMouseLeave={() => setHoveredPhoto(null)}
 						style={{
 							borderRadius: 16,
 							overflow: "hidden",
 							aspectRatio: i === 0 || i === 3 ? "16/10" : "4/3",
 							position: "relative",
+							cursor: "pointer",
 							opacity: visible ? 1 : 0,
-							transform: visible ? "translateY(0)" : "translateY(20px)",
-							transition: `opacity 0.55s ${i * 0.08}s, transform 0.55s ${i * 0.08}s`,
+							transform: visible
+								? hoveredPhoto === i
+									? "scale(1.04)"
+									: "translateY(0)"
+								: "translateY(20px)",
+							transition:
+								hoveredPhoto === i
+									? "opacity 0.55s, transform 0.4s ease"
+									: `opacity 0.55s ${i * 0.08}s, transform 0.55s ${i * 0.08}s`,
+							outline: activePhoto === i ? "2px solid #f59e0b" : "none",
+							outlineOffset: 2,
 						}}
+						onClick={() => setActivePhoto(i)}
 					>
 						<Image
 							src={photo.src}
@@ -425,6 +542,7 @@ function Gallery() {
 // ── Menu Section ──────────────────────────────────────────────────────────────
 
 function MenuSection() {
+	const { ref: sectionRef, visible: sectionVisible } = useScrollFadeIn();
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [products, setProducts] = useState<Product[]>([]);
 	const [active, setActive] = useState("all");
@@ -450,8 +568,16 @@ function MenuSection() {
 
 	return (
 		<section
+			ref={sectionRef as React.RefObject<HTMLElement>}
 			id="menu"
-			style={{ padding: "80px 24px", maxWidth: 860, margin: "0 auto" }}
+			style={{
+				padding: "80px 24px",
+				maxWidth: 860,
+				margin: "0 auto",
+				opacity: sectionVisible ? 1 : 0,
+				transform: sectionVisible ? "translateY(0)" : "translateY(24px)",
+				transition: "opacity 0.6s ease, transform 0.6s ease",
+			}}
 		>
 			<div style={{ marginBottom: 32 }}>
 				<p
@@ -636,9 +762,18 @@ function MenuSection() {
 // ── Delivery CTA ──────────────────────────────────────────────────────────────
 
 function DeliveryCTA() {
+	const { ref, visible } = useScrollFadeIn();
 	return (
 		<section
-			style={{ padding: "0 24px 80px", maxWidth: 1100, margin: "0 auto" }}
+			ref={ref as React.RefObject<HTMLElement>}
+			style={{
+				padding: "0 24px 80px",
+				maxWidth: 1100,
+				margin: "0 auto",
+				opacity: visible ? 1 : 0,
+				transform: visible ? "translateY(0)" : "translateY(24px)",
+				transition: "opacity 0.6s ease, transform 0.6s ease",
+			}}
 		>
 			<div
 				style={{
@@ -735,6 +870,7 @@ function DeliveryCTA() {
 // ── Tracking Widget ───────────────────────────────────────────────────────────
 
 function TrackingWidget() {
+	const { ref, visible } = useScrollFadeIn();
 	const [code, setCode] = useState("");
 
 	const handleTrack = (e: React.FormEvent<HTMLFormElement>) => {
@@ -744,11 +880,15 @@ function TrackingWidget() {
 
 	return (
 		<section
+			ref={ref as React.RefObject<HTMLElement>}
 			style={{
 				padding: "0 24px 80px",
 				maxWidth: 560,
 				margin: "0 auto",
 				textAlign: "center",
+				opacity: visible ? 1 : 0,
+				transform: visible ? "translateY(0)" : "translateY(24px)",
+				transition: "opacity 0.6s ease, transform 0.6s ease",
 			}}
 		>
 			<p
@@ -819,9 +959,18 @@ function TrackingWidget() {
 // ── Info ──────────────────────────────────────────────────────────────────────
 
 function Info() {
+	const { ref, visible } = useScrollFadeIn();
 	return (
 		<section
-			style={{ padding: "0 24px 80px", maxWidth: 900, margin: "0 auto" }}
+			ref={ref as React.RefObject<HTMLElement>}
+			style={{
+				padding: "0 24px 80px",
+				maxWidth: 900,
+				margin: "0 auto",
+				opacity: visible ? 1 : 0,
+				transform: visible ? "translateY(0)" : "translateY(24px)",
+				transition: "opacity 0.6s ease, transform 0.6s ease",
+			}}
 		>
 			<div
 				style={{
