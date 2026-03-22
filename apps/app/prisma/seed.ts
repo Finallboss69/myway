@@ -166,16 +166,20 @@ async function main() {
 
 	// Categories
 	const categories = [
-		{ id: "c1", name: "Tragos 🍹", order: 0 },
-		{ id: "c2", name: "Cervezas 🍺", order: 1 },
-		{ id: "c3", name: "Vinos 🍷", order: 2 },
-		{ id: "c4", name: "Coctelería 🍸", order: 3 },
-		{ id: "c5", name: "Comida 🍔", order: 4 },
-		{ id: "c6", name: "Pool 🎱", order: 5 },
-		{ id: "c7", name: "Sin Alcohol 🧃", order: 6 },
+		{ id: "c1", name: "Tragos 🍹", icon: "🍹", order: 0 },
+		{ id: "c2", name: "Cervezas 🍺", icon: "🍺", order: 1 },
+		{ id: "c3", name: "Vinos 🍷", icon: "🍷", order: 2 },
+		{ id: "c4", name: "Coctelería 🍸", icon: "🍸", order: 3 },
+		{ id: "c5", name: "Comida 🍔", icon: "🍔", order: 4 },
+		{ id: "c6", name: "Pool 🎱", icon: "🎱", order: 5 },
+		{ id: "c7", name: "Sin Alcohol 🧃", icon: "🧃", order: 6 },
 	];
 	for (const c of categories) {
-		await db.category.upsert({ where: { id: c.id }, update: {}, create: c });
+		await db.category.upsert({
+			where: { id: c.id },
+			update: { icon: c.icon },
+			create: c,
+		});
 	}
 
 	// Products
