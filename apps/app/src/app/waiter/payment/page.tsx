@@ -433,40 +433,31 @@ function PaymentContent() {
 										<button
 											key={key}
 											onClick={() => setMethod(key)}
-											className={clsx(
-												"flex flex-col items-center justify-center gap-2.5 rounded-2xl border transition-all active:scale-95",
-												isActive
-													? "border-brand-500 bg-brand-500"
-													: "border-surface-3 bg-surface-2 hover:border-brand-500/30",
-											)}
+											className="flex flex-col items-center justify-center gap-2.5 rounded-2xl transition-all active:scale-95"
 											style={{
 												minHeight: 90,
 												padding: "16px 10px",
+												background: isActive ? "var(--gold)" : "var(--s2)",
+												border: isActive ? "1px solid rgba(245,158,11,0.7)" : "1px solid var(--s3)",
 												boxShadow: isActive
 													? "0 0 28px rgba(245,158,11,0.4), 0 2px 12px rgba(0,0,0,0.4)"
-													: undefined,
+													: "none",
 											}}
 										>
 											<div
-												className={clsx(
-													"w-11 h-11 rounded-xl flex items-center justify-center",
-													isActive
-														? "bg-surface-0/20"
-														: "bg-surface-3 border border-surface-4",
-												)}
+												className="w-11 h-11 rounded-xl flex items-center justify-center"
+												style={{
+													background: isActive ? "rgba(0,0,0,0.2)" : "var(--s3)",
+													border: isActive ? "none" : "1px solid var(--s4)",
+												}}
 											>
 												<Icon
-													className={clsx(
-														"w-5 h-5",
-														isActive ? "text-surface-0" : "text-ink-tertiary",
-													)}
+													style={{ width: 20, height: 20, color: isActive ? "#080808" : "#6b6b6b" }}
 												/>
 											</div>
 											<span
-												className={clsx(
-													"font-display font-bold text-[11px] uppercase tracking-wider text-center leading-tight",
-													isActive ? "text-surface-0" : "text-ink-tertiary",
-												)}
+												className="font-display font-bold text-[11px] uppercase tracking-wider text-center leading-tight"
+												style={{ color: isActive ? "#080808" : "#6b6b6b" }}
 											>
 												{label}
 											</span>

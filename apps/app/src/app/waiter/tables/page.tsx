@@ -461,21 +461,26 @@ export default function WaiterTablesPage() {
 						background: "rgba(12,12,12,0.8)",
 					}}
 				>
-					{zones.map((zone) => (
-						<button
-							key={zone.id}
-							onClick={() => setActiveZoneId(zone.id)}
-							className={clsx(
-								"shrink-0 px-6 rounded-full font-display text-[12px] font-bold uppercase tracking-widest transition-all",
-								activeZoneId === zone.id
-									? "bg-brand-500 text-surface-0 shadow-gold-sm"
-									: "bg-surface-2 text-ink-secondary border border-surface-3 hover:border-brand-500/30 hover:text-ink-primary active:scale-95",
-							)}
-							style={{ minHeight: 44 }}
-						>
-							{zone.name}
-						</button>
-					))}
+					{zones.map((zone) => {
+						const isActive = activeZoneId === zone.id;
+						return (
+							<button
+								key={zone.id}
+								onClick={() => setActiveZoneId(zone.id)}
+								className="shrink-0 px-6 rounded-full font-display font-bold uppercase tracking-widest transition-all active:scale-95"
+								style={{
+									minHeight: 44,
+									fontSize: 12,
+									background: isActive ? "var(--gold)" : "var(--s2)",
+									color: isActive ? "#080808" : "#a3a3a3",
+									border: isActive ? "1px solid rgba(245,158,11,0.7)" : "1px solid var(--s4)",
+									boxShadow: isActive ? "0 0 16px rgba(245,158,11,0.3)" : "none",
+								}}
+							>
+								{zone.name}
+							</button>
+						);
+					})}
 				</div>
 			)}
 

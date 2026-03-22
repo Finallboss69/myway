@@ -177,18 +177,15 @@ export default function WaiterLoginPage() {
 									key={member.id}
 									onClick={() => handleSelect(member)}
 									disabled={selected !== null}
-									className={clsx(
-										"flex flex-col items-center gap-3 rounded-2xl border transition-all duration-200 text-center group active:scale-95",
-										isSelected
-											? "border-brand-500/70 bg-brand-500/12 shadow-gold-sm"
-											: "border-surface-3 bg-surface-2 hover:border-brand-500/40 hover:bg-surface-3",
-									)}
+									className="flex flex-col items-center gap-3 rounded-2xl transition-all duration-200 text-center active:scale-95"
 									style={{
 										padding: "24px 16px 20px",
 										minHeight: 150,
+										background: isSelected ? "rgba(245,158,11,0.1)" : "var(--s2)",
+										border: isSelected ? "1px solid rgba(245,158,11,0.5)" : "1px solid var(--s3)",
 										boxShadow: isSelected
 											? "0 0 0 2px rgba(245,158,11,0.35), 0 0 32px rgba(245,158,11,0.12)"
-											: undefined,
+											: "none",
 									}}
 								>
 									{/* Avatar circle */}
