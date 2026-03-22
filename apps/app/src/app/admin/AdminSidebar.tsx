@@ -9,6 +9,7 @@ import {
 	Users,
 	BookOpen,
 	Truck,
+	MapPin,
 	LogOut,
 } from "lucide-react";
 
@@ -29,6 +30,12 @@ const NAV_ITEMS = [
 		exact: false,
 	},
 	{ href: "/admin/delivery", label: "Delivery", icon: Truck, exact: false },
+	{
+		href: "/admin/repartidores",
+		label: "Mapa GPS",
+		icon: MapPin,
+		exact: false,
+	},
 ];
 
 export default function AdminSidebar() {

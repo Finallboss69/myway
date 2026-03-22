@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
 	try {
+		const { searchParams } = new URL(request.url);
+		const status = searchParams.get("status");
+
 		const orders = await db.deliveryOrder.findMany({
+			where: status ? { status } : undefined,
 			include: { items: true },
 			orderBy: { createdAt: "desc" },
 		});
-		return NextResponse.json(orders);
+		return NextResponse.json({ orders });
 	} catch (error) {
 		console.error("[delivery GET]", error);
 		return NextResponse.json(

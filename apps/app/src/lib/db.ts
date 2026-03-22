@@ -1,5 +1,5 @@
-import { PrismaClient } from "../../node_modules/.prisma/client/index";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 declare global {
 	// eslint-disable-next-line no-var
@@ -7,8 +7,9 @@ declare global {
 }
 
 function createPrismaClient() {
-	const url = process.env.DATABASE_URL ?? "file:./dev.db";
-	const adapter = new PrismaBetterSqlite3({ url });
+	const adapter = new PrismaPg({
+		connectionString: process.env.DATABASE_URL!,
+	});
 	return new PrismaClient({
 		adapter,
 		log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
