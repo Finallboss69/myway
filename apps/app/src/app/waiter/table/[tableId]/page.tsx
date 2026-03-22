@@ -398,30 +398,41 @@ function AgregarTab({
 
 	return (
 		<div className="flex flex-col">
-			{/* Category chips — sticky horizontal scroll */}
-			<div
-				className="sticky top-0 z-10 flex gap-2 px-4 py-3 overflow-x-auto border-b border-surface-3"
-				style={{
-					scrollbarWidth: "none",
-					background: "rgba(16,16,16,0.97)",
-					backdropFilter: "blur(12px)",
-				}}
-			>
-				{categories.map((cat) => (
-					<button
-						key={cat.id}
-						onClick={() => setActiveCategoryId(cat.id)}
-						className={clsx(
-							"shrink-0 px-4 rounded-full font-display text-xs font-bold uppercase tracking-wider transition-all active:scale-95",
-							activeCategoryId === cat.id
-								? "bg-brand-500 text-surface-0 shadow-gold-sm"
-								: "bg-surface-2 text-ink-secondary border border-surface-3 hover:border-brand-500/30",
-						)}
-						style={{ minHeight: 36 }}
-					>
-						{cat.name}
-					</button>
-				))}
+			{/* Category grid */}
+			<div className="p-3 pb-2" style={{ borderBottom: "1px solid var(--s3)" }}>
+				<div
+					className="grid gap-2"
+					style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+				>
+					{categories.map((cat) => (
+						<button
+							key={cat.id}
+							onClick={() => setActiveCategoryId(cat.id)}
+							className="rounded-2xl font-kds tracking-wider transition-all active:scale-95 text-center"
+							style={{
+								minHeight: 58,
+								fontSize: 13,
+								letterSpacing: "0.05em",
+								background:
+									activeCategoryId === cat.id ? "var(--gold)" : "var(--s2)",
+								color: activeCategoryId === cat.id ? "#080808" : "#a3a3a3",
+								border:
+									activeCategoryId === cat.id
+										? "1px solid rgba(245,158,11,0.7)"
+										: "1px solid var(--s4)",
+								boxShadow:
+									activeCategoryId === cat.id
+										? "0 0 20px rgba(245,158,11,0.3)"
+										: "none",
+								padding: "8px 6px",
+								wordBreak: "break-word",
+								lineHeight: 1.2,
+							}}
+						>
+							{cat.name.toUpperCase()}
+						</button>
+					))}
+				</div>
 			</div>
 
 			{/* Product list */}
@@ -434,24 +445,25 @@ function AgregarTab({
 							className={clsx(
 								"flex items-center gap-3 rounded-2xl border transition-all",
 								inCart
-									? "border-brand-500/45 bg-brand-500/08"
+									? "border-brand-500/50 bg-brand-500/10"
 									: "border-surface-3 bg-surface-1",
 								product.isPoolChip && "pool-chip-border",
 							)}
-							style={{ padding: "12px 14px", minHeight: 68 }}
+							style={{ padding: "14px 16px", minHeight: 84 }}
 						>
 							<div className="flex-1 min-w-0">
 								<p
 									className={clsx(
-										"font-display text-sm font-semibold leading-tight",
+										"font-display font-bold leading-tight",
 										product.isPoolChip ? "pool-chip-badge" : "text-ink-primary",
 									)}
+									style={{ fontSize: 15 }}
 								>
 									{product.name}
 								</p>
 								<p
-									className="font-kds text-brand-500 mt-0.5 leading-none"
-									style={{ fontSize: 16 }}
+									className="font-kds text-brand-500 mt-1 leading-none"
+									style={{ fontSize: 22 }}
 								>
 									{formatCurrency(product.price)}
 								</p>
@@ -461,32 +473,42 @@ function AgregarTab({
 								<div className="flex items-center gap-2 shrink-0">
 									<button
 										onClick={() => removeFromCart(product.id)}
-										className="rounded-xl bg-surface-3 border border-surface-4 flex items-center justify-center text-ink-secondary hover:bg-surface-4 transition-all active:scale-90"
-										style={{ width: 44, height: 44 }}
+										className="rounded-2xl bg-surface-3 border border-surface-4 flex items-center justify-center text-ink-secondary hover:bg-surface-4 transition-all active:scale-90"
+										style={{ width: 48, height: 48 }}
 									>
-										<Minus className="w-4 h-4" />
+										<Minus className="w-5 h-5" />
 									</button>
 									<span
 										className="font-kds text-brand-500 text-center leading-none"
-										style={{ width: 32, fontSize: 28 }}
+										style={{ width: 36, fontSize: 32 }}
 									>
 										{inCart.qty}
 									</span>
 									<button
 										onClick={() => addToCart(product)}
-										className="rounded-xl bg-brand-500/15 border border-brand-500/30 flex items-center justify-center text-brand-500 hover:bg-brand-500/25 transition-all active:scale-90"
-										style={{ width: 44, height: 44 }}
+										className="rounded-2xl flex items-center justify-center text-surface-0 transition-all active:scale-90"
+										style={{
+											width: 48,
+											height: 48,
+											background: "var(--gold)",
+											boxShadow: "0 0 12px rgba(245,158,11,0.3)",
+										}}
 									>
-										<Plus className="w-4 h-4" />
+										<Plus className="w-5 h-5" />
 									</button>
 								</div>
 							) : (
 								<button
 									onClick={() => addToCart(product)}
-									className="shrink-0 rounded-xl bg-surface-3 border border-surface-4 flex items-center justify-center text-ink-secondary hover:bg-brand-500/15 hover:border-brand-500/30 hover:text-brand-500 transition-all active:scale-90"
-									style={{ width: 44, height: 44 }}
+									className="shrink-0 rounded-2xl flex items-center justify-center transition-all active:scale-90"
+									style={{
+										width: 48,
+										height: 48,
+										background: "var(--s3)",
+										border: "1px solid var(--s4)",
+									}}
 								>
-									<Plus className="w-5 h-5" />
+									<Plus className="w-5 h-5 text-ink-secondary" />
 								</button>
 							)}
 						</div>
@@ -702,25 +724,26 @@ export default function TableDetailPage() {
 				</span>
 			</header>
 
-			{/* Tabs */}
-			<div
-				className="flex border-b border-surface-3"
-				style={{ background: "var(--s1)" }}
-			>
-				{(["pedido", "agregar"] as const).map((tab) => (
-					<button
-						key={tab}
-						onClick={() => setActiveTab(tab)}
-						className={clsx(
-							"flex-1 py-3.5 font-display text-xs font-bold uppercase tracking-widest transition-all border-b-2 min-h-[48px]",
-							activeTab === tab
-								? "text-brand-500 border-brand-500"
-								: "text-ink-tertiary border-transparent hover:text-ink-secondary",
-						)}
-					>
-						{tab === "pedido" ? "Pedido Actual" : "Agregar Items"}
-					</button>
-				))}
+			{/* Pill tab switcher */}
+			<div style={{ background: "var(--s1)", padding: "10px 16px", borderBottom: "1px solid var(--s3)" }}>
+				<div className="flex gap-2 p-1 rounded-2xl" style={{ background: "var(--s3)" }}>
+					{(["pedido", "agregar"] as const).map((tab) => (
+						<button
+							key={tab}
+							onClick={() => setActiveTab(tab)}
+							className="flex-1 font-kds tracking-wider transition-all rounded-xl"
+							style={{
+								minHeight: 44,
+								fontSize: 15,
+								background: activeTab === tab ? "var(--gold)" : "transparent",
+								color: activeTab === tab ? "#080808" : "#6b6b6b",
+								boxShadow: activeTab === tab ? "0 2px 12px rgba(245,158,11,0.3)" : "none",
+							}}
+						>
+							{tab === "pedido" ? "PEDIDO ACTUAL" : "AGREGAR ITEMS"}
+						</button>
+					))}
+				</div>
 			</div>
 
 			{/* Tab content */}

@@ -163,6 +163,14 @@ const ORDER_STATUS_LABEL: Record<string, string> = {
 	cancelled: "Cancelado",
 };
 
+const ORDER_STATUS_BG: Record<string, string> = {
+	pending: "rgba(245,158,11,0.05)",
+	preparing: "rgba(59,130,246,0.05)",
+	ready: "rgba(16,185,129,0.06)",
+	closed: "transparent",
+	cancelled: "rgba(239,68,68,0.04)",
+};
+
 const FILTER_TABS = [
 	{ key: "all", label: "Todos" },
 	{ key: "pending", label: "Pendiente" },
@@ -198,6 +206,7 @@ function OrderCard({ order }: { order: Order }) {
 	const elapsed = elapsedMinutes(order.createdAt);
 	const orderTotal = order.items.reduce((s, i) => s + i.qty * i.price, 0);
 	const borderColor = ORDER_STATUS_BORDER[order.status] ?? "#333";
+	const bgColor = ORDER_STATUS_BG[order.status] ?? "transparent";
 
 	const allReady = order.items.every(
 		(i) =>
@@ -214,27 +223,36 @@ function OrderCard({ order }: { order: Order }) {
 		<div
 			className={`card animate-slide-up ${urgencyRing}`}
 			style={{
-				borderLeft: `3px solid ${borderColor}`,
+				borderLeft: `4px solid ${borderColor}`,
+				background: bgColor,
+				boxShadow: `0 0 0 1px ${borderColor}18, 0 4px 20px rgba(0,0,0,0.3)`,
 				overflow: "hidden",
 			}}
 		>
 			{/* Card header */}
 			<div
 				className="flex items-center justify-between"
-				style={{ padding: "14px 18px 12px" }}
+				style={{ padding: "16px 20px 14px" }}
 			>
-				<div className="flex items-center gap-3">
+				{/* Table number dominates */}
+				<div className="flex items-center gap-4">
 					<div
-						className="font-kds text-ink-primary"
-						style={{ fontSize: 36, lineHeight: 1 }}
+						className="font-kds"
+						style={{
+							fontSize: 52,
+							lineHeight: 1,
+							color: borderColor,
+							textShadow: `0 0 24px ${borderColor}50`,
+							letterSpacing: "0.02em",
+						}}
 					>
 						{order.tableNumber}
 					</div>
 					<div>
-						<div className="flex items-center gap-2 flex-wrap">
+						<div className="flex items-center gap-2 flex-wrap mb-1">
 							<span
 								className="font-display text-ink-secondary uppercase"
-								style={{ fontSize: 11, letterSpacing: "0.12em" }}
+								style={{ fontSize: 12, letterSpacing: "0.12em" }}
 							>
 								Mesa {order.tableNumber}
 							</span>
@@ -243,7 +261,7 @@ function OrderCard({ order }: { order: Order }) {
 									className="font-display uppercase rounded-full"
 									style={{
 										fontSize: 9,
-										padding: "2px 8px",
+										padding: "2px 9px",
 										letterSpacing: "0.15em",
 										color: "#34d399",
 										background: "rgba(16,185,129,0.12)",
@@ -254,7 +272,7 @@ function OrderCard({ order }: { order: Order }) {
 								</span>
 							)}
 						</div>
-						<div className="flex items-center gap-2 mt-0.5">
+						<div className="flex items-center gap-2">
 							<Clock
 								size={11}
 								style={{
@@ -279,7 +297,7 @@ function OrderCard({ order }: { order: Order }) {
 													? "#fbbf24"
 													: "#6b6b6b",
 										fontFamily: "var(--font-bebas)",
-										fontSize: 15,
+										fontSize: 18,
 									}}
 								>
 									{elapsed}m
@@ -298,27 +316,32 @@ function OrderCard({ order }: { order: Order }) {
 				</div>
 
 				<div className="flex items-center gap-3">
+					{/* Status badge — prominent */}
 					<span
 						className="font-display uppercase rounded-full"
 						style={{
-							fontSize: 9,
-							padding: "4px 11px",
+							fontSize: 10,
+							padding: "5px 13px",
 							letterSpacing: "0.12em",
 							color: borderColor,
-							background: `${borderColor}12`,
-							border: `1px solid ${borderColor}30`,
+							background: `${borderColor}15`,
+							border: `1px solid ${borderColor}40`,
+							whiteSpace: "nowrap",
 						}}
 					>
 						{ORDER_STATUS_LABEL[order.status] ?? order.status}
 					</span>
 
-					<div className="text-right">
-						<div
-							className="font-kds text-brand-500"
-							style={{ fontSize: 24, lineHeight: 1 }}
-						>
-							{formatCurrency(orderTotal)}
-						</div>
+					{/* Total — big */}
+					<div
+						className="font-kds text-brand-500"
+						style={{
+							fontSize: 28,
+							lineHeight: 1,
+							textShadow: "0 0 14px rgba(245,158,11,0.3)",
+						}}
+					>
+						{formatCurrency(orderTotal)}
 					</div>
 
 					<Link
@@ -329,12 +352,13 @@ function OrderCard({ order }: { order: Order }) {
 							className="font-display uppercase rounded-lg flex items-center gap-1.5 transition-all"
 							style={{
 								fontSize: 9,
-								padding: "7px 11px",
+								padding: "8px 13px",
 								color: "#6b6b6b",
 								background: "var(--s3)",
 								border: "1px solid var(--s4)",
 								cursor: "pointer",
 								letterSpacing: "0.12em",
+								whiteSpace: "nowrap",
 							}}
 							onMouseEnter={(e) => {
 								const el = e.currentTarget as HTMLDivElement;
@@ -363,22 +387,22 @@ function OrderCard({ order }: { order: Order }) {
 						key={item.id}
 						className="flex items-center gap-3"
 						style={{
-							padding: "10px 18px",
+							padding: "11px 20px",
 							borderBottom:
 								idx < order.items.length - 1 ? "1px solid var(--s2)" : "none",
 							background:
 								item.status === "ready"
-									? "rgba(16,185,129,0.03)"
+									? "rgba(16,185,129,0.04)"
 									: "transparent",
 						}}
 					>
 						<div
 							style={{
-								width: 7,
-								height: 7,
+								width: 8,
+								height: 8,
 								borderRadius: "50%",
 								background: STATUS_COLOR[item.status] ?? "#6b7280",
-								boxShadow: `0 0 5px ${STATUS_COLOR[item.status] ?? "#6b7280"}70`,
+								boxShadow: `0 0 6px ${STATUS_COLOR[item.status] ?? "#6b7280"}80`,
 								flexShrink: 0,
 							}}
 						/>
@@ -390,7 +414,7 @@ function OrderCard({ order }: { order: Order }) {
 						<div className="flex-1 min-w-0">
 							<span
 								className="font-body text-ink-secondary"
-								style={{ fontSize: 12, fontWeight: 500 }}
+								style={{ fontSize: 13, fontWeight: 500 }}
 							>
 								{item.qty}× {item.name}
 							</span>
@@ -400,7 +424,7 @@ function OrderCard({ order }: { order: Order }) {
 
 						<span
 							className="font-body text-ink-tertiary"
-							style={{ fontSize: 11, minWidth: 68, textAlign: "right" }}
+							style={{ fontSize: 12, minWidth: 72, textAlign: "right" }}
 						>
 							{formatCurrency(item.qty * item.price)}
 						</span>
@@ -413,9 +437,9 @@ function OrderCard({ order }: { order: Order }) {
 				<div
 					className="flex items-center gap-2"
 					style={{
-						padding: "8px 18px",
-						background: "rgba(16,185,129,0.05)",
-						borderTop: "1px solid rgba(16,185,129,0.12)",
+						padding: "9px 20px",
+						background: "rgba(16,185,129,0.06)",
+						borderTop: "1px solid rgba(16,185,129,0.15)",
 					}}
 				>
 					<div
@@ -509,7 +533,7 @@ export default function OrdersPage() {
 						alignItems: "center",
 						justifyContent: "space-between",
 						padding: "0 24px",
-						height: 60,
+						height: 64,
 						borderBottom: "1px solid var(--s3)",
 						background: "var(--s1)",
 						position: "sticky",
@@ -518,25 +542,24 @@ export default function OrdersPage() {
 					}}
 				>
 					<div className="flex items-center gap-3">
-						<ReceiptText size={16} className="text-ink-tertiary" />
+						<ReceiptText size={17} className="text-ink-tertiary" />
 						<div
 							className="font-display text-ink-primary uppercase tracking-widest"
-							style={{ fontSize: 13, letterSpacing: "0.2em" }}
+							style={{ fontSize: 14, letterSpacing: "0.2em" }}
 						>
 							Pedidos Activos
 						</div>
 						{allActive.length > 0 && (
 							<span
 								style={{
-									background: "rgba(245,158,11,0.15)",
-									color: "#f59e0b",
-									border: "1px solid rgba(245,158,11,0.3)",
-									fontFamily: "var(--font-syne)",
-									fontWeight: 700,
-									fontSize: 10,
+									background: "#f59e0b",
+									color: "#080808",
+									fontFamily: "var(--font-bebas)",
+									fontSize: 16,
+									lineHeight: 1,
 									borderRadius: "99px",
-									padding: "2px 9px",
-									letterSpacing: "0.08em",
+									padding: "3px 10px",
+									letterSpacing: "0.06em",
 								}}
 							>
 								{allActive.length}
@@ -545,7 +568,7 @@ export default function OrdersPage() {
 					</div>
 					<div
 						className="font-kds text-ink-disabled"
-						style={{ fontSize: 18, letterSpacing: "0.05em" }}
+						style={{ fontSize: 20, letterSpacing: "0.05em" }}
 						suppressHydrationWarning
 					>
 						{new Date().toLocaleTimeString("es-AR", {
@@ -596,10 +619,10 @@ export default function OrdersPage() {
 							<div
 								key={stat.label}
 								className="card"
-								style={{ padding: "16px 18px" }}
+								style={{ padding: "18px 20px" }}
 							>
 								<div className="flex items-center gap-2 mb-2">
-									<span style={{ color: "#444" }}>{stat.icon}</span>
+									<span style={{ color: "#555" }}>{stat.icon}</span>
 									<div
 										className="font-display text-ink-disabled uppercase tracking-widest"
 										style={{ fontSize: 9, letterSpacing: "0.22em" }}
@@ -610,13 +633,15 @@ export default function OrdersPage() {
 								<div
 									className="font-kds"
 									style={{
-										fontSize: stat.isAmount ? 20 : 38,
+										fontSize: stat.isAmount ? 22 : 44,
 										lineHeight: 1,
 										color: stat.color,
 										textShadow:
 											stat.color === "#f59e0b"
-												? "0 0 16px rgba(245,158,11,0.2)"
-												: undefined,
+												? "0 0 20px rgba(245,158,11,0.25)"
+												: stat.color === "#10b981"
+													? "0 0 16px rgba(16,185,129,0.25)"
+													: undefined,
 									}}
 								>
 									{stat.value}
@@ -631,7 +656,7 @@ export default function OrdersPage() {
 						))}
 					</div>
 
-					{/* Filter tabs */}
+					{/* Filter tabs — bigger and bolder */}
 					<div
 						className="flex items-center"
 						style={{ borderBottom: "1px solid var(--s3)" }}
@@ -642,27 +667,42 @@ export default function OrdersPage() {
 								tab.key === "all"
 									? allActive.length
 									: allActive.filter((o) => o.status === tab.key).length;
+
+							// Per-tab accent color
+							const tabColor =
+								tab.key === "pending"
+									? "#f59e0b"
+									: tab.key === "preparing"
+										? "#3b82f6"
+										: tab.key === "ready"
+											? "#10b981"
+											: "#f59e0b";
+
 							return (
 								<button
 									key={tab.key}
 									onClick={() => setActiveFilter(tab.key)}
 									style={{
-										padding: "0 20px",
-										height: 46,
+										padding: "0 22px",
+										height: 52,
 										border: "none",
 										background: "transparent",
 										cursor: "pointer",
 										fontFamily: "var(--font-syne)",
-										fontWeight: 600,
-										fontSize: 11,
+										fontWeight: 700,
+										fontSize: 12,
 										letterSpacing: "0.18em",
 										textTransform: "uppercase",
-										color: isActive ? "#f59e0b" : "#6b6b6b",
+										color: isActive
+											? tab.key === "all"
+												? "#f59e0b"
+												: tabColor
+											: "#6b6b6b",
 										position: "relative",
 										transition: "color 0.15s",
 										display: "flex",
 										alignItems: "center",
-										gap: 7,
+										gap: 8,
 									}}
 								>
 									{tab.label}
@@ -670,14 +710,16 @@ export default function OrdersPage() {
 										<span
 											style={{
 												background: isActive
-													? "#f59e0b"
+													? tab.key === "all"
+														? "#f59e0b"
+														: tabColor
 													: "rgba(255,255,255,0.07)",
 												color: isActive ? "#080808" : "#6b6b6b",
-												fontFamily: "var(--font-syne)",
-												fontWeight: 700,
-												fontSize: 9,
+												fontFamily: "var(--font-bebas)",
+												fontSize: 14,
+												lineHeight: 1,
 												borderRadius: "99px",
-												padding: "1px 6px",
+												padding: "2px 8px",
 												transition: "all 0.15s",
 											}}
 										>
@@ -691,10 +733,16 @@ export default function OrdersPage() {
 												bottom: 0,
 												left: 0,
 												right: 0,
-												height: 2,
-												background: "#f59e0b",
+												height: 3,
+												background:
+													tab.key === "all"
+														? "linear-gradient(90deg, #f59e0b, #fbbf24)"
+														: tabColor,
 												borderRadius: "2px 2px 0 0",
-												boxShadow: "0 0 8px rgba(245,158,11,0.55)",
+												boxShadow:
+													tab.key === "all"
+														? "0 0 10px rgba(245,158,11,0.6)"
+														: `0 0 10px ${tabColor}90`,
 											}}
 										/>
 									)}
@@ -714,7 +762,7 @@ export default function OrdersPage() {
 					</div>
 
 					{/* Orders list */}
-					<div className="flex flex-col gap-3">
+					<div className="flex flex-col gap-4">
 						{filtered.length === 0 ? (
 							<div
 								className="card flex flex-col items-center justify-center py-16 text-center"

@@ -342,23 +342,35 @@ function PaymentContent() {
 										.map((item) => (
 											<div
 												key={`${o.id}-${item.id}`}
-												className="flex items-center gap-3 px-4 py-3"
+												className="flex items-center gap-3 px-4"
+												style={{
+													minHeight: 52,
+													paddingTop: 10,
+													paddingBottom: 10,
+												}}
 											>
-												<span className="font-kds text-2xl leading-none text-brand-500 w-7 text-center shrink-0">
+												<span
+													className="font-kds leading-none text-brand-500 shrink-0 text-center"
+													style={{ fontSize: 28, width: 28 }}
+												>
 													{item.qty}
 												</span>
-												<p className="flex-1 font-display text-sm text-ink-primary truncate">
+												<p className="flex-1 font-display text-sm font-bold text-ink-primary truncate">
 													{item.name}
 												</p>
-												<span className="font-display text-sm text-ink-secondary shrink-0">
+												<span
+													className="font-kds leading-none text-ink-secondary shrink-0"
+													style={{ fontSize: 18 }}
+												>
 													{formatCurrency(item.qty * item.price)}
 												</span>
 											</div>
 										)),
 								)}
 							</div>
-							{/* Totals */}
-							<div className="px-4 py-4 border-t border-surface-3 bg-surface-2/50 flex flex-col gap-2">
+
+							{/* Subtotal + IVA */}
+							<div className="px-4 pt-3 pb-1 border-t border-surface-3 bg-surface-2/50 flex flex-col gap-2">
 								<div className="flex justify-between">
 									<span className="font-display text-xs text-ink-tertiary">
 										Subtotal
@@ -375,22 +387,29 @@ function PaymentContent() {
 										{formatCurrency(iva)}
 									</span>
 								</div>
-								<div className="divider my-1" />
-								<div className="flex justify-between items-center">
-									<span className="font-display text-xs font-bold text-ink-secondary uppercase tracking-widest">
-										Total
-									</span>
-									<span
-										className="font-kds leading-none text-brand-500"
-										style={{ fontSize: 36 }}
-									>
-										{formatCurrency(total)}
-									</span>
-								</div>
+							</div>
+
+							{/* Total — large and gold, centered */}
+							<div
+								className="flex flex-col items-center justify-center py-5 border-t border-surface-3"
+								style={{ background: "rgba(245,158,11,0.05)" }}
+							>
+								<span className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest mb-1">
+									Total
+								</span>
+								<span
+									className="font-kds leading-none text-brand-500"
+									style={{
+										fontSize: 64,
+										textShadow: "0 0 28px rgba(245,158,11,0.35)",
+									}}
+								>
+									{formatCurrency(total)}
+								</span>
 							</div>
 						</div>
 
-						{/* Payment method — 3 large buttons */}
+						{/* Payment method — 3 large tiles */}
 						<div className="card overflow-hidden">
 							<div className="px-4 py-3 border-b border-surface-3 bg-surface-2/50">
 								<span className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
@@ -417,36 +436,36 @@ function PaymentContent() {
 											className={clsx(
 												"flex flex-col items-center justify-center gap-2.5 rounded-2xl border transition-all active:scale-95",
 												isActive
-													? "border-brand-500/60 bg-brand-500/10"
+													? "border-brand-500 bg-brand-500"
 													: "border-surface-3 bg-surface-2 hover:border-brand-500/30",
 											)}
 											style={{
-												minHeight: 84,
-												padding: "14px 10px",
+												minHeight: 90,
+												padding: "16px 10px",
 												boxShadow: isActive
-													? "0 0 20px rgba(245,158,11,0.12)"
+													? "0 0 28px rgba(245,158,11,0.4), 0 2px 12px rgba(0,0,0,0.4)"
 													: undefined,
 											}}
 										>
 											<div
 												className={clsx(
-													"w-10 h-10 rounded-xl flex items-center justify-center",
+													"w-11 h-11 rounded-xl flex items-center justify-center",
 													isActive
-														? "bg-brand-500/15 border border-brand-500/30"
+														? "bg-surface-0/20"
 														: "bg-surface-3 border border-surface-4",
 												)}
 											>
 												<Icon
 													className={clsx(
 														"w-5 h-5",
-														isActive ? "text-brand-500" : "text-ink-tertiary",
+														isActive ? "text-surface-0" : "text-ink-tertiary",
 													)}
 												/>
 											</div>
 											<span
 												className={clsx(
-													"font-display font-bold text-[10px] uppercase tracking-wider text-center leading-tight",
-													isActive ? "text-brand-500" : "text-ink-tertiary",
+													"font-display font-bold text-[11px] uppercase tracking-wider text-center leading-tight",
+													isActive ? "text-surface-0" : "text-ink-tertiary",
 												)}
 											>
 												{label}
@@ -529,18 +548,17 @@ function PaymentContent() {
 							)}
 						</div>
 
-						{/* Confirm button — full-width, large */}
+						{/* Confirm button — full-width, large and gold */}
 						<button
 							onClick={handleConfirm}
 							disabled={submitting || orders.length === 0}
 							className="btn-primary w-full justify-center"
 							style={{
-								paddingTop: 18,
-								paddingBottom: 18,
-								fontSize: 14,
-								borderRadius: 14,
+								minHeight: 64,
+								fontSize: 16,
+								borderRadius: 16,
 								boxShadow:
-									"0 0 28px rgba(245,158,11,0.25), 0 4px 16px rgba(0,0,0,0.4)",
+									"0 0 32px rgba(245,158,11,0.3), 0 4px 18px rgba(0,0,0,0.4)",
 							}}
 						>
 							{submitting ? (

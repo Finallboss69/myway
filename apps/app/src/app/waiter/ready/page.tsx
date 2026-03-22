@@ -77,16 +77,16 @@ function ReadyItemRow({
 	return (
 		<div
 			className="flex items-center gap-3"
-			style={{ padding: "13px 16px", minHeight: 68 }}
+			style={{ padding: "14px 16px", minHeight: 76 }}
 		>
 			<div
 				className="font-kds leading-none text-center shrink-0"
-				style={{ fontSize: 30, width: 34, color: "#10b981" }}
+				style={{ fontSize: 34, width: 36, color: "#10b981" }}
 			>
 				{item.qty}
 			</div>
 			<div className="flex-1 min-w-0">
-				<p className="font-display text-sm font-semibold text-ink-primary leading-tight">
+				<p className="font-display text-sm font-bold text-ink-primary leading-tight">
 					{item.name}
 				</p>
 				<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest mt-0.5">
@@ -96,19 +96,20 @@ function ReadyItemRow({
 			<button
 				onClick={handleDeliver}
 				disabled={loading}
-				className="shrink-0 btn-green rounded-xl active:scale-95 min-h-[44px]"
+				className="shrink-0 btn-green rounded-xl active:scale-95"
 				style={{
-					minWidth: 100,
-					fontSize: 12,
-					padding: "10px 16px",
-					boxShadow: "0 0 14px rgba(16,185,129,0.25)",
+					minWidth: 110,
+					minHeight: 52,
+					fontSize: 13,
+					padding: "12px 18px",
+					boxShadow: "0 0 18px rgba(16,185,129,0.35)",
 				}}
 			>
 				{loading ? (
 					<Loader2 className="w-4 h-4 animate-spin" />
 				) : (
 					<>
-						<CheckCircle2 className="w-3.5 h-3.5" />
+						<CheckCircle2 className="w-4 h-4" />
 						ENTREGADO
 					</>
 				)}
@@ -191,41 +192,48 @@ export default function ReadyPage() {
 		>
 			{/* Header */}
 			<header
-				className="sticky top-0 z-40 flex items-center gap-3 px-4 py-3 top-accent"
+				className="sticky top-0 z-40 flex items-center gap-3 px-4 top-accent"
 				style={{
 					background: "rgba(10,10,10,0.95)",
 					backdropFilter: "blur(24px)",
 					borderBottom: "1px solid var(--s3)",
 					position: "sticky",
+					paddingTop: 14,
+					paddingBottom: 14,
 				}}
 			>
 				{/* Bell icon */}
 				<div
-					className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+					className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
 					style={{
 						background:
 							totalReadyCount > 0
-								? "rgba(16,185,129,0.12)"
-								: "rgba(255,255,255,0.04)",
+								? "rgba(16,185,129,0.15)"
+								: "rgba(255,255,255,0.05)",
 						border:
 							totalReadyCount > 0
-								? "1px solid rgba(16,185,129,0.3)"
-								: "1px solid rgba(255,255,255,0.07)",
+								? "1px solid rgba(16,185,129,0.4)"
+								: "1px solid rgba(255,255,255,0.08)",
+						boxShadow:
+							totalReadyCount > 0 ? "0 0 16px rgba(16,185,129,0.2)" : undefined,
 					}}
 				>
 					<Bell
 						className={clsx(
-							"w-5 h-5",
+							"w-6 h-6",
 							totalReadyCount > 0 ? "text-emerald-400" : "text-ink-disabled",
 						)}
 					/>
 				</div>
 
 				<div className="flex-1 min-w-0">
-					<h1 className="font-kds text-2xl leading-none text-ink-primary tracking-widest">
+					<h1
+						className="font-kds leading-none text-ink-primary tracking-widest"
+						style={{ fontSize: 32 }}
+					>
 						LISTOS PARA SERVIR
 					</h1>
-					<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest mt-0.5">
+					<p className="font-display text-[11px] text-ink-tertiary uppercase tracking-widest mt-1">
 						{totalReadyCount}{" "}
 						{totalReadyCount === 1 ? "item listo" : "items listos"}
 					</p>
@@ -233,13 +241,19 @@ export default function ReadyPage() {
 
 				{totalReadyCount > 0 && (
 					<div
-						className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0"
+						className="flex items-center justify-center rounded-xl shrink-0"
 						style={{
-							background: "rgba(16,185,129,0.12)",
-							border: "1px solid rgba(16,185,129,0.3)",
+							width: 52,
+							height: 52,
+							background: "rgba(16,185,129,0.15)",
+							border: "1px solid rgba(16,185,129,0.4)",
+							boxShadow: "0 0 20px rgba(16,185,129,0.3)",
 						}}
 					>
-						<span className="font-kds text-2xl leading-none text-emerald-400">
+						<span
+							className="font-kds leading-none text-emerald-400"
+							style={{ fontSize: 28 }}
+						>
 							{totalReadyCount}
 						</span>
 					</div>
@@ -256,21 +270,25 @@ export default function ReadyPage() {
 						</p>
 					</div>
 				) : groupedByTable.length === 0 ? (
-					<div className="flex flex-col items-center gap-4 pt-20">
+					<div className="flex flex-col items-center gap-5 pt-24">
 						<div
-							className="w-20 h-20 rounded-3xl flex items-center justify-center"
+							className="w-24 h-24 rounded-3xl flex items-center justify-center"
 							style={{
-								background: "rgba(16,185,129,0.08)",
-								border: "1px solid rgba(16,185,129,0.2)",
+								background: "rgba(16,185,129,0.1)",
+								border: "1px solid rgba(16,185,129,0.25)",
+								boxShadow: "0 0 32px rgba(16,185,129,0.15)",
 							}}
 						>
-							<CheckCircle2 className="w-10 h-10 text-emerald-400" />
+							<CheckCircle2 className="w-12 h-12 text-emerald-400" />
 						</div>
 						<div className="text-center">
-							<p className="font-kds text-2xl text-emerald-400 tracking-widest">
+							<p
+								className="font-kds text-emerald-400 tracking-widest"
+								style={{ fontSize: 32 }}
+							>
 								TODO ENTREGADO
 							</p>
-							<p className="font-display text-sm text-ink-tertiary mt-1.5">
+							<p className="font-display text-sm text-ink-tertiary mt-2">
 								No hay items listos para servir
 							</p>
 						</div>
@@ -283,18 +301,22 @@ export default function ReadyPage() {
 								className="card-green overflow-hidden animate-slide-up"
 								style={{
 									boxShadow:
-										"0 0 24px rgba(16,185,129,0.1), 0 2px 16px rgba(0,0,0,0.4)",
+										"0 0 28px rgba(16,185,129,0.14), 0 2px 18px rgba(0,0,0,0.45)",
 								}}
 							>
 								{/* Table header */}
 								<div
 									className="flex items-center justify-between px-4 py-3 border-b border-surface-3"
-									style={{ background: "rgba(16,185,129,0.07)" }}
+									style={{ background: "rgba(16,185,129,0.09)" }}
 								>
 									<div className="flex items-center gap-3">
 										<span
 											className="font-kds leading-none"
-											style={{ fontSize: 44, color: "#10b981" }}
+											style={{
+												fontSize: 56,
+												color: "#10b981",
+												textShadow: "0 0 20px rgba(16,185,129,0.5)",
+											}}
 										>
 											{group.tableNumber}
 										</span>
@@ -303,7 +325,7 @@ export default function ReadyPage() {
 												Mesa
 											</p>
 											<p
-												className="font-display text-xs font-semibold"
+												className="font-display text-xs font-bold"
 												style={{ color: "#34d399" }}
 											>
 												{group.entries.length}{" "}

@@ -136,6 +136,22 @@ function POSSidebar({ activePath }: { activePath: string }) {
 function TableBox({ table, order }: { table: Table; order?: Order }) {
 	const elapsed = order ? elapsedMinutes(order.createdAt) : 0;
 	const isPool = table.type === "pool";
+	const isOccupied = table.status === "occupied";
+	const isAvailable = table.status === "available";
+
+	const glowColor = isOccupied
+		? "rgba(245,158,11,0.35)"
+		: isAvailable
+			? "rgba(16,185,129,0.30)"
+			: "rgba(139,92,246,0.25)";
+
+	const borderColor = isOccupied
+		? "rgba(245,158,11,0.55)"
+		: isAvailable
+			? "rgba(16,185,129,0.45)"
+			: "rgba(139,92,246,0.45)";
+
+	const numColor = isAvailable ? "#10b981" : isOccupied ? "#f59e0b" : "#8b5cf6";
 
 	return (
 		<Link href={`/pos/salon/${table.id}`} style={{ textDecoration: "none" }}>
@@ -146,72 +162,92 @@ function TableBox({ table, order }: { table: Table; order?: Order }) {
 					left: table.x,
 					top: table.y,
 					width: table.w,
-					height: table.h,
-					borderRadius: isPool ? 8 : 10,
-					...(table.status === "occupied"
-						? {
-								boxShadow:
-									"0 0 16px rgba(245,158,11,0.18), inset 0 1px 0 rgba(255,255,255,0.04)",
-							}
-						: {
-								boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
-							}),
-					gap: 2,
-					padding: "6px 4px",
+					height: Math.max(table.h, 120),
+					borderRadius: isPool ? 10 : 12,
+					border: `2px solid ${borderColor}`,
+					boxShadow: `0 0 18px ${glowColor}, inset 0 1px 0 rgba(255,255,255,0.05)`,
+					display: "flex",
+					flexDirection: "column",
+					alignItems: "center",
+					justifyContent: "center",
+					padding: "8px 6px",
+					gap: 3,
+					background: isOccupied
+						? "rgba(245,158,11,0.06)"
+						: isAvailable
+							? "rgba(16,185,129,0.04)"
+							: "rgba(139,92,246,0.04)",
 				}}
 			>
-				{/* Table number */}
+				{/* Status dot */}
+				<div
+					style={{
+						position: "absolute",
+						top: 7,
+						right: 7,
+						width: 8,
+						height: 8,
+						borderRadius: "50%",
+					}}
+					className={`dot-${table.status}`}
+				/>
+
+				{/* Table number — big and bold */}
 				<div
 					style={{
 						fontFamily: "var(--font-bebas)",
-						fontSize: isPool ? 28 : 24,
-						lineHeight: 1,
-						color:
-							table.status === "available"
-								? "#10b981"
-								: table.status === "occupied"
-									? "#f59e0b"
-									: "#8b5cf6",
-						letterSpacing: "0.05em",
+						fontSize: isPool
+							? Math.min(table.w * 0.45, 64)
+							: Math.min(table.w * 0.5, 68),
+						lineHeight: 0.9,
+						color: numColor,
+						letterSpacing: "0.04em",
+						textShadow: `0 0 20px ${numColor}60`,
 					}}
 				>
 					{table.number}
 				</div>
 
-				{/* Type + elapsed */}
-				<div
-					style={{
-						display: "flex",
-						alignItems: "center",
-						gap: 3,
-						flexWrap: "nowrap",
-					}}
-				>
-					<span style={{ fontSize: 10 }}>{isPool ? "🎱" : "🍺"}</span>
-					{table.status === "occupied" && elapsed > 0 && (
-						<span
-							style={{
-								fontFamily: "var(--font-dm-sans)",
-								fontSize: 10,
-								color: "#fbbf24",
-							}}
-						>
-							{elapsed}m
-						</span>
-					)}
-					{table.status === "reserved" && (
-						<span
-							style={{
-								fontFamily: "var(--font-syne)",
-								fontSize: 8,
-								color: "#a78bfa",
-								letterSpacing: "0.06em",
-							}}
-						>
-							RES
-						</span>
-					)}
-				</div>
+				{/* Status label */}
+				{isAvailable ? (
+					<div
+						style={{
+							fontFamily: "var(--font-syne)",
+							fontSize: 8,
+							fontWeight: 700,
+							letterSpacing: "0.22em",
+							color: "#10b981",
+							textTransform: "uppercase",
+						}}
+					>
+						LIBRE
+					</div>
+				) : isOccupied && elapsed > 0 ? (
+					<div
+						style={{
+							fontFamily: "var(--font-bebas)",
+							fontSize: 16,
+							lineHeight: 1,
+							color: elapsed > 20 ? "#ef4444" : "#f59e0b",
+							letterSpacing: "0.06em",
+						}}
+					>
+						{elapsed}m
+					</div>
+				) : table.status === "reserved" ? (
+					<div
+						style={{
+							fontFamily: "var(--font-syne)",
+							fontSize: 8,
+							fontWeight: 700,
+							letterSpacing: "0.22em",
+							color: "#a78bfa",
+							textTransform: "uppercase",
+						}}
+					>
+						RESERV.
+					</div>
+				) : null}
 
 				{/* Seats */}
 				<div
@@ -219,8 +255,8 @@ function TableBox({ table, order }: { table: Table; order?: Order }) {
 						display: "flex",
 						alignItems: "center",
 						gap: 2,
-						color: "#444",
-						fontSize: 10,
+						color: "#555",
+						fontSize: 9,
 					}}
 				>
 					<Users size={8} />
@@ -228,19 +264,6 @@ function TableBox({ table, order }: { table: Table; order?: Order }) {
 						{table.seats}
 					</span>
 				</div>
-
-				{/* Status dot */}
-				<div
-					style={{
-						position: "absolute",
-						top: 6,
-						right: 6,
-						width: 6,
-						height: 6,
-						borderRadius: "50%",
-					}}
-					className={`dot-${table.status}`}
-				/>
 			</div>
 		</Link>
 	);
@@ -323,6 +346,7 @@ export default function SalonPage() {
           .pos-right-panel { width: 220px !important; }
         }
       `}</style>
+
 				{/* Top bar */}
 				<header
 					style={{
@@ -330,7 +354,7 @@ export default function SalonPage() {
 						alignItems: "center",
 						justifyContent: "space-between",
 						padding: "0 24px",
-						height: 60,
+						height: 64,
 						borderBottom: "1px solid var(--s3)",
 						background: "var(--s1)",
 						position: "sticky",
@@ -338,49 +362,52 @@ export default function SalonPage() {
 						zIndex: 20,
 					}}
 				>
-					{/* Zone tabs */}
-					<div className="flex items-center gap-0">
-						{zones.map((zone) => (
-							<button
-								key={zone.id}
-								onClick={() => setActiveZone(zone.id)}
-								style={{
-									padding: "0 18px",
-									height: 60,
-									border: "none",
-									background: "transparent",
-									cursor: "pointer",
-									fontFamily: "var(--font-syne)",
-									fontWeight: 600,
-									fontSize: 11,
-									letterSpacing: "0.18em",
-									textTransform: "uppercase",
-									color: activeZone === zone.id ? "#f59e0b" : "#6b6b6b",
-									position: "relative",
-									transition: "color 0.15s",
-								}}
-							>
-								{zone.name}
-								{activeZone === zone.id && (
-									<div
-										style={{
-											position: "absolute",
-											bottom: 0,
-											left: 0,
-											right: 0,
-											height: 2,
-											background: "#f59e0b",
-											borderRadius: "2px 2px 0 0",
-											boxShadow: "0 0 8px rgba(245,158,11,0.6)",
-										}}
-									/>
-								)}
-							</button>
-						))}
+					{/* Zone tab pills — bigger, bolder */}
+					<div className="flex items-center gap-1">
+						{zones.map((zone) => {
+							const isActive = activeZone === zone.id;
+							return (
+								<button
+									key={zone.id}
+									onClick={() => setActiveZone(zone.id)}
+									style={{
+										padding: "0 20px",
+										height: 64,
+										border: "none",
+										background: "transparent",
+										cursor: "pointer",
+										fontFamily: "var(--font-syne)",
+										fontWeight: 700,
+										fontSize: 12,
+										letterSpacing: "0.2em",
+										textTransform: "uppercase",
+										color: isActive ? "#f59e0b" : "#6b6b6b",
+										position: "relative",
+										transition: "color 0.15s",
+									}}
+								>
+									{zone.name}
+									{isActive && (
+										<div
+											style={{
+												position: "absolute",
+												bottom: 0,
+												left: 0,
+												right: 0,
+												height: 3,
+												background: "linear-gradient(90deg, #f59e0b, #fbbf24)",
+												borderRadius: "2px 2px 0 0",
+												boxShadow: "0 0 12px rgba(245,158,11,0.7)",
+											}}
+										/>
+									)}
+								</button>
+							);
+						})}
 					</div>
 
-					{/* Status stats */}
-					<div className="flex items-center gap-5">
+					{/* Status stats — more prominent */}
+					<div className="flex items-center gap-6">
 						{[
 							{
 								label: "Disponibles",
@@ -404,8 +431,8 @@ export default function SalonPage() {
 							<div key={stat.label} className="flex items-center gap-2">
 								<div
 									style={{
-										width: 7,
-										height: 7,
+										width: 8,
+										height: 8,
 										borderRadius: "50%",
 									}}
 									className={stat.dotClass}
@@ -418,7 +445,12 @@ export default function SalonPage() {
 								</span>
 								<span
 									className="font-kds"
-									style={{ fontSize: 18, color: stat.color, lineHeight: 1 }}
+									style={{
+										fontSize: 24,
+										color: stat.color,
+										lineHeight: 1,
+										textShadow: `0 0 12px ${stat.color}50`,
+									}}
 								>
 									{stat.value}
 								</span>
@@ -441,7 +473,7 @@ export default function SalonPage() {
 							>
 								{zones.find((z) => z.id === activeZone)?.name} — Plano de mesas
 							</div>
-							<div className="flex items-center gap-2">
+							<div className="flex items-center gap-3">
 								{[
 									{ label: "Libre", color: "#10b981" },
 									{ label: "Ocupada", color: "#f59e0b" },
@@ -459,12 +491,12 @@ export default function SalonPage() {
 									>
 										<span
 											style={{
-												width: 7,
-												height: 7,
+												width: 8,
+												height: 8,
 												borderRadius: "50%",
 												background: l.color,
 												display: "inline-block",
-												boxShadow: `0 0 5px ${l.color}80`,
+												boxShadow: `0 0 6px ${l.color}90`,
 											}}
 										/>
 										{l.label}
@@ -479,7 +511,7 @@ export default function SalonPage() {
 							style={{
 								position: "relative",
 								width: "100%",
-								height: 400,
+								height: 420,
 								background:
 									"repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.013) 39px, rgba(255,255,255,0.013) 40px), repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,0.013) 39px, rgba(255,255,255,0.013) 40px), var(--s1)",
 								borderRadius: 16,
@@ -520,28 +552,30 @@ export default function SalonPage() {
 							<button
 								className="btn-primary"
 								style={{
-									paddingTop: 13,
-									paddingBottom: 13,
-									paddingLeft: 20,
-									paddingRight: 20,
+									paddingTop: 14,
+									paddingBottom: 14,
+									paddingLeft: 22,
+									paddingRight: 22,
+									fontSize: 13,
 								}}
 								onClick={() => {}}
 							>
-								<Plus size={15} />
+								<Plus size={16} />
 								Nueva Mesa
 							</button>
 							<Link
 								href="/pos/orders"
 								className="btn-secondary"
 								style={{
-									paddingTop: 12,
-									paddingBottom: 12,
-									paddingLeft: 20,
-									paddingRight: 20,
+									paddingTop: 13,
+									paddingBottom: 13,
+									paddingLeft: 22,
+									paddingRight: 22,
 									textDecoration: "none",
+									fontSize: 13,
 								}}
 							>
-								<ListOrdered size={15} />
+								<ListOrdered size={16} />
 								Ver Pedidos
 								{activeOrders.length > 0 && (
 									<span
@@ -550,9 +584,9 @@ export default function SalonPage() {
 											color: "#080808",
 											fontFamily: "var(--font-syne)",
 											fontWeight: 700,
-											fontSize: 10,
+											fontSize: 11,
 											borderRadius: "99px",
-											padding: "1px 7px",
+											padding: "2px 8px",
 											marginLeft: 4,
 										}}
 									>
@@ -567,7 +601,7 @@ export default function SalonPage() {
 					<aside
 						className="pos-right-panel"
 						style={{
-							width: 280,
+							width: 290,
 							borderLeft: "1px solid var(--s3)",
 							background: "var(--s1)",
 							display: "flex",
@@ -595,9 +629,9 @@ export default function SalonPage() {
 							<div
 								className="font-kds text-brand-500"
 								style={{
-									fontSize: 36,
+									fontSize: 40,
 									lineHeight: 1,
-									textShadow: "0 0 20px rgba(245,158,11,0.25)",
+									textShadow: "0 0 24px rgba(245,158,11,0.3)",
 								}}
 							>
 								{formatCurrency(todayRevenue)}
@@ -630,12 +664,12 @@ export default function SalonPage() {
 										style={{
 											background: "rgba(245,158,11,0.15)",
 											color: "#f59e0b",
-											border: "1px solid rgba(245,158,11,0.25)",
+											border: "1px solid rgba(245,158,11,0.3)",
 											fontFamily: "var(--font-syne)",
 											fontWeight: 700,
 											fontSize: 9,
 											borderRadius: "99px",
-											padding: "1px 7px",
+											padding: "2px 8px",
 											letterSpacing: "0.08em",
 										}}
 									>
@@ -682,11 +716,11 @@ export default function SalonPage() {
 											style={{ textDecoration: "none" }}
 										>
 											<div
-												className="rounded-xl mb-1.5 transition-all"
+												className="rounded-xl mb-2 transition-all"
 												style={{
-													padding: "10px 12px",
+													padding: "12px 14px",
 													background: "var(--s2)",
-													border: "1px solid var(--s3)",
+													border: `1px solid var(--s3)`,
 													borderLeft: `3px solid ${borderColor}`,
 													cursor: "pointer",
 												}}
@@ -699,11 +733,11 @@ export default function SalonPage() {
 														"var(--s2)";
 												}}
 											>
-												<div className="flex items-center justify-between mb-1">
+												<div className="flex items-center justify-between mb-1.5">
 													<div className="flex items-center gap-2">
 														<span
 															className="font-kds text-ink-primary"
-															style={{ fontSize: 20, lineHeight: 1 }}
+															style={{ fontSize: 26, lineHeight: 1 }}
 														>
 															Mesa {order.tableNumber}
 														</span>
@@ -713,7 +747,7 @@ export default function SalonPage() {
 														<span
 															className="font-kds"
 															style={{
-																fontSize: 14,
+																fontSize: 16,
 																color:
 																	elapsed > 20
 																		? "#ef4444"
@@ -737,7 +771,7 @@ export default function SalonPage() {
 													<div className="flex items-center gap-2">
 														<span
 															className="font-kds text-brand-500"
-															style={{ fontSize: 14 }}
+															style={{ fontSize: 15 }}
 														>
 															{formatCurrency(orderTotal)}
 														</span>

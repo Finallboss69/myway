@@ -241,7 +241,7 @@ function PayButton({
 		<button
 			className="flex items-center gap-3 rounded-xl w-full transition-all"
 			style={{
-				padding: "13px 16px",
+				padding: "14px 16px",
 				background: "var(--s2)",
 				border: "1px solid var(--s3)",
 				cursor: "pointer",
@@ -264,9 +264,9 @@ function PayButton({
 		>
 			<div
 				style={{
-					width: 38,
-					height: 38,
-					borderRadius: 10,
+					width: 42,
+					height: 42,
+					borderRadius: 12,
 					background: `${accentColor}18`,
 					border: `1px solid ${accentColor}30`,
 					display: "flex",
@@ -290,7 +290,7 @@ function PayButton({
 			</div>
 			<span
 				className="font-kds"
-				style={{ fontSize: 16, color: accentColor, lineHeight: 1 }}
+				style={{ fontSize: 18, color: accentColor, lineHeight: 1 }}
 			>
 				{formatCurrency(amount)}
 			</span>
@@ -494,7 +494,7 @@ export default function TableDetailPage({
 						alignItems: "center",
 						gap: 16,
 						padding: "0 24px",
-						height: 60,
+						height: 64,
 						borderBottom: "1px solid var(--s3)",
 						background: "var(--s1)",
 						position: "sticky",
@@ -533,7 +533,11 @@ export default function TableDetailPage({
 					<div className="flex items-center gap-3 flex-1 min-w-0">
 						<div
 							className="font-kds text-ink-primary"
-							style={{ fontSize: 26, lineHeight: 1 }}
+							style={{
+								fontSize: 32,
+								lineHeight: 1,
+								textShadow: "0 0 20px rgba(245,158,11,0.2)",
+							}}
 						>
 							Mesa {table.number}
 						</div>
@@ -571,7 +575,7 @@ export default function TableDetailPage({
 							<span
 								className="font-kds"
 								style={{
-									fontSize: 20,
+									fontSize: 22,
 									lineHeight: 1,
 									color:
 										elapsed > 20
@@ -739,18 +743,18 @@ export default function TableDetailPage({
 								>
 									En carrito — sin enviar
 								</div>
-								<div className="flex flex-col gap-1.5">
+								<div className="flex flex-col gap-2">
 									{cart.map((item) => (
 										<div
 											key={item.productId}
 											className="flex items-center gap-3 rounded-xl"
 											style={{
-												padding: "9px 12px",
-												background: "rgba(245,158,11,0.04)",
-												border: "1px solid rgba(245,158,11,0.18)",
+												padding: "10px 12px",
+												background: "rgba(245,158,11,0.05)",
+												border: "1px solid rgba(245,158,11,0.22)",
 											}}
 										>
-											<span style={{ fontSize: 13, flexShrink: 0 }}>
+											<span style={{ fontSize: 14, flexShrink: 0 }}>
 												{item.target === "kitchen" ? "🍳" : "🍹"}
 											</span>
 
@@ -763,16 +767,16 @@ export default function TableDetailPage({
 												</div>
 											</div>
 
-											{/* Qty controls */}
-											<div className="flex items-center gap-1">
+											{/* Qty controls — bigger */}
+											<div className="flex items-center gap-1.5">
 												<button
 													style={{
-														width: 24,
-														height: 24,
-														borderRadius: 6,
+														width: 30,
+														height: 30,
+														borderRadius: 8,
 														border: "1px solid var(--s4)",
-														background: "transparent",
-														color: "#6b6b6b",
+														background: "var(--s3)",
+														color: "#a3a3a3",
 														cursor: "pointer",
 														display: "flex",
 														alignItems: "center",
@@ -782,14 +786,14 @@ export default function TableDetailPage({
 														handleUpdateCartQty(item.productId, item.qty - 1)
 													}
 												>
-													<Minus size={10} />
+													<Minus size={11} />
 												</button>
 												<span
 													className="font-kds text-ink-primary"
 													style={{
-														width: 22,
+														width: 26,
 														textAlign: "center",
-														fontSize: 17,
+														fontSize: 20,
 														lineHeight: 1,
 													}}
 												>
@@ -797,12 +801,12 @@ export default function TableDetailPage({
 												</span>
 												<button
 													style={{
-														width: 24,
-														height: 24,
-														borderRadius: 6,
-														border: "1px solid var(--s4)",
-														background: "transparent",
-														color: "#a3a3a3",
+														width: 30,
+														height: 30,
+														borderRadius: 8,
+														border: "1px solid rgba(245,158,11,0.3)",
+														background: "rgba(245,158,11,0.1)",
+														color: "#f59e0b",
 														cursor: "pointer",
 														display: "flex",
 														alignItems: "center",
@@ -812,14 +816,14 @@ export default function TableDetailPage({
 														handleUpdateCartQty(item.productId, item.qty + 1)
 													}
 												>
-													<Plus size={10} />
+													<Plus size={11} />
 												</button>
 											</div>
 
 											<div className="text-right" style={{ minWidth: 68 }}>
 												<div
 													className="font-kds text-brand-500"
-													style={{ fontSize: 14 }}
+													style={{ fontSize: 16 }}
 												>
 													{formatCurrency(item.qty * item.price)}
 												</div>
@@ -827,8 +831,8 @@ export default function TableDetailPage({
 
 											<button
 												style={{
-													width: 22,
-													height: 22,
+													width: 24,
+													height: 24,
 													borderRadius: 4,
 													border: "none",
 													background: "transparent",
@@ -859,15 +863,16 @@ export default function TableDetailPage({
 								<button
 									className="btn-primary w-full justify-center mt-3"
 									style={{
-										paddingTop: 13,
-										paddingBottom: 13,
+										paddingTop: 14,
+										paddingBottom: 14,
 										background: "#10b981",
+										fontSize: 13,
 										opacity: sending ? 0.7 : 1,
 									}}
 									onClick={handleSubmitCart}
 									disabled={sending}
 								>
-									<Send size={14} />
+									<Send size={15} />
 									Enviar {cart.length} ítem{cart.length !== 1 ? "s" : ""} a
 									cocina / bar
 								</button>
@@ -879,44 +884,55 @@ export default function TableDetailPage({
 						{/* Product picker */}
 						<section style={{ padding: "0 20px 24px" }}>
 							<div
-								className="font-display text-ink-tertiary uppercase tracking-widest mb-3"
+								className="font-display text-ink-tertiary uppercase tracking-widest mb-4"
 								style={{ fontSize: 9, letterSpacing: "0.3em" }}
 							>
 								Añadir productos
 							</div>
 
-							{/* Category pills */}
+							{/* Category tiles — large grid */}
 							<div
-								className="flex items-center gap-1.5 mb-3 overflow-x-auto pb-1"
-								style={{ scrollbarWidth: "none" }}
+								className="grid gap-2 mb-4"
+								style={{
+									gridTemplateColumns: "repeat(3, 1fr)",
+								}}
 							>
+								{/* "Todo" tile */}
 								<button
 									onClick={() => setActiveCategory(null)}
 									style={{
-										flexShrink: 0,
-										padding: "5px 12px",
-										borderRadius: 20,
+										padding: "12px 8px",
+										minHeight: 64,
+										borderRadius: 12,
 										border:
 											activeCategory === null
-												? "1px solid rgba(245,158,11,0.4)"
+												? "2px solid rgba(245,158,11,0.6)"
 												: "1px solid var(--s4)",
 										background:
-											activeCategory === null
-												? "rgba(245,158,11,0.1)"
-												: "transparent",
-										color: activeCategory === null ? "#f59e0b" : "#6b6b6b",
+											activeCategory === null ? "#f59e0b" : "var(--s2)",
+										color: activeCategory === null ? "#080808" : "#6b6b6b",
 										fontFamily: "var(--font-syne)",
-										fontSize: 10,
-										fontWeight: 600,
+										fontSize: 11,
+										fontWeight: 700,
 										letterSpacing: "0.1em",
 										textTransform: "uppercase",
 										cursor: "pointer",
 										transition: "all 0.12s",
-										whiteSpace: "nowrap",
+										display: "flex",
+										flexDirection: "column",
+										alignItems: "center",
+										justifyContent: "center",
+										gap: 4,
+										boxShadow:
+											activeCategory === null
+												? "0 0 16px rgba(245,158,11,0.3)"
+												: "none",
 									}}
 								>
-									Todo
+									<span style={{ fontSize: 16 }}>☰</span>
+									<span>Todo</span>
 								</button>
+
 								{categories.map((cat) => {
 									const active = activeCategory === cat.id;
 									return (
@@ -924,127 +940,172 @@ export default function TableDetailPage({
 											key={cat.id}
 											onClick={() => setActiveCategory(active ? null : cat.id)}
 											style={{
-												flexShrink: 0,
-												padding: "5px 11px",
-												borderRadius: 20,
+												padding: "12px 8px",
+												minHeight: 64,
+												borderRadius: 12,
 												border: active
-													? "1px solid rgba(245,158,11,0.4)"
+													? "2px solid rgba(245,158,11,0.6)"
 													: "1px solid var(--s4)",
-												background: active
-													? "rgba(245,158,11,0.1)"
-													: "transparent",
-												color: active ? "#f59e0b" : "#6b6b6b",
+												background: active ? "#f59e0b" : "var(--s2)",
+												color: active ? "#080808" : "#6b6b6b",
 												fontFamily: "var(--font-syne)",
-												fontSize: 10,
-												fontWeight: 600,
+												fontSize: 11,
+												fontWeight: 700,
 												letterSpacing: "0.1em",
 												textTransform: "uppercase",
 												cursor: "pointer",
 												transition: "all 0.12s",
 												display: "flex",
+												flexDirection: "column",
 												alignItems: "center",
+												justifyContent: "center",
 												gap: 4,
-												whiteSpace: "nowrap",
+												boxShadow: active
+													? "0 0 16px rgba(245,158,11,0.3)"
+													: "none",
 											}}
 										>
-											<span style={{ fontSize: 11 }}>{cat.icon}</span>
-											{cat.name}
+											<span style={{ fontSize: 16 }}>{cat.icon}</span>
+											<span>{cat.name}</span>
 										</button>
 									);
 								})}
 							</div>
 
-							{/* Product grid */}
+							{/* Product grid — bold and large */}
 							<div
 								className="grid gap-2"
 								style={{ gridTemplateColumns: "repeat(2, 1fr)" }}
 							>
 								{filteredProducts
 									.filter((p) => p.isAvailable)
-									.map((product) => (
-										<button
-											key={product.id}
-											style={{
-												padding: "11px 12px",
-												borderRadius: 12,
-												border: "1px solid var(--s3)",
-												background: "var(--s2)",
-												cursor: "pointer",
-												textAlign: "left",
-												transition: "all 0.12s",
-												position: "relative",
-												display: "flex",
-												flexDirection: "column",
-												gap: 4,
-											}}
-											onMouseEnter={(e) => {
-												const el = e.currentTarget;
-												el.style.borderColor = "rgba(245,158,11,0.3)";
-												el.style.background = "var(--s3)";
-											}}
-											onMouseLeave={(e) => {
-												const el = e.currentTarget;
-												el.style.borderColor = "var(--s3)";
-												el.style.background = "var(--s2)";
-											}}
-											onClick={() => handleAddToCart(product)}
-										>
-											<div
-												className="font-body text-ink-secondary"
+									.map((product) => {
+										const inCart = cart.find((i) => i.productId === product.id);
+										return (
+											<button
+												key={product.id}
 												style={{
-													fontSize: 12,
-													fontWeight: 500,
-													lineHeight: 1.3,
+													padding: "14px 14px",
+													minHeight: 96,
+													borderRadius: 14,
+													border: inCart
+														? "2px solid rgba(245,158,11,0.5)"
+														: "1px solid var(--s3)",
+													background: inCart
+														? "rgba(245,158,11,0.06)"
+														: "var(--s2)",
+													cursor: "pointer",
+													textAlign: "left",
+													transition: "all 0.12s",
+													position: "relative",
+													display: "flex",
+													flexDirection: "column",
+													gap: 6,
+													boxShadow: inCart
+														? "0 0 14px rgba(245,158,11,0.18)"
+														: "none",
 												}}
+												onMouseEnter={(e) => {
+													const el = e.currentTarget;
+													if (!inCart) {
+														el.style.borderColor = "rgba(245,158,11,0.3)";
+														el.style.background = "var(--s3)";
+													}
+												}}
+												onMouseLeave={(e) => {
+													const el = e.currentTarget;
+													if (!inCart) {
+														el.style.borderColor = "var(--s3)";
+														el.style.background = "var(--s2)";
+													}
+												}}
+												onClick={() => handleAddToCart(product)}
 											>
-												{product.name}
-											</div>
-											<div className="flex items-center justify-between">
 												<div
-													className="font-kds text-brand-500"
-													style={{ fontSize: 17, lineHeight: 1 }}
-												>
-													{formatCurrency(product.price)}
-												</div>
-												<div
+													className="font-body text-ink-primary"
 													style={{
-														display: "flex",
-														alignItems: "center",
-														gap: 5,
+														fontSize: 13,
+														fontWeight: 600,
+														lineHeight: 1.3,
 													}}
 												>
-													<span
-														className="font-display uppercase"
+													{product.name}
+												</div>
+												<div className="flex items-center justify-between mt-auto">
+													<div
+														className="font-kds text-brand-500"
 														style={{
-															fontSize: 9,
-															letterSpacing: "0.12em",
-															color:
-																product.target === "kitchen"
-																	? "#10b981"
-																	: "#60a5fa",
+															fontSize: 24,
+															lineHeight: 1,
+															textShadow: "0 0 12px rgba(245,158,11,0.25)",
 														}}
 													>
-														{product.target === "kitchen" ? "Cocina" : "Bar"}
-													</span>
+														{formatCurrency(product.price)}
+													</div>
 													<div
 														style={{
-															width: 20,
-															height: 20,
-															borderRadius: 6,
-															background: "rgba(245,158,11,0.12)",
-															border: "1px solid rgba(245,158,11,0.25)",
 															display: "flex",
 															alignItems: "center",
-															justifyContent: "center",
-															color: "#f59e0b",
+															gap: 6,
 														}}
 													>
-														<Plus size={10} />
+														<span
+															className="font-display uppercase"
+															style={{
+																fontSize: 9,
+																letterSpacing: "0.12em",
+																color:
+																	product.target === "kitchen"
+																		? "#10b981"
+																		: "#60a5fa",
+															}}
+														>
+															{product.target === "kitchen" ? "Cocina" : "Bar"}
+														</span>
+														<div
+															style={{
+																width: 28,
+																height: 28,
+																borderRadius: 8,
+																background: inCart
+																	? "#f59e0b"
+																	: "rgba(245,158,11,0.12)",
+																border: inCart
+																	? "none"
+																	: "1px solid rgba(245,158,11,0.25)",
+																display: "flex",
+																alignItems: "center",
+																justifyContent: "center",
+																color: inCart ? "#080808" : "#f59e0b",
+															}}
+														>
+															<Plus size={13} />
+														</div>
 													</div>
 												</div>
-											</div>
-										</button>
-									))}
+
+												{/* Cart count badge */}
+												{inCart && (
+													<div
+														style={{
+															position: "absolute",
+															top: 8,
+															right: 8,
+															background: "#f59e0b",
+															color: "#080808",
+															fontFamily: "var(--font-bebas)",
+															fontSize: 14,
+															lineHeight: 1,
+															borderRadius: "99px",
+															padding: "2px 7px",
+														}}
+													>
+														{inCart.qty}
+													</div>
+												)}
+											</button>
+										);
+									})}
 							</div>
 						</section>
 					</div>
@@ -1061,7 +1122,7 @@ export default function TableDetailPage({
 						{/* Order summary card */}
 						<div
 							className="card-gold animate-fade-in"
-							style={{ margin: "20px 20px 0", padding: "18px 18px 16px" }}
+							style={{ margin: "20px 20px 0", padding: "20px 20px 18px" }}
 						>
 							<div
 								className="font-display text-ink-tertiary uppercase tracking-widest mb-3"
@@ -1169,9 +1230,9 @@ export default function TableDetailPage({
 									<span
 										className="font-kds text-brand-500"
 										style={{
-											fontSize: 32,
+											fontSize: 42,
 											lineHeight: 1,
-											textShadow: "0 0 16px rgba(245,158,11,0.3)",
+											textShadow: "0 0 20px rgba(245,158,11,0.35)",
 										}}
 									>
 										{formatCurrency(total)}
@@ -1185,7 +1246,7 @@ export default function TableDetailPage({
 							<div
 								className="flex items-center gap-3 rounded-xl mx-5 mt-3"
 								style={{
-									padding: "11px 14px",
+									padding: "12px 14px",
 									background: "var(--s2)",
 									border: "1px solid var(--s3)",
 								}}
@@ -1212,7 +1273,7 @@ export default function TableDetailPage({
 									<div
 										className="font-kds"
 										style={{
-											fontSize: 22,
+											fontSize: 24,
 											lineHeight: 1,
 											color:
 												elapsed > 20
@@ -1237,11 +1298,11 @@ export default function TableDetailPage({
 										display: "flex",
 										alignItems: "center",
 										gap: 8,
-										padding: "11px 16px",
-										background: "rgba(16,185,129,0.1)",
-										border: "1px solid rgba(16,185,129,0.3)",
+										padding: "13px 16px",
+										background: "rgba(16,185,129,0.12)",
+										border: "1px solid rgba(16,185,129,0.35)",
 										color: "#34d399",
-										fontSize: 11,
+										fontSize: 12,
 										fontWeight: 700,
 										letterSpacing: "0.1em",
 										cursor: "pointer",
@@ -1250,16 +1311,16 @@ export default function TableDetailPage({
 									}}
 									onMouseEnter={(e) => {
 										(e.currentTarget as HTMLButtonElement).style.background =
-											"rgba(16,185,129,0.18)";
+											"rgba(16,185,129,0.2)";
 									}}
 									onMouseLeave={(e) => {
 										(e.currentTarget as HTMLButtonElement).style.background =
-											"rgba(16,185,129,0.1)";
+											"rgba(16,185,129,0.12)";
 									}}
 									onClick={handleSubmitCart}
 									disabled={sending}
 								>
-									<ShoppingCart size={14} />
+									<ShoppingCart size={15} />
 									{cart.length} en carrito — Enviar pedido
 								</button>
 							</div>
@@ -1276,7 +1337,7 @@ export default function TableDetailPage({
 								</div>
 								<div className="flex flex-col gap-2">
 									<PayButton
-										icon={<Banknote size={18} style={{ color: "#34d399" }} />}
+										icon={<Banknote size={20} style={{ color: "#34d399" }} />}
 										label="Efectivo"
 										sub="Pago en mano"
 										amount={total}
@@ -1284,7 +1345,7 @@ export default function TableDetailPage({
 										onClick={() => handleCloseTable("cash")}
 									/>
 									<PayButton
-										icon={<Smartphone size={18} style={{ color: "#60a5fa" }} />}
+										icon={<Smartphone size={20} style={{ color: "#60a5fa" }} />}
 										label="MercadoPago"
 										sub="QR / Link de pago"
 										amount={total}
@@ -1292,7 +1353,7 @@ export default function TableDetailPage({
 										onClick={() => handleCloseTable("mercadopago")}
 									/>
 									<PayButton
-										icon={<CreditCard size={18} style={{ color: "#a78bfa" }} />}
+										icon={<CreditCard size={20} style={{ color: "#a78bfa" }} />}
 										label="Tarjeta"
 										sub="Débito / Crédito"
 										amount={total}
@@ -1310,9 +1371,10 @@ export default function TableDetailPage({
 								<button
 									className="btn-primary w-full justify-center"
 									style={{
-										paddingTop: 14,
-										paddingBottom: 14,
-										fontSize: 12,
+										paddingTop: 16,
+										paddingBottom: 16,
+										fontSize: 13,
+										fontWeight: 700,
 										opacity: closing ? 0.7 : 1,
 									}}
 									onClick={() => handleCloseTable("cash")}

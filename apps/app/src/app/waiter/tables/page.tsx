@@ -108,23 +108,24 @@ function TableCard({
 	const isOccupied = table.status === "occupied";
 	const isReserved = table.status === "reserved";
 
-	const borderColor = isAvailable
-		? "rgba(16,185,129,0.3)"
+	// Status-based left border color
+	const leftBorderColor = isAvailable
+		? "#10b981"
 		: isOccupied
-			? "rgba(245,158,11,0.45)"
-			: "rgba(139,92,246,0.4)";
+			? "#f59e0b"
+			: "#8b5cf6";
 
 	const bgColor = isAvailable
-		? "rgba(16,185,129,0.04)"
+		? "rgba(16,185,129,0.05)"
 		: isOccupied
-			? "rgba(245,158,11,0.07)"
-			: "rgba(139,92,246,0.06)";
+			? "rgba(245,158,11,0.08)"
+			: "rgba(139,92,246,0.07)";
 
 	const boxShadow = isOccupied
-		? "0 0 20px rgba(245,158,11,0.09), 0 2px 12px rgba(0,0,0,0.4)"
+		? "0 0 24px rgba(245,158,11,0.12), 0 2px 14px rgba(0,0,0,0.45)"
 		: isReserved
-			? "0 0 16px rgba(139,92,246,0.08), 0 2px 12px rgba(0,0,0,0.4)"
-			: "0 2px 12px rgba(0,0,0,0.3)";
+			? "0 0 20px rgba(139,92,246,0.1), 0 2px 14px rgba(0,0,0,0.45)"
+			: "0 2px 12px rgba(0,0,0,0.35)";
 
 	const statusLabels: Record<string, string> = {
 		available: "Libre",
@@ -138,10 +139,12 @@ function TableCard({
 			className="flex flex-col rounded-2xl border transition-all duration-150 active:scale-95 text-left w-full"
 			style={{
 				background: bgColor,
-				borderColor: borderColor,
+				borderColor: "rgba(255,255,255,0.06)",
+				borderLeftColor: leftBorderColor,
+				borderLeftWidth: 4,
 				boxShadow,
 				padding: "14px 14px 12px",
-				minHeight: 124,
+				minHeight: 130,
 			}}
 		>
 			{/* Top row: number + status */}
@@ -149,7 +152,7 @@ function TableCard({
 				<div className="flex items-baseline gap-1.5">
 					<span
 						className="font-kds leading-none text-ink-primary"
-						style={{ fontSize: "clamp(40px,9vw,56px)" }}
+						style={{ fontSize: "clamp(48px,10vw,64px)" }}
 					>
 						{table.number}
 					</span>
@@ -195,6 +198,21 @@ function TableCard({
 				</div>
 			</div>
 
+			{/* Available: LIBRE label */}
+			{isAvailable && (
+				<div
+					className="mt-2 pt-2 border-t w-full"
+					style={{ borderColor: "rgba(16,185,129,0.2)" }}
+				>
+					<span
+						className="font-kds tracking-widest"
+						style={{ fontSize: 14, color: "#10b981", letterSpacing: "0.2em" }}
+					>
+						LIBRE
+					</span>
+				</div>
+			)}
+
 			{/* Occupied: elapsed + items + total */}
 			{isOccupied && oldestOrder && (
 				<div
@@ -202,10 +220,10 @@ function TableCard({
 					style={{ borderColor: "rgba(245,158,11,0.2)" }}
 				>
 					<div className="flex items-center gap-1.5">
-						<Clock className="w-3 h-3 text-brand-500" />
+						<Clock className="w-3.5 h-3.5 text-brand-500" />
 						<span
 							className="font-kds text-brand-500 leading-none"
-							style={{ fontSize: 18 }}
+							style={{ fontSize: 24 }}
 						>
 							{elapsed}
 							<span className="text-[10px] font-body text-ink-tertiary ml-0.5">
@@ -335,39 +353,51 @@ export default function WaiterTablesPage() {
 				</div>
 
 				<div className="flex items-center gap-2.5">
-					{/* Stats pills */}
-					<div className="hidden sm:flex items-center gap-2 mr-1">
+					{/* Stats pills — bigger and more vibrant */}
+					<div className="flex items-center gap-2 mr-1">
 						<div
-							className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl"
+							className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
 							style={{
-								background: "rgba(16,185,129,0.08)",
-								border: "1px solid rgba(16,185,129,0.2)",
+								background: "rgba(16,185,129,0.12)",
+								border: "1px solid rgba(16,185,129,0.3)",
 							}}
 						>
 							<span
-								className="dot-available w-1.5 h-1.5 rounded-full inline-block"
-								style={{ width: 6, height: 6 }}
+								style={{
+									width: 7,
+									height: 7,
+									borderRadius: "50%",
+									background: "#10b981",
+									display: "inline-block",
+									boxShadow: "0 0 6px rgba(16,185,129,0.7)",
+								}}
 							/>
 							<span
-								className="font-display text-[10px] uppercase tracking-wide"
+								className="font-display font-bold text-[11px] uppercase tracking-wide"
 								style={{ color: "#34d399" }}
 							>
 								{availableCount} libres
 							</span>
 						</div>
 						<div
-							className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl"
+							className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
 							style={{
-								background: "rgba(245,158,11,0.08)",
-								border: "1px solid rgba(245,158,11,0.2)",
+								background: "rgba(245,158,11,0.12)",
+								border: "1px solid rgba(245,158,11,0.3)",
 							}}
 						>
 							<span
-								className="dot-occupied w-1.5 h-1.5 rounded-full inline-block"
-								style={{ width: 6, height: 6 }}
+								style={{
+									width: 7,
+									height: 7,
+									borderRadius: "50%",
+									background: "#f59e0b",
+									display: "inline-block",
+									boxShadow: "0 0 6px rgba(245,158,11,0.7)",
+								}}
 							/>
 							<span
-								className="font-display text-[10px] uppercase tracking-wide"
+								className="font-display font-bold text-[11px] uppercase tracking-wide"
 								style={{ color: "#fbbf24" }}
 							>
 								{occupiedCount} ocupadas
@@ -421,14 +451,14 @@ export default function WaiterTablesPage() {
 				</div>
 			</header>
 
-			{/* Zone tabs */}
+			{/* Zone tabs — bigger pill-style */}
 			{zones.length > 0 && (
 				<div
-					className="flex gap-2 px-4 py-3 overflow-x-auto"
+					className="flex gap-2.5 px-4 py-3.5 overflow-x-auto"
 					style={{
 						borderBottom: "1px solid var(--s3)",
 						scrollbarWidth: "none",
-						background: "rgba(16,16,16,0.6)",
+						background: "rgba(12,12,12,0.8)",
 					}}
 				>
 					{zones.map((zone) => (
@@ -436,12 +466,12 @@ export default function WaiterTablesPage() {
 							key={zone.id}
 							onClick={() => setActiveZoneId(zone.id)}
 							className={clsx(
-								"shrink-0 px-5 rounded-full font-display text-[11px] font-bold uppercase tracking-widest transition-all",
+								"shrink-0 px-6 rounded-full font-display text-[12px] font-bold uppercase tracking-widest transition-all",
 								activeZoneId === zone.id
 									? "bg-brand-500 text-surface-0 shadow-gold-sm"
 									: "bg-surface-2 text-ink-secondary border border-surface-3 hover:border-brand-500/30 hover:text-ink-primary active:scale-95",
 							)}
-							style={{ minHeight: 36 }}
+							style={{ minHeight: 44 }}
 						>
 							{zone.name}
 						</button>
