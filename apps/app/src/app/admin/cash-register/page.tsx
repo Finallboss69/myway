@@ -114,8 +114,13 @@ function IconBox({
 function SectionLabel({ children }: { children: React.ReactNode }) {
 	return (
 		<div
-			className="font-display text-ink-disabled uppercase"
-			style={{ fontSize: 9, letterSpacing: "0.25em", marginBottom: 12 }}
+			className="font-display uppercase"
+			style={{
+				fontSize: 9,
+				letterSpacing: "0.25em",
+				marginBottom: 12,
+				color: "#666",
+			}}
 		>
 			{children}
 		</div>
@@ -179,7 +184,7 @@ function StatusIndicator({
 					{label}
 				</div>
 				{time && (
-					<div className="font-body text-ink-disabled" style={{ fontSize: 11 }}>
+					<div className="font-body" style={{ fontSize: 11, color: "#555" }}>
 						Desde las {time}
 					</div>
 				)}
@@ -188,14 +193,13 @@ function StatusIndicator({
 	);
 }
 
-// ─── Stat card ────────────────────────────────────────────────────────────────
+// ─── KPI Card ─────────────────────────────────────────────────────────────────
 
 function StatCard({
 	label,
 	value,
 	icon: Icon,
 	color,
-	highlight = false,
 }: {
 	label: string;
 	value: number;
@@ -205,52 +209,75 @@ function StatCard({
 }) {
 	return (
 		<div
-			className="card animate-fade-in"
 			style={{
-				padding: "20px 22px",
-				flex: 1,
-				minWidth: 170,
+				background: "var(--s1)",
+				border: `1px solid ${color}25`,
+				borderRadius: 16,
+				padding: "24px 22px 20px",
 				position: "relative",
 				overflow: "hidden",
-				borderColor: highlight ? `${color}30` : undefined,
+				flex: 1,
+				minWidth: 170,
 			}}
 		>
-			{/* Gradient glow */}
 			<div
 				style={{
 					position: "absolute",
-					top: -30,
-					right: -30,
-					width: 80,
-					height: 80,
-					borderRadius: "50%",
-					background: `radial-gradient(circle, ${color}12 0%, transparent 70%)`,
-					pointerEvents: "none",
+					top: 0,
+					left: "20%",
+					right: "20%",
+					height: 1,
+					background: `linear-gradient(90deg, transparent, ${color}50, transparent)`,
 				}}
 			/>
 			<div
-				className="flex items-center gap-3 mb-3"
-				style={{ position: "relative" }}
-			>
-				<IconBox icon={Icon} color={color} size={34} iconSize={15} />
-				<div
-					className="font-display text-ink-disabled uppercase"
-					style={{ fontSize: 9, letterSpacing: "0.2em" }}
-				>
-					{label}
-				</div>
-			</div>
-			<div
-				className="font-kds"
 				style={{
-					fontSize: 30,
-					lineHeight: 1,
-					color,
-					position: "relative",
-					letterSpacing: "0.02em",
+					position: "absolute",
+					top: 0,
+					right: 0,
+					width: 120,
+					height: 120,
+					background: `radial-gradient(circle at 100% 0%, ${color}12 0%, transparent 70%)`,
+					pointerEvents: "none",
 				}}
-			>
-				{formatCurrency(value)}
+			/>
+			<div style={{ position: "relative", zIndex: 1 }}>
+				<div
+					className="flex items-center justify-between"
+					style={{ marginBottom: 16 }}
+				>
+					<div
+						className="font-display uppercase"
+						style={{
+							fontSize: 10,
+							letterSpacing: "0.2em",
+							color: "#888",
+							fontWeight: 600,
+						}}
+					>
+						{label}
+					</div>
+					<div
+						style={{
+							width: 34,
+							height: 34,
+							borderRadius: 10,
+							background: `${color}15`,
+							border: `1px solid ${color}30`,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+					>
+						<Icon size={16} style={{ color }} />
+					</div>
+				</div>
+				<div
+					className="font-kds"
+					style={{ fontSize: 36, lineHeight: 1, color }}
+				>
+					{formatCurrency(value)}
+				</div>
 			</div>
 		</div>
 	);
@@ -273,10 +300,9 @@ function MovementRow({ movement }: { movement: CashMovement }) {
 		<div
 			className="transition-all"
 			style={{
-				padding: "14px 18px",
+				padding: "12px 20px",
 				background: "var(--s1)",
-				borderRadius: 12,
-				borderLeft: `3px solid ${color}`,
+				borderBottom: "1px solid var(--s3)",
 				display: "flex",
 				alignItems: "center",
 				gap: 14,
@@ -284,22 +310,18 @@ function MovementRow({ movement }: { movement: CashMovement }) {
 			}}
 			onMouseEnter={(e) => {
 				(e.currentTarget as HTMLDivElement).style.background = "var(--s2)";
-				(e.currentTarget as HTMLDivElement).style.transform = "translateX(2px)";
 			}}
 			onMouseLeave={(e) => {
 				(e.currentTarget as HTMLDivElement).style.background = "var(--s1)";
-				(e.currentTarget as HTMLDivElement).style.transform = "translateX(0)";
 			}}
 		>
-			{/* Time */}
 			<div className="flex items-center gap-1.5" style={{ minWidth: 56 }}>
 				<Clock size={10} style={{ color: "#555" }} />
-				<span className="font-kds text-ink-disabled" style={{ fontSize: 14 }}>
+				<span className="font-kds" style={{ fontSize: 14, color: "#666" }}>
 					{time}
 				</span>
 			</div>
 
-			{/* Type indicator */}
 			<div
 				style={{
 					width: 24,
@@ -319,15 +341,10 @@ function MovementRow({ movement }: { movement: CashMovement }) {
 				)}
 			</div>
 
-			{/* Concept */}
-			<div
-				className="font-body text-ink-secondary flex-1"
-				style={{ fontSize: 13 }}
-			>
+			<div className="font-body flex-1" style={{ fontSize: 13, color: "#ccc" }}>
 				{movement.concept}
 			</div>
 
-			{/* Payment method badge */}
 			{method && (
 				<span
 					className="font-display uppercase"
@@ -346,7 +363,6 @@ function MovementRow({ movement }: { movement: CashMovement }) {
 				</span>
 			)}
 
-			{/* Amount */}
 			<div
 				className="font-kds"
 				style={{ fontSize: 20, color, minWidth: 110, textAlign: "right" }}
@@ -401,39 +417,54 @@ function NewMovementModal({
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				zIndex: 1000,
+				zIndex: 50,
 			}}
 			onClick={(e) => {
 				if (e.target === e.currentTarget && !submitting) onClose();
 			}}
 		>
 			<div
-				className="card-gold animate-scale-in"
-				style={{ width: 460, padding: "32px 32px 28px" }}
+				className="animate-scale-in"
+				style={{
+					width: 460,
+					background: "var(--s1)",
+					border: "1px solid var(--s4)",
+					borderRadius: 16,
+					overflow: "hidden",
+					boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+				}}
 			>
 				{/* Header */}
-				<div className="flex items-center justify-between mb-6">
+				<div
+					className="flex items-center justify-between"
+					style={{
+						padding: "14px 20px",
+						borderBottom: "1px solid var(--s3)",
+						background: "var(--s2)",
+					}}
+				>
 					<div className="flex items-center gap-3">
 						<IconBox
 							icon={isIncome ? Plus : Minus}
 							color={color}
-							size={38}
-							iconSize={18}
+							size={34}
+							iconSize={16}
 						/>
 						<div>
 							<div
-								className="font-display text-ink-primary uppercase"
+								className="font-display uppercase"
 								style={{
-									fontSize: 14,
-									letterSpacing: "0.18em",
+									fontSize: 13,
+									letterSpacing: "0.15em",
 									fontWeight: 700,
+									color: "#f5f5f5",
 								}}
 							>
 								{title}
 							</div>
 							<div
-								className="font-body text-ink-disabled"
-								style={{ fontSize: 11 }}
+								className="font-body"
+								style={{ fontSize: 11, color: "#666" }}
 							>
 								{isIncome ? "Agregar fondos a la caja" : "Registrar un gasto"}
 							</div>
@@ -448,141 +479,141 @@ function NewMovementModal({
 					</button>
 				</div>
 
-				<div className="divider mb-5" />
-
-				{/* Amount */}
-				<SectionLabel>Monto</SectionLabel>
-				<div
-					style={{
-						background: "var(--s1)",
-						borderRadius: 14,
-						border: `1px solid ${color}20`,
-						padding: "20px 24px",
-						marginBottom: 22,
-						textAlign: "center",
-					}}
-				>
-					<div className="flex items-center justify-center gap-2">
-						<span
-							className="font-kds text-ink-disabled"
-							style={{ fontSize: 28 }}
-						>
-							$
-						</span>
-						<input
-							type="number"
-							placeholder="0"
-							value={amount}
-							onChange={(e) => setAmount(e.target.value)}
-							className="font-kds"
-							style={{
-								fontSize: 52,
-								lineHeight: 1,
-								color,
-								background: "transparent",
-								border: "none",
-								outline: "none",
-								textAlign: "center",
-								width: "100%",
-								maxWidth: 240,
-							}}
-							autoFocus
-						/>
-					</div>
-				</div>
-
-				{/* Concept */}
-				<SectionLabel>Concepto</SectionLabel>
-				<input
-					type="text"
-					placeholder={
-						isIncome ? "Ej: Venta de producto" : "Ej: Compra de insumos"
-					}
-					value={concept}
-					onChange={(e) => setConcept(e.target.value)}
-					className="input-base font-body"
-					style={{
-						width: "100%",
-						padding: "13px 16px",
-						fontSize: 13,
-						marginBottom: 22,
-						borderRadius: 12,
-					}}
-				/>
-
-				{/* Payment method */}
-				<SectionLabel>Medio de pago</SectionLabel>
-				<div className="grid grid-cols-2 gap-2 mb-7">
-					{PAYMENT_METHODS.map(({ value, label, icon: Icon, color: mc }) => {
-						const selected = paymentMethod === value;
-						return (
-							<button
-								key={value}
-								onClick={() => setPaymentMethod(value)}
-								className="flex items-center gap-2.5 transition-all"
-								style={{
-									padding: "12px 14px",
-									borderRadius: 12,
-									background: selected ? `${mc}14` : "var(--s1)",
-									border: `1.5px solid ${selected ? mc : "var(--s3)"}`,
-									color: selected ? mc : "#666",
-									textAlign: "left",
-									cursor: "pointer",
-									transform: selected ? "scale(1.02)" : "scale(1)",
-								}}
+				<div style={{ padding: "24px 24px 20px" }}>
+					{/* Amount */}
+					<SectionLabel>Monto</SectionLabel>
+					<div
+						style={{
+							background: "var(--s2)",
+							borderRadius: 14,
+							border: `1px solid ${color}20`,
+							padding: "20px 24px",
+							marginBottom: 22,
+							textAlign: "center",
+						}}
+					>
+						<div className="flex items-center justify-center gap-2">
+							<span
+								className="font-kds"
+								style={{ fontSize: 28, color: "#555" }}
 							>
-								<IconBox
-									icon={Icon}
-									color={selected ? mc : "#555"}
-									size={28}
-									iconSize={13}
-								/>
-								<span
-									className="font-display uppercase"
+								$
+							</span>
+							<input
+								type="number"
+								placeholder="0"
+								value={amount}
+								onChange={(e) => setAmount(e.target.value)}
+								className="font-kds"
+								style={{
+									fontSize: 52,
+									lineHeight: 1,
+									color,
+									background: "transparent",
+									border: "none",
+									outline: "none",
+									textAlign: "center",
+									width: "100%",
+									maxWidth: 240,
+								}}
+								autoFocus
+							/>
+						</div>
+					</div>
+
+					{/* Concept */}
+					<SectionLabel>Concepto</SectionLabel>
+					<input
+						type="text"
+						placeholder={
+							isIncome ? "Ej: Venta de producto" : "Ej: Compra de insumos"
+						}
+						value={concept}
+						onChange={(e) => setConcept(e.target.value)}
+						className="input-base font-body"
+						style={{
+							width: "100%",
+							padding: "13px 16px",
+							fontSize: 13,
+							marginBottom: 22,
+							borderRadius: 12,
+						}}
+					/>
+
+					{/* Payment method */}
+					<SectionLabel>Medio de pago</SectionLabel>
+					<div className="grid grid-cols-2 gap-2 mb-7">
+						{PAYMENT_METHODS.map(({ value, label, icon: Icon, color: mc }) => {
+							const selected = paymentMethod === value;
+							return (
+								<button
+									key={value}
+									onClick={() => setPaymentMethod(value)}
+									className="flex items-center gap-2.5 transition-all"
 									style={{
-										fontSize: 10,
-										fontWeight: 700,
-										letterSpacing: "0.1em",
+										padding: "12px 14px",
+										borderRadius: 12,
+										background: selected ? `${mc}14` : "var(--s2)",
+										border: `1.5px solid ${selected ? mc : "var(--s3)"}`,
+										color: selected ? mc : "#666",
+										textAlign: "left",
+										cursor: "pointer",
+										transform: selected ? "scale(1.02)" : "scale(1)",
 									}}
 								>
-									{label}
-								</span>
-							</button>
-						);
-					})}
-				</div>
+									<IconBox
+										icon={Icon}
+										color={selected ? mc : "#555"}
+										size={28}
+										iconSize={13}
+									/>
+									<span
+										className="font-display uppercase"
+										style={{
+											fontSize: 10,
+											fontWeight: 700,
+											letterSpacing: "0.1em",
+										}}
+									>
+										{label}
+									</span>
+								</button>
+							);
+						})}
+					</div>
 
-				{/* Submit */}
-				<button
-					onClick={handleSubmit}
-					disabled={submitting || !valid}
-					className="flex items-center justify-center gap-2"
-					style={{
-						width: "100%",
-						padding: "15px 0",
-						borderRadius: 14,
-						background: valid ? color : `${color}40`,
-						color: "#fff",
-						fontFamily: "var(--font-syne)",
-						fontWeight: 700,
-						fontSize: 13,
-						letterSpacing: "0.15em",
-						textTransform: "uppercase",
-						border: "none",
-						cursor: submitting || !valid ? "not-allowed" : "pointer",
-						opacity: submitting ? 0.6 : 1,
-						transition: "all 0.2s ease",
-					}}
-				>
-					{submitting ? (
-						"Registrando..."
-					) : (
-						<>
-							{isIncome ? <Plus size={15} /> : <Minus size={15} />}
-							Confirmar {isIncome ? "Ingreso" : "Egreso"}
-						</>
-					)}
-				</button>
+					{/* Submit */}
+					<button
+						onClick={handleSubmit}
+						disabled={submitting || !valid}
+						className="flex items-center justify-center gap-2"
+						style={{
+							width: "100%",
+							padding: "15px 0",
+							borderRadius: 14,
+							background: valid ? color : `${color}40`,
+							color: "#fff",
+							fontFamily: "var(--font-syne)",
+							fontWeight: 700,
+							fontSize: 13,
+							letterSpacing: "0.15em",
+							textTransform: "uppercase",
+							border: "none",
+							cursor: submitting || !valid ? "not-allowed" : "pointer",
+							opacity: submitting ? 0.6 : 1,
+							transition: "all 0.2s ease",
+						}}
+					>
+						{submitting ? (
+							"Registrando..."
+						) : (
+							<>
+								{isIncome ? <Plus size={15} /> : <Minus size={15} />}
+								Confirmar {isIncome ? "Ingreso" : "Egreso"}
+							</>
+						)}
+					</button>
+				</div>
 			</div>
 		</div>
 	);
@@ -622,34 +653,49 @@ function CloseRegisterModal({
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				zIndex: 1000,
+				zIndex: 50,
 			}}
 			onClick={(e) => {
 				if (e.target === e.currentTarget && !submitting) onClose();
 			}}
 		>
 			<div
-				className="card-gold animate-scale-in"
-				style={{ width: 480, padding: "32px 32px 28px" }}
+				className="animate-scale-in"
+				style={{
+					width: 480,
+					background: "var(--s1)",
+					border: "1px solid var(--s4)",
+					borderRadius: 16,
+					overflow: "hidden",
+					boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+				}}
 			>
 				{/* Header */}
-				<div className="flex items-center justify-between mb-6">
+				<div
+					className="flex items-center justify-between"
+					style={{
+						padding: "14px 20px",
+						borderBottom: "1px solid var(--s3)",
+						background: "var(--s2)",
+					}}
+				>
 					<div className="flex items-center gap-3">
-						<IconBox icon={Lock} color="#f59e0b" size={38} iconSize={18} glow />
+						<IconBox icon={Lock} color="#f59e0b" size={34} iconSize={16} glow />
 						<div>
 							<div
-								className="font-display text-ink-primary uppercase"
+								className="font-display uppercase"
 								style={{
-									fontSize: 14,
-									letterSpacing: "0.18em",
+									fontSize: 13,
+									letterSpacing: "0.15em",
 									fontWeight: 700,
+									color: "#f5f5f5",
 								}}
 							>
 								Cerrar Caja
 							</div>
 							<div
-								className="font-body text-ink-disabled"
-								style={{ fontSize: 11 }}
+								className="font-body"
+								style={{ fontSize: 11, color: "#666" }}
 							>
 								Resumen del dia y cierre final
 							</div>
@@ -664,180 +710,184 @@ function CloseRegisterModal({
 					</button>
 				</div>
 
-				<div className="divider-gold mb-5" />
-
-				{/* Summary */}
-				<div
-					style={{
-						background: "var(--s1)",
-						borderRadius: 14,
-						padding: 22,
-						marginBottom: 22,
-					}}
-				>
-					<SectionLabel>Resumen del dia</SectionLabel>
-					<div className="flex flex-col gap-4">
-						{[
-							{
-								label: "Saldo Inicial",
-								value: register.openingBalance,
-								color: "#888",
-								icon: Vault,
-							},
-							{
-								label: "Ingresos",
-								value: income,
-								color: "#10b981",
-								icon: TrendingUp,
-							},
-							{
-								label: "Egresos",
-								value: expenses,
-								color: "#ef4444",
-								icon: TrendingDown,
-							},
-						].map(({ label, value, color: c, icon: Icon }) => (
-							<div key={label} className="flex items-center justify-between">
-								<div className="flex items-center gap-2.5">
-									<IconBox icon={Icon} color={c} size={26} iconSize={12} />
-									<span
-										className="font-body text-ink-disabled"
-										style={{ fontSize: 13 }}
-									>
-										{label}
-									</span>
-								</div>
-								<span className="font-kds" style={{ fontSize: 20, color: c }}>
-									{formatCurrency(value)}
-								</span>
-							</div>
-						))}
-						<div
-							style={{
-								borderTop: "1px solid var(--s3)",
-								paddingTop: 14,
-								marginTop: 4,
-							}}
-							className="flex items-center justify-between"
-						>
-							<span
-								className="font-display text-ink-primary uppercase"
-								style={{
-									fontSize: 11,
-									letterSpacing: "0.15em",
-									fontWeight: 700,
-								}}
-							>
-								Saldo Calculado
-							</span>
-							<span
-								className="font-kds"
-								style={{ fontSize: 28, lineHeight: 1, color: "var(--gold)" }}
-							>
-								{formatCurrency(calculatedBalance)}
-							</span>
-						</div>
-					</div>
-				</div>
-
-				{/* Actual balance input */}
-				<SectionLabel>Saldo real en caja</SectionLabel>
-				<div
-					style={{
-						background: "var(--s1)",
-						borderRadius: 14,
-						border: "1px solid var(--s3)",
-						padding: "16px 20px",
-						marginBottom: 10,
-						textAlign: "center",
-					}}
-				>
-					<div className="flex items-center justify-center gap-2">
-						<span
-							className="font-kds text-ink-disabled"
-							style={{ fontSize: 24 }}
-						>
-							$
-						</span>
-						<input
-							type="number"
-							value={actualBalance}
-							onChange={(e) => setActualBalance(e.target.value)}
-							className="font-kds"
-							style={{
-								fontSize: 40,
-								lineHeight: 1,
-								color: "var(--gold)",
-								background: "transparent",
-								border: "none",
-								outline: "none",
-								textAlign: "center",
-								width: "100%",
-								maxWidth: 220,
-							}}
-						/>
-					</div>
-				</div>
-
-				{/* Difference */}
-				{diff !== 0 && (
+				<div style={{ padding: "24px 24px 20px" }}>
+					{/* Summary */}
 					<div
-						className="flex items-center gap-2.5 mb-6"
 						style={{
-							padding: "12px 16px",
-							borderRadius: 12,
-							background:
-								diff > 0 ? "rgba(16,185,129,0.06)" : "rgba(239,68,68,0.06)",
-							border: `1px solid ${diff > 0 ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"}`,
+							background: "var(--s2)",
+							borderRadius: 14,
+							padding: 22,
+							marginBottom: 22,
 						}}
 					>
-						<AlertTriangle
-							size={15}
-							style={{ color: diff > 0 ? "#10b981" : "#ef4444" }}
-						/>
-						<span
-							className="font-body"
-							style={{ fontSize: 12, color: diff > 0 ? "#10b981" : "#ef4444" }}
-						>
-							Diferencia de {formatCurrency(Math.abs(diff))} (
-							{diff > 0 ? "sobrante" : "faltante"})
-						</span>
+						<SectionLabel>Resumen del dia</SectionLabel>
+						<div className="flex flex-col gap-4">
+							{[
+								{
+									label: "Saldo Inicial",
+									value: register.openingBalance,
+									color: "#888",
+									icon: Vault,
+								},
+								{
+									label: "Ingresos",
+									value: income,
+									color: "#10b981",
+									icon: TrendingUp,
+								},
+								{
+									label: "Egresos",
+									value: expenses,
+									color: "#ef4444",
+									icon: TrendingDown,
+								},
+							].map(({ label, value, color: c, icon: Icon }) => (
+								<div key={label} className="flex items-center justify-between">
+									<div className="flex items-center gap-2.5">
+										<IconBox icon={Icon} color={c} size={26} iconSize={12} />
+										<span
+											className="font-body"
+											style={{ fontSize: 13, color: "#888" }}
+										>
+											{label}
+										</span>
+									</div>
+									<span className="font-kds" style={{ fontSize: 20, color: c }}>
+										{formatCurrency(value)}
+									</span>
+								</div>
+							))}
+							<div
+								style={{
+									borderTop: "1px solid var(--s3)",
+									paddingTop: 14,
+									marginTop: 4,
+								}}
+								className="flex items-center justify-between"
+							>
+								<span
+									className="font-display uppercase"
+									style={{
+										fontSize: 11,
+										letterSpacing: "0.15em",
+										fontWeight: 700,
+										color: "#f5f5f5",
+									}}
+								>
+									Saldo Calculado
+								</span>
+								<span
+									className="font-kds"
+									style={{ fontSize: 28, lineHeight: 1, color: "var(--gold)" }}
+								>
+									{formatCurrency(calculatedBalance)}
+								</span>
+							</div>
+						</div>
 					</div>
-				)}
 
-				{diff === 0 && <div style={{ marginBottom: 24 }} />}
+					{/* Actual balance input */}
+					<SectionLabel>Saldo real en caja</SectionLabel>
+					<div
+						style={{
+							background: "var(--s2)",
+							borderRadius: 14,
+							border: "1px solid var(--s3)",
+							padding: "16px 20px",
+							marginBottom: 10,
+							textAlign: "center",
+						}}
+					>
+						<div className="flex items-center justify-center gap-2">
+							<span
+								className="font-kds"
+								style={{ fontSize: 24, color: "#555" }}
+							>
+								$
+							</span>
+							<input
+								type="number"
+								value={actualBalance}
+								onChange={(e) => setActualBalance(e.target.value)}
+								className="font-kds"
+								style={{
+									fontSize: 40,
+									lineHeight: 1,
+									color: "var(--gold)",
+									background: "transparent",
+									border: "none",
+									outline: "none",
+									textAlign: "center",
+									width: "100%",
+									maxWidth: 220,
+								}}
+							/>
+						</div>
+					</div>
 
-				{/* Confirm */}
-				<button
-					onClick={() => onConfirm(actual)}
-					disabled={submitting}
-					className="flex items-center justify-center gap-2"
-					style={{
-						width: "100%",
-						padding: "15px 0",
-						borderRadius: 14,
-						background: "var(--gold)",
-						color: "#000",
-						fontFamily: "var(--font-syne)",
-						fontWeight: 700,
-						fontSize: 13,
-						letterSpacing: "0.15em",
-						textTransform: "uppercase",
-						border: "none",
-						cursor: submitting ? "not-allowed" : "pointer",
-						opacity: submitting ? 0.6 : 1,
-						transition: "all 0.2s ease",
-					}}
-				>
-					{submitting ? (
-						"Cerrando..."
-					) : (
-						<>
-							<Lock size={14} />
-							Confirmar Cierre de Caja
-						</>
+					{/* Difference */}
+					{diff !== 0 && (
+						<div
+							className="flex items-center gap-2.5 mb-6"
+							style={{
+								padding: "12px 16px",
+								borderRadius: 12,
+								background:
+									diff > 0 ? "rgba(16,185,129,0.06)" : "rgba(239,68,68,0.06)",
+								border: `1px solid ${diff > 0 ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"}`,
+							}}
+						>
+							<AlertTriangle
+								size={15}
+								style={{ color: diff > 0 ? "#10b981" : "#ef4444" }}
+							/>
+							<span
+								className="font-body"
+								style={{
+									fontSize: 12,
+									color: diff > 0 ? "#10b981" : "#ef4444",
+								}}
+							>
+								Diferencia de {formatCurrency(Math.abs(diff))} (
+								{diff > 0 ? "sobrante" : "faltante"})
+							</span>
+						</div>
 					)}
-				</button>
+
+					{diff === 0 && <div style={{ marginBottom: 24 }} />}
+
+					{/* Confirm */}
+					<button
+						onClick={() => onConfirm(actual)}
+						disabled={submitting}
+						className="flex items-center justify-center gap-2"
+						style={{
+							width: "100%",
+							padding: "15px 0",
+							borderRadius: 14,
+							background: "var(--gold)",
+							color: "#000",
+							fontFamily: "var(--font-syne)",
+							fontWeight: 700,
+							fontSize: 13,
+							letterSpacing: "0.15em",
+							textTransform: "uppercase",
+							border: "none",
+							cursor: submitting ? "not-allowed" : "pointer",
+							opacity: submitting ? 0.6 : 1,
+							transition: "all 0.2s ease",
+						}}
+					>
+						{submitting ? (
+							"Cerrando..."
+						) : (
+							<>
+								<Lock size={14} />
+								Confirmar Cierre de Caja
+							</>
+						)}
+					</button>
+				</div>
 			</div>
 		</div>
 	);
@@ -890,18 +940,18 @@ function HistoryRow({ register }: { register: CashRegister }) {
 
 	return (
 		<div
-			className="card transition-all"
 			style={{
-				marginBottom: 8,
+				marginBottom: 2,
 				overflow: "hidden",
-				borderColor: expanded ? "var(--s3)" : undefined,
+				background: "var(--s1)",
+				borderBottom: "1px solid var(--s3)",
 			}}
 		>
 			<button
 				onClick={toggleExpand}
 				className="w-full transition-colors"
 				style={{
-					padding: "16px 20px",
+					padding: "12px 20px",
 					display: "flex",
 					alignItems: "center",
 					gap: 16,
@@ -911,20 +961,27 @@ function HistoryRow({ register }: { register: CashRegister }) {
 					cursor: "pointer",
 					textAlign: "left",
 				}}
+				onMouseEnter={(e) => {
+					(e.currentTarget as HTMLButtonElement).style.background = "var(--s2)";
+				}}
+				onMouseLeave={(e) => {
+					(e.currentTarget as HTMLButtonElement).style.background =
+						"transparent";
+				}}
 			>
 				<IconBox icon={Receipt} color="#6b7280" size={34} iconSize={15} />
 
 				<div style={{ minWidth: 90 }}>
 					<div
-						className="font-kds text-ink-secondary"
-						style={{ fontSize: 18, lineHeight: 1 }}
+						className="font-kds"
+						style={{ fontSize: 18, lineHeight: 1, color: "#ccc" }}
 					>
 						{date}
 					</div>
 					{closedTime && (
 						<div
-							className="font-body text-ink-disabled"
-							style={{ fontSize: 10, marginTop: 3 }}
+							className="font-body"
+							style={{ fontSize: 10, marginTop: 3, color: "#555" }}
 						>
 							Cerrada a las {closedTime}
 						</div>
@@ -934,36 +991,45 @@ function HistoryRow({ register }: { register: CashRegister }) {
 				<div style={{ flex: 1, display: "flex", gap: 28 }}>
 					<div>
 						<div
-							className="font-display text-ink-disabled uppercase"
-							style={{ fontSize: 8, letterSpacing: "0.2em", marginBottom: 2 }}
+							className="font-display uppercase"
+							style={{
+								fontSize: 8,
+								letterSpacing: "0.2em",
+								marginBottom: 2,
+								color: "#666",
+							}}
 						>
 							Apertura
 						</div>
-						<div
-							className="font-kds text-ink-tertiary"
-							style={{ fontSize: 16 }}
-						>
+						<div className="font-kds" style={{ fontSize: 16, color: "#888" }}>
 							{formatCurrency(register.openingBalance)}
 						</div>
 					</div>
 					<div>
 						<div
-							className="font-display text-ink-disabled uppercase"
-							style={{ fontSize: 8, letterSpacing: "0.2em", marginBottom: 2 }}
+							className="font-display uppercase"
+							style={{
+								fontSize: 8,
+								letterSpacing: "0.2em",
+								marginBottom: 2,
+								color: "#666",
+							}}
 						>
 							Cierre
 						</div>
-						<div
-							className="font-kds text-ink-tertiary"
-							style={{ fontSize: 16 }}
-						>
+						<div className="font-kds" style={{ fontSize: 16, color: "#888" }}>
 							{formatCurrency(register.closingBalance ?? 0)}
 						</div>
 					</div>
 					<div>
 						<div
-							className="font-display text-ink-disabled uppercase"
-							style={{ fontSize: 8, letterSpacing: "0.2em", marginBottom: 2 }}
+							className="font-display uppercase"
+							style={{
+								fontSize: 8,
+								letterSpacing: "0.2em",
+								marginBottom: 2,
+								color: "#666",
+							}}
 						>
 							Resultado
 						</div>
@@ -977,15 +1043,17 @@ function HistoryRow({ register }: { register: CashRegister }) {
 					</div>
 					<div>
 						<div
-							className="font-display text-ink-disabled uppercase"
-							style={{ fontSize: 8, letterSpacing: "0.2em", marginBottom: 2 }}
+							className="font-display uppercase"
+							style={{
+								fontSize: 8,
+								letterSpacing: "0.2em",
+								marginBottom: 2,
+								color: "#666",
+							}}
 						>
 							Movimientos
 						</div>
-						<div
-							className="font-kds text-ink-tertiary"
-							style={{ fontSize: 16 }}
-						>
+						<div className="font-kds" style={{ fontSize: 16, color: "#888" }}>
 							{count}
 						</div>
 					</div>
@@ -999,13 +1067,11 @@ function HistoryRow({ register }: { register: CashRegister }) {
 			</button>
 
 			{expanded && (
-				<div
-					style={{ padding: "0 20px 18px", borderTop: "1px solid var(--s3)" }}
-				>
+				<div style={{ borderTop: "1px solid var(--s3)" }}>
 					{loading ? (
 						<div
-							className="font-body text-ink-disabled text-center py-8"
-							style={{ fontSize: 12 }}
+							className="font-body text-center py-8"
+							style={{ fontSize: 12, color: "#666" }}
 						>
 							Cargando movimientos...
 						</div>
@@ -1013,14 +1079,14 @@ function HistoryRow({ register }: { register: CashRegister }) {
 						<div className="flex flex-col items-center py-8 gap-2">
 							<IconBox icon={Receipt} color="#555" size={32} iconSize={14} />
 							<div
-								className="font-body text-ink-disabled"
-								style={{ fontSize: 12 }}
+								className="font-body"
+								style={{ fontSize: 12, color: "#666" }}
 							>
 								Sin movimientos registrados
 							</div>
 						</div>
 					) : (
-						<div className="flex flex-col gap-2 mt-4">
+						<div>
 							{movements.map((m) => (
 								<MovementRow key={m.id} movement={m} />
 							))}
@@ -1045,103 +1111,133 @@ function OpenRegisterCard({ onOpen }: { onOpen: (balance: number) => void }) {
 
 	return (
 		<div
-			className="card-gold animate-scale-in"
+			className="animate-scale-in"
 			style={{
 				maxWidth: 480,
 				margin: "48px auto",
-				padding: "48px 40px",
+				background: "var(--s1)",
+				border: "1px solid var(--s4)",
+				borderRadius: 16,
+				overflow: "hidden",
+				boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
 				textAlign: "center",
 			}}
 		>
-			<IconBox icon={Unlock} color="#f59e0b" size={72} iconSize={32} glow />
-			<div style={{ marginTop: 24 }}>
-				<div
-					className="font-display text-ink-primary uppercase"
-					style={{
-						fontSize: 22,
-						letterSpacing: "0.15em",
-						fontWeight: 700,
-						marginBottom: 8,
-					}}
-				>
-					Abrir Caja
-				</div>
-				<div
-					className="font-body text-ink-disabled"
-					style={{ fontSize: 13, lineHeight: 1.5 }}
-				>
-					Ingresa el saldo inicial para comenzar el dia
-				</div>
-			</div>
-
-			<div className="divider-gold" style={{ margin: "28px 0" }} />
-
-			<SectionLabel>Saldo Inicial</SectionLabel>
 			<div
 				style={{
-					background: "var(--s1)",
-					borderRadius: 14,
-					border: "1px solid rgba(245,158,11,0.15)",
-					padding: "20px 24px",
-					marginBottom: 28,
+					padding: "14px 20px",
+					borderBottom: "1px solid var(--s3)",
+					background: "var(--s2)",
 				}}
 			>
-				<div className="flex items-center justify-center gap-2">
-					<span className="font-kds text-ink-disabled" style={{ fontSize: 28 }}>
-						$
-					</span>
-					<input
-						type="number"
-						placeholder="0"
-						value={balance}
-						onChange={(e) => setBalance(e.target.value)}
-						className="font-kds"
+				<div className="flex items-center justify-center gap-2.5">
+					<Unlock size={14} style={{ color: "var(--gold)" }} />
+					<span
+						className="font-display uppercase"
 						style={{
-							fontSize: 52,
-							lineHeight: 1,
-							color: "var(--gold)",
-							background: "transparent",
-							border: "none",
-							outline: "none",
-							textAlign: "center",
-							width: "100%",
-							maxWidth: 240,
+							fontSize: 11,
+							letterSpacing: "0.15em",
+							color: "#ccc",
+							fontWeight: 600,
 						}}
-						autoFocus
-					/>
+					>
+						ABRIR CAJA
+					</span>
 				</div>
 			</div>
 
-			<button
-				onClick={handleOpen}
-				disabled={submitting}
-				className="flex items-center justify-center gap-2"
-				style={{
-					width: "100%",
-					padding: "16px 0",
-					borderRadius: 14,
-					background: "var(--gold)",
-					color: "#000",
-					fontFamily: "var(--font-syne)",
-					fontWeight: 700,
-					fontSize: 14,
-					letterSpacing: "0.15em",
-					textTransform: "uppercase",
-					border: "none",
-					cursor: submitting ? "not-allowed" : "pointer",
-					opacity: submitting ? 0.6 : 1,
-					transition: "all 0.2s ease",
-				}}
-			>
-				{submitting ? (
-					"Abriendo..."
-				) : (
-					<>
-						<Unlock size={16} />
+			<div style={{ padding: "40px 40px 36px" }}>
+				<IconBox icon={Unlock} color="#f59e0b" size={72} iconSize={32} glow />
+				<div style={{ marginTop: 24 }}>
+					<div
+						className="font-display uppercase"
+						style={{
+							fontSize: 18,
+							letterSpacing: "0.15em",
+							fontWeight: 700,
+							marginBottom: 8,
+							color: "#f5f5f5",
+						}}
+					>
 						Abrir Caja
-					</>
-				)}
-			</button>
+					</div>
+					<div
+						className="font-body"
+						style={{ fontSize: 13, lineHeight: 1.5, color: "#666" }}
+					>
+						Ingresa el saldo inicial para comenzar el dia
+					</div>
+				</div>
+
+				<div className="divider-gold" style={{ margin: "28px 0" }} />
+
+				<SectionLabel>Saldo Inicial</SectionLabel>
+				<div
+					style={{
+						background: "var(--s2)",
+						borderRadius: 14,
+						border: "1px solid rgba(245,158,11,0.15)",
+						padding: "20px 24px",
+						marginBottom: 28,
+					}}
+				>
+					<div className="flex items-center justify-center gap-2">
+						<span className="font-kds" style={{ fontSize: 28, color: "#555" }}>
+							$
+						</span>
+						<input
+							type="number"
+							placeholder="0"
+							value={balance}
+							onChange={(e) => setBalance(e.target.value)}
+							className="font-kds"
+							style={{
+								fontSize: 52,
+								lineHeight: 1,
+								color: "var(--gold)",
+								background: "transparent",
+								border: "none",
+								outline: "none",
+								textAlign: "center",
+								width: "100%",
+								maxWidth: 240,
+							}}
+							autoFocus
+						/>
+					</div>
+				</div>
+
+				<button
+					onClick={handleOpen}
+					disabled={submitting}
+					className="flex items-center justify-center gap-2"
+					style={{
+						width: "100%",
+						padding: "16px 0",
+						borderRadius: 14,
+						background: "var(--gold)",
+						color: "#000",
+						fontFamily: "var(--font-syne)",
+						fontWeight: 700,
+						fontSize: 14,
+						letterSpacing: "0.15em",
+						textTransform: "uppercase",
+						border: "none",
+						cursor: submitting ? "not-allowed" : "pointer",
+						opacity: submitting ? 0.6 : 1,
+						transition: "all 0.2s ease",
+					}}
+				>
+					{submitting ? (
+						"Abriendo..."
+					) : (
+						<>
+							<Unlock size={16} />
+							Abrir Caja
+						</>
+					)}
+				</button>
+			</div>
 		</div>
 	);
 }
@@ -1304,15 +1400,15 @@ export default function CashRegisterPage() {
 
 	if (loading) {
 		return (
-			<div
-				className="min-h-screen flex items-center justify-center"
-				style={{ background: "var(--s0)" }}
-			>
-				<div className="flex flex-col items-center gap-3 animate-fade-in">
+			<div style={{ minHeight: "100vh", background: "var(--s0)" }}>
+				<div
+					className="flex flex-col items-center justify-center gap-3 animate-fade-in"
+					style={{ minHeight: "60vh" }}
+				>
 					<IconBox icon={Vault} color="#f59e0b" size={48} iconSize={22} glow />
 					<div
-						className="font-display text-ink-disabled uppercase"
-						style={{ fontSize: 11, letterSpacing: "0.2em" }}
+						className="font-display uppercase"
+						style={{ fontSize: 11, letterSpacing: "0.2em", color: "#666" }}
 					>
 						Cargando caja...
 					</div>
@@ -1324,306 +1420,370 @@ export default function CashRegisterPage() {
 	// ─── Render ─────────────────────────────────────────────────────────────
 
 	return (
-		<div
-			className="min-h-screen p-5 md:p-7 pb-10"
-			style={{ background: "var(--s0)" }}
-		>
-			{/* Pulse animation for status indicator */}
-			<style>{`
-				@keyframes pulse {
-					0%, 100% { opacity: 1; transform: scale(1); }
-					50% { opacity: 0.4; transform: scale(1.3); }
-				}
-			`}</style>
+		<div style={{ minHeight: "100vh", background: "var(--s0)" }}>
+			<div
+				style={{ padding: "28px 24px 48px", maxWidth: 1200, margin: "0 auto" }}
+			>
+				{/* Pulse animation */}
+				<style>{`
+					@keyframes pulse {
+						0%, 100% { opacity: 1; transform: scale(1); }
+						50% { opacity: 0.4; transform: scale(1.3); }
+					}
+				`}</style>
 
-			{/* Header */}
-			<div className="flex flex-wrap items-start justify-between gap-4 mb-6 animate-fade-in">
-				<div>
-					<div className="flex items-center gap-3 mb-3">
+				{/* Header */}
+				<div
+					className="flex items-center justify-between animate-fade-in"
+					style={{ marginBottom: 8 }}
+				>
+					<div className="flex items-center gap-3">
 						<div
 							style={{
 								width: 3,
 								height: 24,
-								borderRadius: 3,
+								borderRadius: 2,
 								background: "var(--gold)",
 							}}
 						/>
-						<h1
-							className="font-display text-ink-primary uppercase"
-							style={{ fontSize: 22, letterSpacing: "0.15em", fontWeight: 700 }}
-						>
-							Caja Registradora
-						</h1>
-					</div>
-					<div
-						className="font-body text-ink-disabled"
-						style={{ fontSize: 12, marginLeft: 15 }}
-					>
-						Gestion de caja diaria
-					</div>
-				</div>
-
-				<div className="flex items-center gap-3">
-					<StatusIndicator
-						isOpen={!!activeRegister}
-						since={activeRegister?.date}
-					/>
-					{(activeRegister || history.length > 0) && (
-						<button
-							className="btn-ghost flex items-center gap-1.5"
-							style={{ padding: "10px 16px", borderRadius: 10 }}
-							onClick={handlePrint}
-						>
-							<Printer size={14} />
-							<span
-								className="font-display uppercase"
-								style={{ fontSize: 10, letterSpacing: "0.1em" }}
+						<div>
+							<h1
+								className="font-display"
+								style={{
+									fontSize: 22,
+									fontWeight: 700,
+									color: "#f5f5f5",
+									lineHeight: 1.1,
+								}}
 							>
-								Imprimir
-							</span>
-						</button>
-					)}
+								CAJA REGISTRADORA
+							</h1>
+							<p
+								className="font-body"
+								style={{ fontSize: 12, color: "#666", marginTop: 2 }}
+							>
+								Gestion de caja diaria
+							</p>
+						</div>
+					</div>
+					<div className="flex items-center gap-3">
+						<StatusIndicator
+							isOpen={!!activeRegister}
+							since={activeRegister?.date}
+						/>
+						{(activeRegister || history.length > 0) && (
+							<button
+								className="btn-ghost flex items-center gap-1.5"
+								style={{ padding: "10px 16px", borderRadius: 10 }}
+								onClick={handlePrint}
+							>
+								<Printer size={14} />
+								<span
+									className="font-display uppercase"
+									style={{ fontSize: 10, letterSpacing: "0.1em" }}
+								>
+									Imprimir
+								</span>
+							</button>
+						)}
+					</div>
 				</div>
-			</div>
+				<div className="divider-gold" style={{ marginBottom: 28 }} />
 
-			<div className="divider-gold mb-7" />
+				{/* No register open */}
+				{!activeRegister && (
+					<>
+						<OpenRegisterCard onOpen={handleOpenRegister} />
 
-			{/* No register open */}
-			{!activeRegister && (
-				<>
-					<OpenRegisterCard onOpen={handleOpenRegister} />
-
-					{history.length > 0 && (
-						<div style={{ maxWidth: 740, margin: "48px auto 0" }}>
-							<div className="flex items-center gap-2.5 mb-5">
-								<IconBox
-									icon={History}
-									color="#6b7280"
-									size={28}
-									iconSize={13}
-								/>
+						{history.length > 0 && (
+							<div style={{ maxWidth: 900, margin: "48px auto 0" }}>
 								<div
-									className="font-display text-ink-disabled uppercase"
 									style={{
-										fontSize: 11,
-										letterSpacing: "0.2em",
-										fontWeight: 700,
+										background: "var(--s1)",
+										border: "1px solid var(--s4)",
+										borderRadius: 16,
+										overflow: "hidden",
+										boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
 									}}
 								>
-									Historial de Cajas
-								</div>
-								<div
-									className="font-kds text-ink-disabled"
-									style={{ fontSize: 14, marginLeft: 4 }}
-								>
-									({history.length})
+									<div
+										className="flex items-center justify-between"
+										style={{
+											padding: "14px 20px",
+											borderBottom: "1px solid var(--s3)",
+											background: "var(--s2)",
+										}}
+									>
+										<div className="flex items-center gap-2.5">
+											<History size={14} style={{ color: "var(--gold)" }} />
+											<span
+												className="font-display uppercase"
+												style={{
+													fontSize: 11,
+													letterSpacing: "0.15em",
+													color: "#ccc",
+													fontWeight: 600,
+												}}
+											>
+												HISTORIAL DE CAJAS
+											</span>
+										</div>
+										<span
+											className="font-kds"
+											style={{ fontSize: 14, color: "#666" }}
+										>
+											({history.length})
+										</span>
+									</div>
+									{history.map((r) => (
+										<HistoryRow key={r.id} register={r} />
+									))}
 								</div>
 							</div>
-							{history.map((r) => (
-								<HistoryRow key={r.id} register={r} />
-							))}
+						)}
+					</>
+				)}
+
+				{/* Active register */}
+				{activeRegister && (
+					<>
+						{/* KPI row */}
+						<div className="flex flex-wrap gap-4 mb-7">
+							<StatCard
+								label="Saldo Inicial"
+								value={activeRegister.openingBalance}
+								icon={Vault}
+								color="#888"
+							/>
+							<StatCard
+								label="Ingresos"
+								value={income}
+								icon={TrendingUp}
+								color="#10b981"
+							/>
+							<StatCard
+								label="Egresos"
+								value={expenses}
+								icon={TrendingDown}
+								color="#ef4444"
+							/>
+							<StatCard
+								label="Saldo Actual"
+								value={currentBalance}
+								icon={DollarSign}
+								color="var(--gold)"
+								highlight
+							/>
 						</div>
-					)}
-				</>
-			)}
 
-			{/* Active register */}
-			{activeRegister && (
-				<>
-					{/* Stats row */}
-					<div className="flex flex-wrap gap-3 mb-7">
-						<StatCard
-							label="Saldo Inicial"
-							value={activeRegister.openingBalance}
-							icon={Vault}
-							color="#888"
-						/>
-						<StatCard
-							label="Ingresos"
-							value={income}
-							icon={TrendingUp}
-							color="#10b981"
-						/>
-						<StatCard
-							label="Egresos"
-							value={expenses}
-							icon={TrendingDown}
-							color="#ef4444"
-						/>
-						<StatCard
-							label="Saldo Actual"
-							value={currentBalance}
-							icon={DollarSign}
-							color="var(--gold)"
-							highlight
-						/>
-					</div>
+						{/* Quick actions */}
+						<div className="flex flex-wrap gap-3 mb-7 animate-slide-up">
+							<button
+								onClick={() => setModal("income")}
+								className="btn-primary flex items-center gap-2"
+								style={{
+									padding: "13px 22px",
+									borderRadius: 12,
+									fontSize: 11,
+									letterSpacing: "0.12em",
+									background: "rgba(16,185,129,0.12)",
+									border: "1px solid rgba(16,185,129,0.3)",
+									color: "#10b981",
+								}}
+							>
+								<Plus size={15} />
+								Registrar Ingreso
+							</button>
+							<button
+								onClick={() => setModal("expense")}
+								className="flex items-center gap-2"
+								style={{
+									padding: "13px 22px",
+									borderRadius: 12,
+									background: "rgba(239,68,68,0.08)",
+									border: "1px solid rgba(239,68,68,0.2)",
+									color: "#ef4444",
+									fontFamily: "var(--font-syne)",
+									fontWeight: 700,
+									fontSize: 11,
+									letterSpacing: "0.12em",
+									textTransform: "uppercase",
+									cursor: "pointer",
+									transition: "all 0.2s ease",
+								}}
+							>
+								<Minus size={15} />
+								Registrar Egreso
+							</button>
+							<div style={{ flex: 1 }} />
+							<button
+								onClick={() => setModal("close")}
+								className="btn-primary flex items-center gap-2"
+								style={{
+									padding: "13px 22px",
+									borderRadius: 12,
+									fontSize: 11,
+									letterSpacing: "0.12em",
+								}}
+							>
+								<Lock size={14} />
+								Cerrar Caja
+							</button>
+						</div>
 
-					{/* Quick actions */}
-					<div className="flex flex-wrap gap-3 mb-7 animate-slide-up">
-						<button
-							onClick={() => setModal("income")}
-							className="btn-green flex items-center gap-2"
-							style={{
-								padding: "13px 22px",
-								borderRadius: 12,
-								fontSize: 11,
-								letterSpacing: "0.12em",
-							}}
-						>
-							<Plus size={15} />
-							Registrar Ingreso
-						</button>
-						<button
-							onClick={() => setModal("expense")}
-							className="flex items-center gap-2"
-							style={{
-								padding: "13px 22px",
-								borderRadius: 12,
-								background: "rgba(239,68,68,0.08)",
-								border: "1px solid rgba(239,68,68,0.2)",
-								color: "#ef4444",
-								fontFamily: "var(--font-syne)",
-								fontWeight: 700,
-								fontSize: 11,
-								letterSpacing: "0.12em",
-								textTransform: "uppercase",
-								cursor: "pointer",
-								transition: "all 0.2s ease",
-							}}
-						>
-							<Minus size={15} />
-							Registrar Egreso
-						</button>
-						<div style={{ flex: 1 }} />
-						<button
-							onClick={() => setModal("close")}
-							className="btn-primary flex items-center gap-2"
-							style={{
-								padding: "13px 22px",
-								borderRadius: 12,
-								fontSize: 11,
-								letterSpacing: "0.12em",
-							}}
-						>
-							<Lock size={14} />
-							Cerrar Caja
-						</button>
-					</div>
-
-					{/* Movements list */}
-					<div className="flex items-center gap-2.5 mb-4">
-						<IconBox
-							icon={ArrowRightLeft}
-							color="#888"
-							size={28}
-							iconSize={13}
-						/>
+						{/* Movements section card */}
 						<div
-							className="font-display text-ink-disabled uppercase"
-							style={{ fontSize: 11, letterSpacing: "0.2em", fontWeight: 700 }}
+							style={{
+								background: "var(--s1)",
+								border: "1px solid var(--s4)",
+								borderRadius: 16,
+								overflow: "hidden",
+								boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+								marginBottom: 32,
+							}}
 						>
-							Movimientos del dia
-						</div>
-						<div
-							className="font-kds text-ink-disabled"
-							style={{ fontSize: 14, marginLeft: 4 }}
-						>
-							({movements.length})
-						</div>
-					</div>
+							<div
+								className="flex items-center justify-between"
+								style={{
+									padding: "14px 20px",
+									borderBottom: "1px solid var(--s3)",
+									background: "var(--s2)",
+								}}
+							>
+								<div className="flex items-center gap-2.5">
+									<ArrowRightLeft size={14} style={{ color: "var(--gold)" }} />
+									<span
+										className="font-display uppercase"
+										style={{
+											fontSize: 11,
+											letterSpacing: "0.15em",
+											color: "#ccc",
+											fontWeight: 600,
+										}}
+									>
+										MOVIMIENTOS DEL DIA
+									</span>
+								</div>
+								<span
+									className="font-kds"
+									style={{ fontSize: 14, color: "#666" }}
+								>
+									({movements.length})
+								</span>
+							</div>
 
-					{movements.length === 0 ? (
-						<div className="card flex flex-col items-center justify-center gap-4 py-20">
-							<IconBox icon={DollarSign} color="#555" size={52} iconSize={22} />
-							<div className="text-center">
-								<p
-									className="font-display text-ink-secondary uppercase"
+							{movements.length === 0 ? (
+								<div className="flex flex-col items-center justify-center gap-4 py-20">
+									<IconBox
+										icon={DollarSign}
+										color="#555"
+										size={52}
+										iconSize={22}
+									/>
+									<div className="text-center">
+										<p
+											className="font-display uppercase"
+											style={{
+												fontSize: 13,
+												letterSpacing: "0.12em",
+												fontWeight: 700,
+												color: "#ccc",
+											}}
+										>
+											Sin movimientos
+										</p>
+										<p
+											className="font-body mt-2"
+											style={{ fontSize: 12, lineHeight: 1.5, color: "#666" }}
+										>
+											Registra ingresos y egresos para llevar el control
+										</p>
+									</div>
+								</div>
+							) : (
+								<div>
+									{[...movements]
+										.sort(
+											(a, b) =>
+												new Date(b.createdAt).getTime() -
+												new Date(a.createdAt).getTime(),
+										)
+										.map((m) => (
+											<MovementRow key={m.id} movement={m} />
+										))}
+								</div>
+							)}
+						</div>
+
+						{/* History */}
+						{history.length > 0 && (
+							<div
+								style={{
+									background: "var(--s1)",
+									border: "1px solid var(--s4)",
+									borderRadius: 16,
+									overflow: "hidden",
+									boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+								}}
+							>
+								<div
+									className="flex items-center justify-between"
 									style={{
-										fontSize: 13,
-										letterSpacing: "0.12em",
-										fontWeight: 700,
+										padding: "14px 20px",
+										borderBottom: "1px solid var(--s3)",
+										background: "var(--s2)",
 									}}
 								>
-									Sin movimientos
-								</p>
-								<p
-									className="font-body text-ink-disabled mt-2"
-									style={{ fontSize: 12, lineHeight: 1.5 }}
-								>
-									Registra ingresos y egresos para llevar el control
-								</p>
-							</div>
-						</div>
-					) : (
-						<div className="flex flex-col gap-2 mb-8">
-							{[...movements]
-								.sort(
-									(a, b) =>
-										new Date(b.createdAt).getTime() -
-										new Date(a.createdAt).getTime(),
-								)
-								.map((m) => (
-									<MovementRow key={m.id} movement={m} />
+									<div className="flex items-center gap-2.5">
+										<History size={14} style={{ color: "var(--gold)" }} />
+										<span
+											className="font-display uppercase"
+											style={{
+												fontSize: 11,
+												letterSpacing: "0.15em",
+												color: "#ccc",
+												fontWeight: 600,
+											}}
+										>
+											HISTORIAL DE CAJAS
+										</span>
+									</div>
+									<span
+										className="font-kds"
+										style={{ fontSize: 14, color: "#666" }}
+									>
+										({history.length})
+									</span>
+								</div>
+								{history.map((r) => (
+									<HistoryRow key={r.id} register={r} />
 								))}
-						</div>
-					)}
-
-					{/* History */}
-					{history.length > 0 && (
-						<div style={{ marginTop: 48 }}>
-							<div className="flex items-center gap-2.5 mb-5">
-								<IconBox
-									icon={History}
-									color="#6b7280"
-									size={28}
-									iconSize={13}
-								/>
-								<div
-									className="font-display text-ink-disabled uppercase"
-									style={{
-										fontSize: 11,
-										letterSpacing: "0.2em",
-										fontWeight: 700,
-									}}
-								>
-									Historial de Cajas
-								</div>
-								<div
-									className="font-kds text-ink-disabled"
-									style={{ fontSize: 14, marginLeft: 4 }}
-								>
-									({history.length})
-								</div>
 							</div>
-							{history.map((r) => (
-								<HistoryRow key={r.id} register={r} />
-							))}
-						</div>
-					)}
-				</>
-			)}
+						)}
+					</>
+				)}
 
-			{/* Modals */}
-			{(modal === "income" || modal === "expense") && (
-				<NewMovementModal
-					type={modal}
-					onClose={() => !submitting && setModal(null)}
-					onSubmit={handleNewMovement}
-					submitting={submitting}
-				/>
-			)}
+				{/* Modals */}
+				{(modal === "income" || modal === "expense") && (
+					<NewMovementModal
+						type={modal}
+						onClose={() => !submitting && setModal(null)}
+						onSubmit={handleNewMovement}
+						submitting={submitting}
+					/>
+				)}
 
-			{modal === "close" && activeRegister && (
-				<CloseRegisterModal
-					register={activeRegister}
-					income={income}
-					expenses={expenses}
-					onClose={() => !submitting && setModal(null)}
-					onConfirm={handleCloseRegister}
-					submitting={submitting}
-				/>
-			)}
+				{modal === "close" && activeRegister && (
+					<CloseRegisterModal
+						register={activeRegister}
+						income={income}
+						expenses={expenses}
+						onClose={() => !submitting && setModal(null)}
+						onConfirm={handleCloseRegister}
+						submitting={submitting}
+					/>
+				)}
+			</div>
 		</div>
 	);
 }

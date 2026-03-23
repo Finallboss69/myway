@@ -70,9 +70,6 @@ const PAYMENT_COLORS: Record<string, string> = {
 	Transferencia: "#f97316",
 };
 
-// Default categories used for seeding (kept as reference)
-// const DEFAULT_CATEGORIES: Omit<ExpenseCategory, "id">[] = [...];
-
 const ICON_MAP: Record<
 	string,
 	React.ComponentType<{ size?: number; style?: React.CSSProperties }>
@@ -149,16 +146,100 @@ function formatDate(dateStr: string): string {
 	});
 }
 
-// ─── Section Label ───────────────────────────────────────────────────────────
+// ─── KPI Card ────────────────────────────────────────────────────────────────
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function KpiCard({
+	label,
+	value,
+	Icon,
+	color,
+	sub,
+}: {
+	label: string;
+	value: string;
+	Icon: React.ElementType;
+	color: string;
+	sub?: string;
+}) {
 	return (
-		<span
-			className="font-display text-ink-disabled uppercase"
-			style={{ fontSize: 9, letterSpacing: "0.25em" }}
+		<div
+			style={{
+				background: "var(--s1)",
+				border: `1px solid ${color}25`,
+				borderRadius: 16,
+				padding: "24px 22px 20px",
+				position: "relative",
+				overflow: "hidden",
+			}}
 		>
-			{children}
-		</span>
+			<div
+				style={{
+					position: "absolute",
+					top: 0,
+					left: "20%",
+					right: "20%",
+					height: 1,
+					background: `linear-gradient(90deg, transparent, ${color}50, transparent)`,
+				}}
+			/>
+			<div
+				style={{
+					position: "absolute",
+					top: 0,
+					right: 0,
+					width: 120,
+					height: 120,
+					background: `radial-gradient(circle at 100% 0%, ${color}12 0%, transparent 70%)`,
+					pointerEvents: "none",
+				}}
+			/>
+			<div style={{ position: "relative", zIndex: 1 }}>
+				<div
+					className="flex items-center justify-between"
+					style={{ marginBottom: 16 }}
+				>
+					<div
+						className="font-display uppercase"
+						style={{
+							fontSize: 10,
+							letterSpacing: "0.2em",
+							color: "#888",
+							fontWeight: 600,
+						}}
+					>
+						{label}
+					</div>
+					<div
+						style={{
+							width: 34,
+							height: 34,
+							borderRadius: 10,
+							background: `${color}15`,
+							border: `1px solid ${color}30`,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+					>
+						<Icon size={16} style={{ color }} />
+					</div>
+				</div>
+				<div
+					className="font-kds"
+					style={{ fontSize: 36, lineHeight: 1, color }}
+				>
+					{value}
+				</div>
+				{sub && (
+					<div
+						className="font-body"
+						style={{ fontSize: 11, color: "#666", marginTop: 4 }}
+					>
+						{sub}
+					</div>
+				)}
+			</div>
+		</div>
 	);
 }
 
@@ -169,7 +250,7 @@ function Modal({
 	onClose,
 	title,
 	children,
-	width = 520,
+	width = 560,
 }: {
 	open: boolean;
 	onClose: () => void;
@@ -188,148 +269,62 @@ function Modal({
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				background: "rgba(0,0,0,0.75)",
+				background: "rgba(0,0,0,0.7)",
 				backdropFilter: "blur(8px)",
 			}}
 			onClick={onClose}
 		>
 			<div
-				className="card animate-slide-up"
 				style={{
 					width: "100%",
 					maxWidth: width,
 					maxHeight: "90vh",
 					overflow: "auto",
-					padding: 0,
+					background: "var(--s1)",
 					border: "1px solid var(--s4)",
-					boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
+					borderRadius: 16,
+					boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
 				}}
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div
 					className="flex items-center justify-between"
 					style={{
-						padding: "18px 24px",
+						padding: "14px 20px",
 						borderBottom: "1px solid var(--s3)",
-						background: "var(--s1)",
+						background: "var(--s2)",
 					}}
 				>
-					<div className="flex items-center gap-3">
+					<div className="flex items-center gap-2.5">
 						<div
 							style={{
 								width: 3,
 								height: 16,
-								borderRadius: 3,
+								borderRadius: 2,
 								background: "var(--gold)",
 							}}
 						/>
-						<h2
-							className="font-display text-ink-primary"
-							style={{ fontSize: 15, fontWeight: 700 }}
+						<span
+							className="font-display uppercase"
+							style={{
+								fontSize: 11,
+								letterSpacing: "0.15em",
+								color: "#ccc",
+								fontWeight: 600,
+							}}
 						>
 							{title}
-						</h2>
+						</span>
 					</div>
 					<button
 						onClick={onClose}
 						className="btn-ghost"
-						style={{
-							padding: 6,
-							borderRadius: 8,
-							transition: "all 0.15s",
-						}}
+						style={{ padding: 6, borderRadius: 8 }}
 					>
 						<X size={16} />
 					</button>
 				</div>
-				<div style={{ padding: "24px" }}>{children}</div>
-			</div>
-		</div>
-	);
-}
-
-// ─── KPI Card ────────────────────────────────────────────────────────────────
-
-function Kpi({
-	label,
-	value,
-	Icon,
-	accent,
-	sub,
-}: {
-	label: string;
-	value: string;
-	Icon: React.ElementType;
-	accent?: boolean;
-	sub?: string;
-}) {
-	return (
-		<div
-			className="card p-5 animate-fade-in"
-			style={{
-				position: "relative",
-				overflow: "hidden",
-				transition: "border-color 0.2s, box-shadow 0.2s",
-				...(accent
-					? {
-							borderColor: "rgba(245,158,11,0.25)",
-							boxShadow: "0 0 24px rgba(245,158,11,0.08)",
-						}
-					: {}),
-			}}
-		>
-			{accent && (
-				<div
-					style={{
-						position: "absolute",
-						inset: 0,
-						background:
-							"radial-gradient(ellipse 300px 200px at 50% 0%, rgba(245,158,11,0.06) 0%, transparent 60%)",
-						pointerEvents: "none",
-					}}
-				/>
-			)}
-			<div
-				className="flex items-center justify-between mb-3"
-				style={{ position: "relative", zIndex: 1 }}
-			>
-				<SectionLabel>{label}</SectionLabel>
-				<div
-					style={{
-						width: 32,
-						height: 32,
-						borderRadius: 9,
-						background: accent ? "rgba(245,158,11,0.15)" : "var(--s3)",
-						border: accent
-							? "1px solid rgba(245,158,11,0.3)"
-							: "1px solid var(--s4)",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-					}}
-				>
-					<Icon size={14} style={{ color: accent ? "#f59e0b" : "#888" }} />
-				</div>
-			</div>
-			<div style={{ position: "relative", zIndex: 1 }}>
-				<div
-					className="font-kds"
-					style={{
-						fontSize: accent ? 34 : 28,
-						lineHeight: 1,
-						color: accent ? "#f59e0b" : "#e5e5e5",
-					}}
-				>
-					{value}
-				</div>
-				{sub && (
-					<div
-						className="font-body text-ink-disabled mt-1.5"
-						style={{ fontSize: 11 }}
-					>
-						{sub}
-					</div>
-				)}
+				<div style={{ padding: 24 }}>{children}</div>
 			</div>
 		</div>
 	);
@@ -424,13 +419,24 @@ function NuevoGastoModal({
 		<Modal
 			open={open}
 			onClose={onClose}
-			title={editing ? "Editar Gasto" : "Nuevo Gasto"}
+			title={editing ? "EDITAR GASTO" : "NUEVO GASTO"}
 		>
 			<div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-				{/* Category selector as visual grid */}
+				{/* Category selector */}
 				<div>
-					<SectionLabel>Categoria</SectionLabel>
-					<div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+					<div
+						className="font-display uppercase"
+						style={{
+							fontSize: 10,
+							letterSpacing: "0.2em",
+							color: "#888",
+							fontWeight: 600,
+							marginBottom: 8,
+						}}
+					>
+						Categoria
+					</div>
+					<div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
 						{categories
 							.sort((a, b) => a.order - b.order)
 							.map((c, idx) => {
@@ -469,9 +475,7 @@ function NuevoGastoModal({
 											<CategoryIcon
 												iconName={c.icon}
 												size={13}
-												style={{
-													color: isSelected ? color : "#888",
-												}}
+												style={{ color: isSelected ? color : "#888" }}
 											/>
 										</div>
 										<span
@@ -492,9 +496,20 @@ function NuevoGastoModal({
 
 				{/* Description */}
 				<div>
-					<SectionLabel>Descripcion</SectionLabel>
+					<div
+						className="font-display uppercase"
+						style={{
+							fontSize: 10,
+							letterSpacing: "0.2em",
+							color: "#888",
+							fontWeight: 600,
+							marginBottom: 6,
+						}}
+					>
+						Descripcion
+					</div>
 					<input
-						className="input-base mt-1.5"
+						className="input-base"
 						style={{ width: "100%" }}
 						value={description}
 						onChange={(e) => setDescription(e.target.value)}
@@ -502,12 +517,23 @@ function NuevoGastoModal({
 					/>
 				</div>
 
-				{/* Amount + Date row */}
+				{/* Amount + Date */}
 				<div className="grid grid-cols-2 gap-3">
 					<div>
-						<SectionLabel>Monto (ARS)</SectionLabel>
+						<div
+							className="font-display uppercase"
+							style={{
+								fontSize: 10,
+								letterSpacing: "0.2em",
+								color: "#888",
+								fontWeight: 600,
+								marginBottom: 6,
+							}}
+						>
+							Monto (ARS)
+						</div>
 						<input
-							className="input-base mt-1.5"
+							className="input-base"
 							style={{ width: "100%" }}
 							type="number"
 							min={0}
@@ -518,9 +544,20 @@ function NuevoGastoModal({
 						/>
 					</div>
 					<div>
-						<SectionLabel>Fecha</SectionLabel>
+						<div
+							className="font-display uppercase"
+							style={{
+								fontSize: 10,
+								letterSpacing: "0.2em",
+								color: "#888",
+								fontWeight: 600,
+								marginBottom: 6,
+							}}
+						>
+							Fecha
+						</div>
 						<input
-							className="input-base mt-1.5"
+							className="input-base"
 							style={{ width: "100%" }}
 							type="date"
 							value={date}
@@ -531,9 +568,20 @@ function NuevoGastoModal({
 
 				{/* Supplier */}
 				<div>
-					<SectionLabel>Proveedor (opcional)</SectionLabel>
+					<div
+						className="font-display uppercase"
+						style={{
+							fontSize: 10,
+							letterSpacing: "0.2em",
+							color: "#888",
+							fontWeight: 600,
+							marginBottom: 6,
+						}}
+					>
+						Proveedor (opcional)
+					</div>
 					<select
-						className="input-base mt-1.5"
+						className="input-base"
 						style={{ width: "100%" }}
 						value={supplierId}
 						onChange={(e) => setSupplierId(e.target.value)}
@@ -549,8 +597,19 @@ function NuevoGastoModal({
 
 				{/* Payment method pills */}
 				<div>
-					<SectionLabel>Metodo de Pago</SectionLabel>
-					<div className="flex gap-2 mt-2 flex-wrap">
+					<div
+						className="font-display uppercase"
+						style={{
+							fontSize: 10,
+							letterSpacing: "0.2em",
+							color: "#888",
+							fontWeight: 600,
+							marginBottom: 8,
+						}}
+					>
+						Metodo de Pago
+					</div>
+					<div className="flex gap-2 flex-wrap">
 						{PAYMENT_METHODS.map((m) => {
 							const isActive = paymentMethod === m;
 							const color = PAYMENT_COLORS[m] ?? "#888";
@@ -584,9 +643,20 @@ function NuevoGastoModal({
 
 				{/* Notes */}
 				<div>
-					<SectionLabel>Notas (opcional)</SectionLabel>
+					<div
+						className="font-display uppercase"
+						style={{
+							fontSize: 10,
+							letterSpacing: "0.2em",
+							color: "#888",
+							fontWeight: 600,
+							marginBottom: 6,
+						}}
+					>
+						Notas (opcional)
+					</div>
 					<textarea
-						className="input-base mt-1.5"
+						className="input-base"
 						style={{ width: "100%", minHeight: 60, resize: "vertical" }}
 						value={notes}
 						onChange={(e) => setNotes(e.target.value)}
@@ -722,11 +792,10 @@ function CategoriasModal({
 		<Modal
 			open={open}
 			onClose={onClose}
-			title="Gestionar Categorias"
+			title="GESTIONAR CATEGORIAS"
 			width={480}
 		>
 			<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-				{/* Category list */}
 				{sorted.map((cat, idx) => {
 					const color = CAT_COLORS[idx % CAT_COLORS.length];
 					const isEditing = editingId === cat.id;
@@ -760,14 +829,14 @@ function CategoriasModal({
 								<CategoryIcon iconName={cat.icon} size={14} style={{ color }} />
 							</div>
 							<span
-								className="font-body text-ink-primary flex-1"
-								style={{ fontSize: 13, fontWeight: 500 }}
+								className="font-body flex-1"
+								style={{ fontSize: 13, fontWeight: 500, color: "#f5f5f5" }}
 							>
 								{cat.name}
 							</span>
 							<span
-								className="font-body text-ink-disabled"
-								style={{ fontSize: 10, fontFamily: "monospace" }}
+								className="font-body"
+								style={{ fontSize: 10, color: "#666", fontFamily: "monospace" }}
 							>
 								#{cat.order}
 							</span>
@@ -795,10 +864,7 @@ function CategoriasModal({
 						style={{ padding: "32px 16px" }}
 					>
 						<Tag size={24} style={{ color: "#333", marginBottom: 8 }} />
-						<span
-							className="font-body text-ink-disabled"
-							style={{ fontSize: 12 }}
-						>
+						<span className="font-body" style={{ fontSize: 12, color: "#666" }}>
 							No hay categorias definidas
 						</span>
 					</div>
@@ -812,10 +878,19 @@ function CategoriasModal({
 						marginTop: 8,
 					}}
 				>
-					<SectionLabel>
+					<div
+						className="font-display uppercase"
+						style={{
+							fontSize: 10,
+							letterSpacing: "0.2em",
+							color: "#888",
+							fontWeight: 600,
+							marginBottom: 10,
+						}}
+					>
 						{editingId ? "Editar categoria" : "Nueva categoria"}
-					</SectionLabel>
-					<div className="flex gap-2 mt-2.5">
+					</div>
+					<div className="flex gap-2">
 						<div
 							style={{
 								position: "relative",
@@ -919,7 +994,6 @@ export default function ExpensesPage() {
 	const [sortField, setSortField] = useState<"date" | "amount">("date");
 	const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
-	// ── Fetch categories ─────────────────────────────────────────────────────
 	const fetchCategories = useCallback(async () => {
 		try {
 			const data = await apiFetch<ExpenseCategory[]>("/api/expense-categories");
@@ -929,7 +1003,6 @@ export default function ExpensesPage() {
 		}
 	}, []);
 
-	// ── Fetch expenses ───────────────────────────────────────────────────────
 	const fetchExpenses = useCallback(async () => {
 		try {
 			const { from, to } = getDateRange(period, customFrom, customTo);
@@ -942,7 +1015,6 @@ export default function ExpensesPage() {
 		}
 	}, [period, customFrom, customTo, filterCat]);
 
-	// ── Fetch suppliers ──────────────────────────────────────────────────────
 	const fetchSuppliers = useCallback(async () => {
 		try {
 			const data = await apiFetch<Supplier[]>("/api/suppliers");
@@ -952,19 +1024,16 @@ export default function ExpensesPage() {
 		}
 	}, []);
 
-	// ── Initial load ─────────────────────────────────────────────────────────
 	useEffect(() => {
 		Promise.all([fetchCategories(), fetchExpenses(), fetchSuppliers()]).finally(
 			() => setLoading(false),
 		);
 	}, [fetchCategories, fetchExpenses, fetchSuppliers]);
 
-	// ── Refetch expenses on filter change ────────────────────────────────────
 	useEffect(() => {
 		fetchExpenses();
 	}, [fetchExpenses]);
 
-	// ── Delete expense ───────────────────────────────────────────────────────
 	const handleDelete = async (id: string) => {
 		if (!confirm("Eliminar este gasto?")) return;
 		try {
@@ -975,7 +1044,7 @@ export default function ExpensesPage() {
 		}
 	};
 
-	// ── Computed KPIs ────────────────────────────────────────────────────────
+	// Computed KPIs
 	const totalMes = expenses.reduce((s, e) => s + e.amount, 0);
 	const todayStr = new Date().toISOString().slice(0, 10);
 	const gastosHoy = expenses
@@ -983,7 +1052,7 @@ export default function ExpensesPage() {
 		.reduce((s, e) => s + e.amount, 0);
 	const uniqueCats = new Set(expenses.map((e) => e.categoryId)).size;
 
-	// ── Category summaries ───────────────────────────────────────────────────
+	// Category summaries
 	const catSummaries = categories
 		.map((cat, idx) => {
 			const catExpenses = expenses.filter((e) => e.categoryId === cat.id);
@@ -997,7 +1066,7 @@ export default function ExpensesPage() {
 		.filter((c) => c.count > 0)
 		.sort((a, b) => b.total - a.total);
 
-	// ── Sorted expenses ──────────────────────────────────────────────────────
+	// Sorted expenses
 	const sortedExpenses = [...expenses].sort((a, b) => {
 		const mul = sortDir === "asc" ? 1 : -1;
 		if (sortField === "date")
@@ -1022,7 +1091,6 @@ export default function ExpensesPage() {
 		);
 	};
 
-	// ── Category name resolver ───────────────────────────────────────────────
 	const catName = (id: string) =>
 		categories.find((c) => c.id === id)?.name ?? "--";
 	const catIcon = (id: string) =>
@@ -1057,12 +1125,11 @@ export default function ExpensesPage() {
 		});
 	};
 
-	// ── Loading state ────────────────────────────────────────────────────────
 	if (loading) {
 		return (
 			<div
-				className="min-h-screen flex items-center justify-center"
-				style={{ background: "var(--s0)" }}
+				className="flex items-center justify-center"
+				style={{ minHeight: "100vh", background: "var(--s0)" }}
 			>
 				<Loader2
 					size={28}
@@ -1074,774 +1141,808 @@ export default function ExpensesPage() {
 	}
 
 	return (
-		<div
-			className="min-h-screen p-5 md:p-7 pb-10"
-			style={{ background: "var(--s0)" }}
-		>
-			{/* ── Header ──────────────────────────────────────────────────────── */}
-			<div className="flex flex-wrap items-center justify-between gap-3 mb-6 animate-fade-in">
-				<div>
+		<div style={{ minHeight: "100vh", background: "var(--s0)" }}>
+			<div
+				style={{ padding: "28px 24px 48px", maxWidth: 1200, margin: "0 auto" }}
+			>
+				{/* Header */}
+				<div
+					className="flex items-center justify-between animate-fade-in"
+					style={{ marginBottom: 8 }}
+				>
 					<div className="flex items-center gap-3">
 						<div
 							style={{
 								width: 3,
-								height: 22,
-								borderRadius: 3,
+								height: 24,
+								borderRadius: 2,
 								background: "var(--gold)",
 							}}
 						/>
-						<h1
-							className="font-display"
-							style={{
-								fontSize: 22,
-								lineHeight: 1,
-								color: "#e5e5e5",
-								fontWeight: 700,
-							}}
-						>
-							Gastos
-						</h1>
+						<div>
+							<h1
+								className="font-display"
+								style={{
+									fontSize: 22,
+									fontWeight: 700,
+									color: "#f5f5f5",
+									lineHeight: 1.1,
+								}}
+							>
+								GASTOS
+							</h1>
+							<p
+								className="font-body"
+								style={{ fontSize: 12, color: "#666", marginTop: 2 }}
+							>
+								Control y registro de gastos operativos
+							</p>
+						</div>
 					</div>
-					<div
-						className="font-body text-ink-disabled mt-1.5"
-						style={{ fontSize: 12, paddingLeft: 15 }}
-					>
-						Control y registro de gastos operativos
-					</div>
-				</div>
-				<div className="flex items-center gap-2">
-					<button
-						className="btn-ghost flex items-center gap-1.5"
-						style={{ padding: "8px 14px", borderRadius: 10 }}
-						onClick={handlePrint}
-					>
-						<Printer size={13} />
-						<span
-							className="font-display"
-							style={{ fontSize: 10, letterSpacing: "0.1em" }}
-						>
-							Imprimir
-						</span>
-					</button>
-					<button
-						className="btn-secondary flex items-center gap-1.5"
-						style={{ padding: "8px 14px", borderRadius: 10 }}
-						onClick={() => setShowCatModal(true)}
-					>
-						<Settings size={13} />
-						<span
-							className="font-display"
-							style={{ fontSize: 10, letterSpacing: "0.1em" }}
-						>
-							Categorias
-						</span>
-					</button>
-					<button
-						className="btn-primary flex items-center gap-1.5"
-						style={{ padding: "8px 16px", borderRadius: 10 }}
-						onClick={() => {
-							setEditingExpense(null);
-							setShowNewModal(true);
-						}}
-					>
-						<Plus size={14} />
-						<span
-							className="font-display"
-							style={{ fontSize: 10, letterSpacing: "0.1em" }}
-						>
-							Nuevo Gasto
-						</span>
-					</button>
-				</div>
-			</div>
-
-			{/* ── Period Selector ──────────────────────────────────────────────── */}
-			<div className="flex flex-wrap items-center gap-3 mb-6 animate-fade-in">
-				<div
-					className="flex items-center gap-0.5 p-1 rounded-xl"
-					style={{ background: "var(--s2)", border: "1px solid var(--s3)" }}
-				>
-					{PERIODS.map((p) => (
-						<button
-							key={p}
-							onClick={() => setPeriod(p)}
-							style={{
-								padding: "7px 16px",
-								borderRadius: 10,
-								background: period === p ? "#f59e0b" : "transparent",
-								color: period === p ? "#0a0a0a" : "#666",
-								fontFamily: "var(--font-syne)",
-								fontWeight: 700,
-								fontSize: 11,
-								letterSpacing: "0.1em",
-								border: "none",
-								cursor: "pointer",
-								transition: "all 0.15s",
-								boxShadow:
-									period === p ? "0 0 10px rgba(245,158,11,0.3)" : "none",
-							}}
-						>
-							{p}
-						</button>
-					))}
-				</div>
-				{period === "Custom" && (
 					<div className="flex items-center gap-2">
-						<input
-							className="input-base"
-							type="date"
-							value={customFrom}
-							onChange={(e) => setCustomFrom(e.target.value)}
-							style={{ fontSize: 12 }}
-						/>
-						<span className="text-ink-disabled" style={{ fontSize: 12 }}>
-							a
-						</span>
-						<input
-							className="input-base"
-							type="date"
-							value={customTo}
-							onChange={(e) => setCustomTo(e.target.value)}
-							style={{ fontSize: 12 }}
-						/>
-					</div>
-				)}
-			</div>
-
-			<div className="divider-gold mb-6" />
-
-			{/* ── KPI Cards ───────────────────────────────────────────────────── */}
-			<div className="grid gap-4 grid-cols-2 md:grid-cols-3 mb-7">
-				<Kpi
-					label="Gasto Total Periodo"
-					value={formatCurrency(totalMes)}
-					Icon={DollarSign}
-					accent
-					sub={`${expenses.length} registro${expenses.length !== 1 ? "s" : ""}`}
-				/>
-				<Kpi
-					label="Gastos Hoy"
-					value={formatCurrency(gastosHoy)}
-					Icon={CalendarDays}
-				/>
-				<Kpi label="Categorias Activas" value={String(uniqueCats)} Icon={Tag} />
-			</div>
-
-			{/* ── Category Summary ────────────────────────────────────────────── */}
-			{catSummaries.length > 0 && (
-				<div className="mb-7 animate-fade-in">
-					<div className="mb-3">
-						<SectionLabel>Resumen por Categoria</SectionLabel>
-					</div>
-					<div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-						{catSummaries.map((cat) => {
-							const isActive = filterCat === cat.id;
-							const pct =
-								totalMes > 0 ? ((cat.total / totalMes) * 100).toFixed(1) : "0";
-							return (
-								<button
-									key={cat.id}
-									onClick={() => setFilterCat(isActive ? "" : cat.id)}
-									style={{
-										padding: "16px",
-										borderRadius: 14,
-										cursor: "pointer",
-										textAlign: "left",
-										border: isActive
-											? `1px solid ${cat.color}55`
-											: "1px solid var(--s3)",
-										background: isActive ? `${cat.color}08` : "var(--s1)",
-										transition: "all 0.2s",
-										position: "relative",
-										overflow: "hidden",
-									}}
-								>
-									{/* Subtle top-bar accent */}
-									<div
-										style={{
-											position: "absolute",
-											top: 0,
-											left: 0,
-											right: 0,
-											height: 2,
-											background: cat.color,
-											opacity: isActive ? 0.6 : 0.2,
-											transition: "opacity 0.2s",
-										}}
-									/>
-									<div className="flex items-center gap-2.5 mb-3">
-										<div
-											style={{
-												width: 30,
-												height: 30,
-												borderRadius: 9,
-												background: `${cat.color}18`,
-												border: `1px solid ${cat.color}30`,
-												display: "flex",
-												alignItems: "center",
-												justifyContent: "center",
-											}}
-										>
-											<CategoryIcon
-												iconName={cat.icon}
-												size={14}
-												style={{ color: cat.color }}
-											/>
-										</div>
-										<div style={{ flex: 1, minWidth: 0 }}>
-											<span
-												className="font-body text-ink-primary"
-												style={{
-													fontSize: 12,
-													fontWeight: 500,
-													display: "block",
-												}}
-											>
-												{cat.name}
-											</span>
-											<span
-												className="font-body text-ink-disabled"
-												style={{ fontSize: 10 }}
-											>
-												{cat.count} gasto{cat.count !== 1 ? "s" : ""} / {pct}%
-											</span>
-										</div>
-									</div>
-									<div
-										className="font-kds"
-										style={{
-											fontSize: 22,
-											lineHeight: 1,
-											color: isActive ? cat.color : "#e5e5e5",
-										}}
-									>
-										{formatCurrency(cat.total)}
-									</div>
-									{/* Mini progress bar */}
-									<div
-										style={{
-											marginTop: 8,
-											width: "100%",
-											height: 3,
-											borderRadius: 2,
-											background: "var(--s3)",
-											overflow: "hidden",
-										}}
-									>
-										<div
-											style={{
-												width: `${totalMes > 0 ? (cat.total / totalMes) * 100 : 0}%`,
-												height: "100%",
-												borderRadius: 2,
-												background: cat.color,
-												transition: "width 0.3s",
-											}}
-										/>
-									</div>
-								</button>
-							);
-						})}
-					</div>
-					{filterCat && (
 						<button
-							className="btn-ghost mt-3 flex items-center gap-1.5"
-							style={{ fontSize: 11, padding: "6px 12px", borderRadius: 8 }}
-							onClick={() => setFilterCat("")}
+							className="btn-ghost flex items-center gap-1.5"
+							onClick={handlePrint}
 						>
-							<X size={10} />
-							Limpiar filtro
+							<Printer size={13} />
+							<span
+								className="font-display"
+								style={{ fontSize: 10, letterSpacing: "0.1em" }}
+							>
+								Imprimir
+							</span>
 						</button>
-					)}
-				</div>
-			)}
-
-			{/* ── Expense List ────────────────────────────────────────────────── */}
-			<div
-				className="card animate-slide-up"
-				style={{ padding: 0, overflow: "hidden" }}
-			>
-				{/* List header */}
-				<div
-					style={{
-						padding: "16px 20px",
-						borderBottom: "1px solid var(--s3)",
-						background: "var(--s1)",
-					}}
-					className="flex items-center justify-between"
-				>
-					<div>
-						<h3
-							className="font-display text-ink-primary"
-							style={{ fontSize: 14, fontWeight: 700 }}
-						>
-							Listado de Gastos
-						</h3>
-						<div
-							className="font-body text-ink-disabled mt-0.5"
-							style={{ fontSize: 11 }}
-						>
-							{expenses.length} registro{expenses.length !== 1 ? "s" : ""}
-							{filterCat ? ` -- ${catName(filterCat)}` : ""}
-						</div>
-					</div>
-					{sortedExpenses.length > 0 && (
-						<div
-							className="font-kds"
-							style={{ fontSize: 22, color: "var(--gold)" }}
-						>
-							{formatCurrency(totalMes)}
-						</div>
-					)}
-				</div>
-
-				{sortedExpenses.length === 0 ? (
-					<div
-						className="flex flex-col items-center justify-center"
-						style={{ padding: "48px 20px" }}
-					>
-						<Wallet size={32} style={{ color: "#333", marginBottom: 12 }} />
-						<span
-							className="font-body text-ink-disabled"
-							style={{ fontSize: 13 }}
-						>
-							No hay gastos registrados en este periodo
-						</span>
 						<button
-							className="btn-primary mt-4 flex items-center gap-1.5"
-							style={{ padding: "8px 20px", fontSize: 12 }}
+							className="btn-secondary flex items-center gap-1.5"
+							onClick={() => setShowCatModal(true)}
+						>
+							<Settings size={13} />
+							<span
+								className="font-display"
+								style={{ fontSize: 10, letterSpacing: "0.1em" }}
+							>
+								Categorias
+							</span>
+						</button>
+						<button
+							className="btn-primary flex items-center gap-1.5"
 							onClick={() => {
 								setEditingExpense(null);
 								setShowNewModal(true);
 							}}
 						>
-							<Plus size={13} />
-							Registrar gasto
+							<Plus size={14} />
+							<span
+								className="font-display"
+								style={{ fontSize: 10, letterSpacing: "0.1em" }}
+							>
+								Nuevo Gasto
+							</span>
 						</button>
 					</div>
-				) : (
-					<>
-						{/* Desktop table */}
-						<div className="hidden md:block" style={{ overflowX: "auto" }}>
-							<table style={{ width: "100%", borderCollapse: "collapse" }}>
-								<thead>
-									<tr style={{ borderBottom: "1px solid var(--s3)" }}>
-										{[
-											{ label: "Categoria", field: null, align: "left" },
-											{ label: "Descripcion", field: null, align: "left" },
-											{ label: "Proveedor", field: null, align: "left" },
-											{ label: "Fecha", field: "date" as const, align: "left" },
-											{
-												label: "Monto",
-												field: "amount" as const,
-												align: "right",
-											},
-											{ label: "Pago", field: null, align: "center" },
-										].map((col) => (
-											<th
-												key={col.label}
-												className="font-display text-ink-disabled uppercase"
-												style={{
-													fontSize: 9,
-													letterSpacing: "0.25em",
-													padding: "12px 16px",
-													textAlign: col.align as "left" | "right" | "center",
-													fontWeight: 600,
-													cursor: col.field ? "pointer" : "default",
-													userSelect: "none",
-												}}
-												onClick={
-													col.field ? () => toggleSort(col.field!) : undefined
-												}
-											>
-												<span
-													className="flex items-center gap-1"
-													style={{
-														justifyContent:
-															col.align === "right"
-																? "flex-end"
-																: col.align === "center"
-																	? "center"
-																	: "flex-start",
-													}}
-												>
-													{col.label}
-													{col.field && <SortIcon field={col.field} />}
-												</span>
-											</th>
-										))}
-										<th style={{ width: 72 }} />
-									</tr>
-								</thead>
-								<tbody>
-									{sortedExpenses.map((exp) => (
-										<tr
-											key={exp.id}
-											style={{
-												borderBottom: "1px solid var(--s3)",
-												transition: "background 0.1s",
-											}}
-											onMouseEnter={(e) =>
-												(e.currentTarget.style.background = "var(--s2)")
-											}
-											onMouseLeave={(e) =>
-												(e.currentTarget.style.background = "transparent")
-											}
-										>
-											{/* Category */}
-											<td style={{ padding: "14px 16px" }}>
-												<div className="flex items-center gap-2.5">
-													<div
-														style={{
-															width: 26,
-															height: 26,
-															borderRadius: 7,
-															background: `${catColor(exp.categoryId)}18`,
-															border: `1px solid ${catColor(exp.categoryId)}30`,
-															display: "flex",
-															alignItems: "center",
-															justifyContent: "center",
-															flexShrink: 0,
-														}}
-													>
-														<CategoryIcon
-															iconName={catIcon(exp.categoryId)}
-															size={11}
-															style={{
-																color: catColor(exp.categoryId),
-															}}
-														/>
-													</div>
-													<span
-														className="font-body text-ink-secondary"
-														style={{ fontSize: 12 }}
-													>
-														{catName(exp.categoryId)}
-													</span>
-												</div>
-											</td>
-											{/* Description */}
-											<td style={{ padding: "14px 16px" }}>
-												<span
-													className="font-body text-ink-primary"
-													style={{ fontSize: 13 }}
-												>
-													{exp.description}
-												</span>
-												{exp.notes && (
-													<div
-														className="font-body text-ink-disabled mt-0.5"
-														style={{ fontSize: 10 }}
-													>
-														{exp.notes}
-													</div>
-												)}
-											</td>
-											{/* Supplier */}
-											<td style={{ padding: "14px 16px" }}>
-												<span
-													className="font-body text-ink-disabled"
-													style={{ fontSize: 12 }}
-												>
-													{exp.supplier?.name ?? "--"}
-												</span>
-											</td>
-											{/* Date */}
-											<td style={{ padding: "14px 16px" }}>
-												<span
-													className="font-body text-ink-secondary"
-													style={{
-														fontSize: 12,
-														fontFamily: "monospace",
-													}}
-												>
-													{formatDate(exp.date)}
-												</span>
-											</td>
-											{/* Amount */}
-											<td
-												style={{
-													padding: "14px 16px",
-													textAlign: "right",
-												}}
-											>
-												<span
-													className="font-kds"
-													style={{ fontSize: 20, color: "#e5e5e5" }}
-												>
-													{formatCurrency(exp.amount)}
-												</span>
-											</td>
-											{/* Payment method badge */}
-											<td
-												style={{
-													padding: "14px 16px",
-													textAlign: "center",
-												}}
-											>
-												<span
-													className="badge"
-													style={{
-														fontSize: 10,
-														padding: "4px 12px",
-														borderRadius: 8,
-														background: `${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}15`,
-														color: PAYMENT_COLORS[exp.paymentMethod] ?? "#888",
-														border: `1px solid ${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}30`,
-														fontWeight: 600,
-													}}
-												>
-													{exp.paymentMethod}
-												</span>
-											</td>
-											{/* Actions */}
-											<td style={{ padding: "14px 8px" }}>
-												<div className="flex items-center gap-1">
-													<button
-														className="btn-ghost"
-														style={{ padding: 6, borderRadius: 8 }}
-														onClick={() => {
-															setEditingExpense(exp);
-															setShowNewModal(true);
-														}}
-													>
-														<Pencil size={12} style={{ color: "#888" }} />
-													</button>
-													<button
-														className="btn-ghost"
-														style={{ padding: 6, borderRadius: 8 }}
-														onClick={() => handleDelete(exp.id)}
-													>
-														<Trash2 size={12} style={{ color: "#ef4444" }} />
-													</button>
-												</div>
-											</td>
-										</tr>
-									))}
-								</tbody>
-								{/* Footer total */}
-								<tfoot>
-									<tr style={{ borderTop: "2px solid var(--s4)" }}>
-										<td
-											colSpan={4}
-											className="font-display text-ink-primary"
-											style={{
-												padding: "16px 16px",
-												fontSize: 12,
-												fontWeight: 700,
-											}}
-										>
-											Total
-										</td>
-										<td
-											style={{
-												padding: "16px 16px",
-												textAlign: "right",
-											}}
-										>
-											<span
-												className="font-kds"
-												style={{
-													fontSize: 24,
-													color: "#f59e0b",
-												}}
-											>
-												{formatCurrency(totalMes)}
-											</span>
-										</td>
-										<td colSpan={2} />
-									</tr>
-								</tfoot>
-							</table>
-						</div>
+				</div>
 
-						{/* Mobile card list */}
-						<div className="md:hidden" style={{ padding: "8px" }}>
-							<div
+				{/* Period Selector */}
+				<div
+					className="flex flex-wrap items-center gap-3 animate-fade-in"
+					style={{ marginBottom: 12 }}
+				>
+					<div
+						className="flex items-center gap-0.5 p-1 rounded-xl"
+						style={{ background: "var(--s2)", border: "1px solid var(--s3)" }}
+					>
+						{PERIODS.map((p) => (
+							<button
+								key={p}
+								onClick={() => setPeriod(p)}
 								style={{
-									display: "flex",
-									flexDirection: "column",
-									gap: 6,
+									padding: "7px 16px",
+									borderRadius: 10,
+									background: period === p ? "#f59e0b" : "transparent",
+									color: period === p ? "#0a0a0a" : "#666",
+									fontFamily: "var(--font-syne)",
+									fontWeight: 700,
+									fontSize: 11,
+									letterSpacing: "0.1em",
+									border: "none",
+									cursor: "pointer",
+									transition: "all 0.15s",
+									boxShadow:
+										period === p ? "0 0 10px rgba(245,158,11,0.3)" : "none",
 								}}
 							>
-								{sortedExpenses.map((exp) => {
-									const color = catColor(exp.categoryId);
-									return (
+								{p}
+							</button>
+						))}
+					</div>
+					{period === "Custom" && (
+						<div className="flex items-center gap-2">
+							<input
+								className="input-base"
+								type="date"
+								value={customFrom}
+								onChange={(e) => setCustomFrom(e.target.value)}
+								style={{ fontSize: 12 }}
+							/>
+							<span style={{ fontSize: 12, color: "#666" }}>a</span>
+							<input
+								className="input-base"
+								type="date"
+								value={customTo}
+								onChange={(e) => setCustomTo(e.target.value)}
+								style={{ fontSize: 12 }}
+							/>
+						</div>
+					)}
+				</div>
+
+				<div className="divider-gold" style={{ marginBottom: 28 }} />
+
+				{/* KPI Cards */}
+				<div
+					className="grid gap-4 grid-cols-2 md:grid-cols-3"
+					style={{ marginBottom: 28 }}
+				>
+					<KpiCard
+						label="Gasto Total Periodo"
+						value={formatCurrency(totalMes)}
+						Icon={DollarSign}
+						color="#f59e0b"
+						sub={`${expenses.length} registro${expenses.length !== 1 ? "s" : ""}`}
+					/>
+					<KpiCard
+						label="Gastos Hoy"
+						value={formatCurrency(gastosHoy)}
+						Icon={CalendarDays}
+						color="#60a5fa"
+					/>
+					<KpiCard
+						label="Categorias Activas"
+						value={String(uniqueCats)}
+						Icon={Tag}
+						color="#8b5cf6"
+					/>
+				</div>
+
+				{/* Category Summary */}
+				{catSummaries.length > 0 && (
+					<div className="animate-fade-in" style={{ marginBottom: 28 }}>
+						<div
+							className="font-display uppercase"
+							style={{
+								fontSize: 10,
+								letterSpacing: "0.2em",
+								color: "#888",
+								fontWeight: 600,
+								marginBottom: 12,
+							}}
+						>
+							Resumen por Categoria
+						</div>
+						<div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+							{catSummaries.map((cat) => {
+								const isActive = filterCat === cat.id;
+								const pct =
+									totalMes > 0
+										? ((cat.total / totalMes) * 100).toFixed(1)
+										: "0";
+								return (
+									<button
+										key={cat.id}
+										onClick={() => setFilterCat(isActive ? "" : cat.id)}
+										style={{
+											padding: 16,
+											borderRadius: 14,
+											cursor: "pointer",
+											textAlign: "left",
+											border: isActive
+												? `1px solid ${cat.color}55`
+												: "1px solid var(--s3)",
+											background: isActive ? `${cat.color}08` : "var(--s1)",
+											transition: "all 0.2s",
+											position: "relative",
+											overflow: "hidden",
+										}}
+									>
 										<div
-											key={exp.id}
 											style={{
-												padding: "14px 16px",
-												borderRadius: 12,
-												background: "var(--s2)",
-												border: "1px solid var(--s3)",
-												position: "relative",
+												position: "absolute",
+												top: 0,
+												left: 0,
+												right: 0,
+												height: 2,
+												background: cat.color,
+												opacity: isActive ? 0.6 : 0.2,
+												transition: "opacity 0.2s",
+											}}
+										/>
+										<div
+											className="flex items-center gap-2.5"
+											style={{ marginBottom: 12 }}
+										>
+											<div
+												style={{
+													width: 30,
+													height: 30,
+													borderRadius: 9,
+													background: `${cat.color}18`,
+													border: `1px solid ${cat.color}30`,
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+												}}
+											>
+												<CategoryIcon
+													iconName={cat.icon}
+													size={14}
+													style={{ color: cat.color }}
+												/>
+											</div>
+											<div style={{ flex: 1, minWidth: 0 }}>
+												<span
+													className="font-body"
+													style={{
+														fontSize: 12,
+														fontWeight: 500,
+														display: "block",
+														color: "#f5f5f5",
+													}}
+												>
+													{cat.name}
+												</span>
+												<span
+													className="font-body"
+													style={{ fontSize: 10, color: "#666" }}
+												>
+													{cat.count} gasto{cat.count !== 1 ? "s" : ""} / {pct}%
+												</span>
+											</div>
+										</div>
+										<div
+											className="font-kds"
+											style={{
+												fontSize: 22,
+												lineHeight: 1,
+												color: isActive ? cat.color : "#e5e5e5",
+											}}
+										>
+											{formatCurrency(cat.total)}
+										</div>
+										<div
+											style={{
+												marginTop: 8,
+												width: "100%",
+												height: 3,
+												borderRadius: 2,
+												background: "var(--s3)",
 												overflow: "hidden",
 											}}
 										>
-											{/* Left accent line */}
 											<div
 												style={{
-													position: "absolute",
-													top: 0,
-													left: 0,
-													bottom: 0,
-													width: 3,
-													background: color,
-													borderRadius: "3px 0 0 3px",
-													opacity: 0.5,
+													width: `${totalMes > 0 ? (cat.total / totalMes) * 100 : 0}%`,
+													height: "100%",
+													borderRadius: 2,
+													background: cat.color,
+													transition: "width 0.3s",
 												}}
 											/>
-											<div className="flex items-start justify-between gap-3">
-												<div style={{ flex: 1, minWidth: 0 }}>
-													<div className="flex items-center gap-2 mb-1">
-														<CategoryIcon
-															iconName={catIcon(exp.categoryId)}
-															size={12}
-															style={{ color, flexShrink: 0 }}
-														/>
+										</div>
+									</button>
+								);
+							})}
+						</div>
+						{filterCat && (
+							<button
+								className="btn-ghost flex items-center gap-1.5"
+								style={{
+									fontSize: 11,
+									padding: "6px 12px",
+									borderRadius: 8,
+									marginTop: 12,
+								}}
+								onClick={() => setFilterCat("")}
+							>
+								<X size={10} />
+								Limpiar filtro
+							</button>
+						)}
+					</div>
+				)}
+
+				{/* Expense List */}
+				<div
+					style={{
+						background: "var(--s1)",
+						border: "1px solid var(--s4)",
+						borderRadius: 16,
+						overflow: "hidden",
+						boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+					}}
+				>
+					{/* List header */}
+					<div
+						className="flex items-center justify-between"
+						style={{
+							padding: "14px 20px",
+							borderBottom: "1px solid var(--s3)",
+							background: "var(--s2)",
+						}}
+					>
+						<div className="flex items-center gap-2.5">
+							<Wallet size={14} style={{ color: "var(--gold)" }} />
+							<span
+								className="font-display uppercase"
+								style={{
+									fontSize: 11,
+									letterSpacing: "0.15em",
+									color: "#ccc",
+									fontWeight: 600,
+								}}
+							>
+								LISTADO DE GASTOS
+							</span>
+							<span
+								className="font-body"
+								style={{ fontSize: 11, color: "#666" }}
+							>
+								{expenses.length} registro{expenses.length !== 1 ? "s" : ""}
+								{filterCat ? ` -- ${catName(filterCat)}` : ""}
+							</span>
+						</div>
+						{sortedExpenses.length > 0 && (
+							<div
+								className="font-kds"
+								style={{ fontSize: 22, color: "var(--gold)" }}
+							>
+								{formatCurrency(totalMes)}
+							</div>
+						)}
+					</div>
+
+					{sortedExpenses.length === 0 ? (
+						<div
+							className="flex flex-col items-center justify-center"
+							style={{ padding: "48px 20px" }}
+						>
+							<Wallet size={32} style={{ color: "#333", marginBottom: 12 }} />
+							<span
+								className="font-body"
+								style={{ fontSize: 13, color: "#666" }}
+							>
+								No hay gastos registrados en este periodo
+							</span>
+							<button
+								className="btn-primary flex items-center gap-1.5"
+								style={{ padding: "8px 20px", fontSize: 12, marginTop: 16 }}
+								onClick={() => {
+									setEditingExpense(null);
+									setShowNewModal(true);
+								}}
+							>
+								<Plus size={13} />
+								Registrar gasto
+							</button>
+						</div>
+					) : (
+						<>
+							{/* Desktop table */}
+							<div className="hidden md:block" style={{ overflowX: "auto" }}>
+								<table style={{ width: "100%", borderCollapse: "collapse" }}>
+									<thead>
+										<tr style={{ borderBottom: "1px solid var(--s3)" }}>
+											{[
+												{ label: "Categoria", field: null, align: "left" },
+												{ label: "Descripcion", field: null, align: "left" },
+												{ label: "Proveedor", field: null, align: "left" },
+												{
+													label: "Fecha",
+													field: "date" as const,
+													align: "left",
+												},
+												{
+													label: "Monto",
+													field: "amount" as const,
+													align: "right",
+												},
+												{ label: "Pago", field: null, align: "center" },
+											].map((col) => (
+												<th
+													key={col.label}
+													className="font-display uppercase"
+													style={{
+														fontSize: 9,
+														letterSpacing: "0.25em",
+														padding: "12px 16px",
+														textAlign: col.align as "left" | "right" | "center",
+														fontWeight: 600,
+														color: "#888",
+														cursor: col.field ? "pointer" : "default",
+														userSelect: "none",
+													}}
+													onClick={
+														col.field ? () => toggleSort(col.field!) : undefined
+													}
+												>
+													<span
+														className="flex items-center gap-1"
+														style={{
+															justifyContent:
+																col.align === "right"
+																	? "flex-end"
+																	: col.align === "center"
+																		? "center"
+																		: "flex-start",
+														}}
+													>
+														{col.label}
+														{col.field && <SortIcon field={col.field} />}
+													</span>
+												</th>
+											))}
+											<th style={{ width: 72 }} />
+										</tr>
+									</thead>
+									<tbody>
+										{sortedExpenses.map((exp) => (
+											<tr
+												key={exp.id}
+												style={{
+													borderBottom: "1px solid var(--s3)",
+													transition: "background 0.1s",
+												}}
+												onMouseEnter={(e) =>
+													(e.currentTarget.style.background = "var(--s2)")
+												}
+												onMouseLeave={(e) =>
+													(e.currentTarget.style.background = "transparent")
+												}
+											>
+												<td style={{ padding: "12px 16px" }}>
+													<div className="flex items-center gap-2.5">
+														<div
+															style={{
+																width: 26,
+																height: 26,
+																borderRadius: 7,
+																background: `${catColor(exp.categoryId)}18`,
+																border: `1px solid ${catColor(exp.categoryId)}30`,
+																display: "flex",
+																alignItems: "center",
+																justifyContent: "center",
+																flexShrink: 0,
+															}}
+														>
+															<CategoryIcon
+																iconName={catIcon(exp.categoryId)}
+																size={11}
+																style={{ color: catColor(exp.categoryId) }}
+															/>
+														</div>
 														<span
-															className="font-body text-ink-disabled"
-															style={{ fontSize: 10 }}
+															className="font-body"
+															style={{ fontSize: 12, color: "#aaa" }}
 														>
 															{catName(exp.categoryId)}
 														</span>
-														<span
-															className="badge"
-															style={{
-																fontSize: 9,
-																padding: "2px 8px",
-																borderRadius: 6,
-																background: `${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}15`,
-																color:
-																	PAYMENT_COLORS[exp.paymentMethod] ?? "#888",
-																border: `1px solid ${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}30`,
-															}}
-														>
-															{exp.paymentMethod}
-														</span>
 													</div>
-													<div
-														className="font-body text-ink-primary"
-														style={{
-															fontSize: 13,
-															fontWeight: 500,
-														}}
+												</td>
+												<td style={{ padding: "12px 16px" }}>
+													<span
+														className="font-body"
+														style={{ fontSize: 13, color: "#f5f5f5" }}
 													>
 														{exp.description}
-													</div>
-													<div
-														className="font-body text-ink-disabled mt-0.5"
+													</span>
+													{exp.notes && (
+														<div
+															className="font-body"
+															style={{
+																fontSize: 10,
+																color: "#666",
+																marginTop: 2,
+															}}
+														>
+															{exp.notes}
+														</div>
+													)}
+												</td>
+												<td style={{ padding: "12px 16px" }}>
+													<span
+														className="font-body"
+														style={{ fontSize: 12, color: "#666" }}
+													>
+														{exp.supplier?.name ?? "--"}
+													</span>
+												</td>
+												<td style={{ padding: "12px 16px" }}>
+													<span
+														className="font-body"
 														style={{
-															fontSize: 11,
+															fontSize: 12,
+															color: "#aaa",
 															fontFamily: "monospace",
 														}}
 													>
 														{formatDate(exp.date)}
-														{exp.supplier?.name
-															? ` / ${exp.supplier.name}`
-															: ""}
-													</div>
-												</div>
-												<div
-													style={{
-														textAlign: "right",
-														flexShrink: 0,
-													}}
+													</span>
+												</td>
+												<td
+													style={{ padding: "12px 16px", textAlign: "right" }}
 												>
-													<div
+													<span
 														className="font-kds"
-														style={{
-															fontSize: 20,
-															color: "#e5e5e5",
-															lineHeight: 1,
-														}}
+														style={{ fontSize: 20, color: "#e5e5e5" }}
 													>
 														{formatCurrency(exp.amount)}
-													</div>
-													<div
-														className="flex items-center gap-1 mt-2"
-														style={{ justifyContent: "flex-end" }}
+													</span>
+												</td>
+												<td
+													style={{
+														padding: "12px 16px",
+														textAlign: "center",
+													}}
+												>
+													<span
+														className="badge"
+														style={{
+															fontSize: 10,
+															padding: "4px 12px",
+															borderRadius: 8,
+															background: `${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}15`,
+															color:
+																PAYMENT_COLORS[exp.paymentMethod] ?? "#888",
+															border: `1px solid ${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}30`,
+															fontWeight: 600,
+														}}
 													>
+														{exp.paymentMethod}
+													</span>
+												</td>
+												<td style={{ padding: "12px 8px" }}>
+													<div className="flex items-center gap-1">
 														<button
 															className="btn-ghost"
-															style={{
-																padding: 4,
-																borderRadius: 6,
-															}}
+															style={{ padding: 6, borderRadius: 8 }}
 															onClick={() => {
 																setEditingExpense(exp);
 																setShowNewModal(true);
 															}}
 														>
-															<Pencil size={11} style={{ color: "#888" }} />
+															<Pencil size={12} style={{ color: "#888" }} />
 														</button>
 														<button
 															className="btn-ghost"
-															style={{
-																padding: 4,
-																borderRadius: 6,
-															}}
+															style={{ padding: 6, borderRadius: 8 }}
 															onClick={() => handleDelete(exp.id)}
 														>
-															<Trash2 size={11} style={{ color: "#ef4444" }} />
+															<Trash2 size={12} style={{ color: "#ef4444" }} />
 														</button>
+													</div>
+												</td>
+											</tr>
+										))}
+									</tbody>
+									<tfoot>
+										<tr style={{ borderTop: "2px solid var(--s4)" }}>
+											<td
+												colSpan={4}
+												className="font-display"
+												style={{
+													padding: "16px 16px",
+													fontSize: 12,
+													fontWeight: 700,
+													color: "#f5f5f5",
+												}}
+											>
+												Total
+											</td>
+											<td style={{ padding: "16px 16px", textAlign: "right" }}>
+												<span
+													className="font-kds"
+													style={{ fontSize: 24, color: "#f59e0b" }}
+												>
+													{formatCurrency(totalMes)}
+												</span>
+											</td>
+											<td colSpan={2} />
+										</tr>
+									</tfoot>
+								</table>
+							</div>
+
+							{/* Mobile card list */}
+							<div className="md:hidden" style={{ padding: 8 }}>
+								<div
+									style={{
+										display: "flex",
+										flexDirection: "column",
+										gap: 6,
+									}}
+								>
+									{sortedExpenses.map((exp) => {
+										const color = catColor(exp.categoryId);
+										return (
+											<div
+												key={exp.id}
+												style={{
+													padding: "14px 16px",
+													borderRadius: 12,
+													background: "var(--s2)",
+													border: "1px solid var(--s3)",
+													position: "relative",
+													overflow: "hidden",
+												}}
+											>
+												<div
+													style={{
+														position: "absolute",
+														top: 0,
+														left: 0,
+														bottom: 0,
+														width: 3,
+														background: color,
+														borderRadius: "3px 0 0 3px",
+														opacity: 0.5,
+													}}
+												/>
+												<div className="flex items-start justify-between gap-3">
+													<div style={{ flex: 1, minWidth: 0 }}>
+														<div
+															className="flex items-center gap-2"
+															style={{ marginBottom: 4 }}
+														>
+															<CategoryIcon
+																iconName={catIcon(exp.categoryId)}
+																size={12}
+																style={{ color, flexShrink: 0 }}
+															/>
+															<span
+																className="font-body"
+																style={{ fontSize: 10, color: "#666" }}
+															>
+																{catName(exp.categoryId)}
+															</span>
+															<span
+																className="badge"
+																style={{
+																	fontSize: 9,
+																	padding: "2px 8px",
+																	borderRadius: 6,
+																	background: `${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}15`,
+																	color:
+																		PAYMENT_COLORS[exp.paymentMethod] ?? "#888",
+																	border: `1px solid ${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}30`,
+																}}
+															>
+																{exp.paymentMethod}
+															</span>
+														</div>
+														<div
+															className="font-body"
+															style={{
+																fontSize: 13,
+																fontWeight: 500,
+																color: "#f5f5f5",
+															}}
+														>
+															{exp.description}
+														</div>
+														<div
+															className="font-body"
+															style={{
+																fontSize: 11,
+																color: "#666",
+																fontFamily: "monospace",
+																marginTop: 2,
+															}}
+														>
+															{formatDate(exp.date)}
+															{exp.supplier?.name
+																? ` / ${exp.supplier.name}`
+																: ""}
+														</div>
+													</div>
+													<div style={{ textAlign: "right", flexShrink: 0 }}>
+														<div
+															className="font-kds"
+															style={{
+																fontSize: 20,
+																color: "#e5e5e5",
+																lineHeight: 1,
+															}}
+														>
+															{formatCurrency(exp.amount)}
+														</div>
+														<div
+															className="flex items-center gap-1"
+															style={{
+																justifyContent: "flex-end",
+																marginTop: 8,
+															}}
+														>
+															<button
+																className="btn-ghost"
+																style={{ padding: 4, borderRadius: 6 }}
+																onClick={() => {
+																	setEditingExpense(exp);
+																	setShowNewModal(true);
+																}}
+															>
+																<Pencil size={11} style={{ color: "#888" }} />
+															</button>
+															<button
+																className="btn-ghost"
+																style={{ padding: 4, borderRadius: 6 }}
+																onClick={() => handleDelete(exp.id)}
+															>
+																<Trash2
+																	size={11}
+																	style={{ color: "#ef4444" }}
+																/>
+															</button>
+														</div>
 													</div>
 												</div>
 											</div>
-										</div>
-									);
-								})}
-							</div>
-							{/* Mobile total */}
-							<div
-								className="flex items-center justify-between"
-								style={{
-									padding: "16px 16px 8px",
-									borderTop: "2px solid var(--s4)",
-									marginTop: 8,
-								}}
-							>
-								<span
-									className="font-display text-ink-primary"
-									style={{ fontSize: 12, fontWeight: 700 }}
+										);
+									})}
+								</div>
+								<div
+									className="flex items-center justify-between"
+									style={{
+										padding: "16px 16px 8px",
+										borderTop: "2px solid var(--s4)",
+										marginTop: 8,
+									}}
 								>
-									Total
-								</span>
-								<span
-									className="font-kds"
-									style={{ fontSize: 24, color: "#f59e0b" }}
-								>
-									{formatCurrency(totalMes)}
-								</span>
+									<span
+										className="font-display"
+										style={{
+											fontSize: 12,
+											fontWeight: 700,
+											color: "#f5f5f5",
+										}}
+									>
+										Total
+									</span>
+									<span
+										className="font-kds"
+										style={{ fontSize: 24, color: "#f59e0b" }}
+									>
+										{formatCurrency(totalMes)}
+									</span>
+								</div>
 							</div>
-						</div>
-					</>
-				)}
-			</div>
+						</>
+					)}
+				</div>
 
-			{/* ── Modals ──────────────────────────────────────────────────────── */}
-			<NuevoGastoModal
-				open={showNewModal}
-				onClose={() => {
-					setShowNewModal(false);
-					setEditingExpense(null);
-				}}
-				categories={categories}
-				suppliers={suppliers}
-				onSaved={() => {
-					fetchExpenses();
-					fetchCategories();
-				}}
-				editing={editingExpense}
-			/>
-			<CategoriasModal
-				open={showCatModal}
-				onClose={() => setShowCatModal(false)}
-				categories={categories}
-				onChanged={() => {
-					fetchCategories();
-					fetchExpenses();
-				}}
-			/>
+				{/* Modals */}
+				<NuevoGastoModal
+					open={showNewModal}
+					onClose={() => {
+						setShowNewModal(false);
+						setEditingExpense(null);
+					}}
+					categories={categories}
+					suppliers={suppliers}
+					onSaved={() => {
+						fetchExpenses();
+						fetchCategories();
+					}}
+					editing={editingExpense}
+				/>
+				<CategoriasModal
+					open={showCatModal}
+					onClose={() => setShowCatModal(false)}
+					categories={categories}
+					onChanged={() => {
+						fetchCategories();
+						fetchExpenses();
+					}}
+				/>
+			</div>
 		</div>
 	);
 }

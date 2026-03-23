@@ -12,12 +12,14 @@ import {
 	Flame,
 	Zap,
 	X,
+	Timer,
+	DollarSign,
 } from "lucide-react";
 import { formatCurrency, elapsedMinutes } from "@/lib/utils";
 import type { DeliveryOrder, DeliveryStatus } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// --- Helpers ----------------------------------------------------------------
 
 const STATUS_CONFIG: Record<
 	DeliveryStatus,
@@ -74,7 +76,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 	card: "Tarjeta",
 };
 
-// ─── Elapsed badge ────────────────────────────────────────────────────────────
+// --- Elapsed badge ----------------------------------------------------------
 
 function ElapsedBadge({ createdAt }: { createdAt: string }) {
 	const [mins, setMins] = useState(() => elapsedMinutes(createdAt));
@@ -111,7 +113,7 @@ function ElapsedBadge({ createdAt }: { createdAt: string }) {
 	);
 }
 
-// ─── Delivery card ────────────────────────────────────────────────────────────
+// --- Repartidor link row ----------------------------------------------------
 
 function RepartidorLinkRow({ orderId }: { orderId: string }) {
 	const [copied, setCopied] = useState(false);
@@ -149,7 +151,7 @@ function RepartidorLinkRow({ orderId }: { orderId: string }) {
 					fontFamily: "monospace",
 				}}
 			>
-				/repartidor/{orderId.slice(0, 8)}…
+				/repartidor/{orderId.slice(0, 8)}...
 			</span>
 			<button
 				onClick={handleCopy}
@@ -202,6 +204,8 @@ function RepartidorLinkRow({ orderId }: { orderId: string }) {
 	);
 }
 
+// --- Delivery card ----------------------------------------------------------
+
 function DeliveryCard({
 	order,
 	onAdvance,
@@ -216,9 +220,9 @@ function DeliveryCard({
 		: NEXT_STATUS[order.status as Exclude<DeliveryStatus, "delivered">];
 
 	const advanceLabel: Record<Exclude<DeliveryStatus, "delivered">, string> = {
-		pending: "Iniciar preparación →",
-		preparing: "Enviar a repartidor →",
-		on_the_way: "Confirmar entrega ✓",
+		pending: "Iniciar preparacion",
+		preparing: "Enviar a repartidor",
+		on_the_way: "Confirmar entrega",
 	};
 
 	const advanceBg: Record<Exclude<DeliveryStatus, "delivered">, string> = {
@@ -229,8 +233,17 @@ function DeliveryCard({
 
 	return (
 		<div
-			className="card overflow-hidden flex flex-col"
-			style={{ opacity: isDelivered ? 0.6 : 1, transition: "opacity 0.2s" }}
+			style={{
+				background: "var(--s1)",
+				border: "1px solid var(--s4)",
+				borderRadius: 16,
+				overflow: "hidden",
+				boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+				opacity: isDelivered ? 0.6 : 1,
+				transition: "opacity 0.2s",
+				display: "flex",
+				flexDirection: "column",
+			}}
 		>
 			{/* Header */}
 			<div
@@ -266,8 +279,13 @@ function DeliveryCard({
 						</span>
 					</div>
 					<div
-						className="font-display text-ink-primary"
-						style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2 }}
+						className="font-display"
+						style={{
+							fontSize: 14,
+							fontWeight: 700,
+							color: "#f5f5f5",
+							lineHeight: 1.2,
+						}}
 					>
 						{order.customerName}
 					</div>
@@ -277,9 +295,10 @@ function DeliveryCard({
 					>
 						<MapPin size={11} style={{ flexShrink: 0 }} />
 						<span
-							className="font-body text-ink-disabled"
+							className="font-body"
 							style={{
 								fontSize: 12,
+								color: "#666",
 								overflow: "hidden",
 								textOverflow: "ellipsis",
 								whiteSpace: "nowrap",
@@ -303,18 +322,19 @@ function DeliveryCard({
 				}}
 			>
 				{order.items.length === 0 ? (
-					<div className="font-body text-ink-disabled" style={{ fontSize: 12 }}>
-						Sin ítems registrados
+					<div className="font-body" style={{ fontSize: 12, color: "#555" }}>
+						Sin items registrados
 					</div>
 				) : (
 					order.items.map((item, i) => (
 						<div key={i} className="flex items-center justify-between gap-2">
 							<div className="flex items-center gap-2 min-w-0">
 								<span
-									className="font-kds text-brand-500"
+									className="font-kds"
 									style={{
 										fontSize: 18,
 										lineHeight: 1,
+										color: "var(--gold)",
 										width: 20,
 										textAlign: "center",
 										flexShrink: 0,
@@ -323,10 +343,11 @@ function DeliveryCard({
 									{item.qty}
 								</span>
 								<span
-									className="font-display text-ink-primary"
+									className="font-display"
 									style={{
 										fontSize: 12,
 										fontWeight: 600,
+										color: "#f5f5f5",
 										overflow: "hidden",
 										textOverflow: "ellipsis",
 										whiteSpace: "nowrap",
@@ -336,8 +357,8 @@ function DeliveryCard({
 								</span>
 							</div>
 							<span
-								className="font-body text-ink-disabled"
-								style={{ fontSize: 12, flexShrink: 0 }}
+								className="font-body"
+								style={{ fontSize: 12, color: "#666", flexShrink: 0 }}
 							>
 								{formatCurrency(item.price * item.qty)}
 							</span>
@@ -359,22 +380,19 @@ function DeliveryCard({
 			>
 				<div className="flex items-center gap-2">
 					<CreditCard size={12} style={{ color: "#555" }} />
-					<span
-						className="font-body text-ink-disabled"
-						style={{ fontSize: 12 }}
-					>
+					<span className="font-body" style={{ fontSize: 12, color: "#666" }}>
 						{PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}
 					</span>
 				</div>
 				<span
-					className="font-kds text-brand-500"
-					style={{ fontSize: 20, lineHeight: 1 }}
+					className="font-kds"
+					style={{ fontSize: 20, lineHeight: 1, color: "var(--gold)" }}
 				>
 					{formatCurrency(order.total)}
 				</span>
 			</div>
 
-			{/* Repartidor link — shown for active orders */}
+			{/* Repartidor link */}
 			{!isDelivered && <RepartidorLinkRow orderId={order.id} />}
 
 			{/* Advance button */}
@@ -408,7 +426,104 @@ function DeliveryCard({
 	);
 }
 
-// ─── Stats row ────────────────────────────────────────────────────────────────
+// --- KPI Card ---------------------------------------------------------------
+
+function KpiCard({
+	label,
+	value,
+	sub,
+	color,
+	icon: Icon,
+}: {
+	label: string;
+	value: string | number;
+	sub?: string;
+	color: string;
+	icon: React.FC<{ size?: number; style?: React.CSSProperties }>;
+}) {
+	return (
+		<div
+			style={{
+				background: "var(--s1)",
+				border: `1px solid ${color}25`,
+				borderRadius: 16,
+				padding: "24px 22px 20px",
+				position: "relative",
+				overflow: "hidden",
+			}}
+		>
+			<div
+				style={{
+					position: "absolute",
+					top: 0,
+					left: "20%",
+					right: "20%",
+					height: 1,
+					background: `linear-gradient(90deg, transparent, ${color}50, transparent)`,
+				}}
+			/>
+			<div
+				style={{
+					position: "absolute",
+					top: 0,
+					right: 0,
+					width: 120,
+					height: 120,
+					background: `radial-gradient(circle at 100% 0%, ${color}12 0%, transparent 70%)`,
+					pointerEvents: "none",
+				}}
+			/>
+			<div style={{ position: "relative", zIndex: 1 }}>
+				<div
+					className="flex items-center justify-between"
+					style={{ marginBottom: 16 }}
+				>
+					<div
+						className="font-display uppercase"
+						style={{
+							fontSize: 10,
+							letterSpacing: "0.2em",
+							color: "#888",
+							fontWeight: 600,
+						}}
+					>
+						{label}
+					</div>
+					<div
+						style={{
+							width: 34,
+							height: 34,
+							borderRadius: 10,
+							background: `${color}15`,
+							border: `1px solid ${color}30`,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+					>
+						<Icon size={16} style={{ color }} />
+					</div>
+				</div>
+				<div
+					className="font-kds"
+					style={{ fontSize: 36, lineHeight: 1, color }}
+				>
+					{value}
+				</div>
+				{sub && (
+					<div
+						className="font-body"
+						style={{ fontSize: 11, color: "#666", marginTop: 4 }}
+					>
+						{sub}
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
+// --- Stats row --------------------------------------------------------------
 
 function StatsRow({ orders }: { orders: DeliveryOrder[] }) {
 	const pending = orders.filter((o) => o.status === "pending").length;
@@ -420,98 +535,34 @@ function StatsRow({ orders }: { orders: DeliveryOrder[] }) {
 		.reduce((s, o) => s + o.total, 0);
 
 	return (
-		<div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
-			<div
-				className="card col-span-2 sm:col-span-1 md:col-span-2 p-5"
-				style={{
-					position: "relative",
-					overflow: "hidden",
-					borderColor: "rgba(245,158,11,0.25)",
-					boxShadow: "0 0 24px rgba(245,158,11,0.06)",
-				}}
-			>
-				<div
-					style={{
-						position: "absolute",
-						inset: 0,
-						background:
-							"radial-gradient(ellipse 300px 200px at 50% 0%, rgba(245,158,11,0.06) 0%, transparent 60%)",
-						pointerEvents: "none",
-					}}
+		<div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+			<div style={{ gridColumn: "span 2" }}>
+				<KpiCard
+					label="Facturacion delivery hoy"
+					value={formatCurrency(total)}
+					sub={`${delivered} entregados`}
+					color="#f59e0b"
+					icon={DollarSign}
 				/>
-				<div style={{ position: "relative", zIndex: 1 }}>
-					<div
-						className="font-display text-ink-disabled uppercase mb-3"
-						style={{ fontSize: 9, letterSpacing: "0.25em" }}
-					>
-						Facturación delivery hoy
-					</div>
-					<div className="flex items-end gap-3">
-						<span
-							className="font-kds text-brand-500"
-							style={{ fontSize: 36, lineHeight: 1 }}
-						>
-							{formatCurrency(total)}
-						</span>
-						<div style={{ paddingBottom: 4 }}>
-							<div className="flex items-center gap-1.5">
-								<div
-									style={{
-										width: 6,
-										height: 6,
-										borderRadius: "50%",
-										background: "#10b981",
-									}}
-								/>
-								<span
-									className="font-body"
-									style={{ fontSize: 10, color: "#10b981" }}
-								>
-									{delivered} entregados
-								</span>
-							</div>
-						</div>
-					</div>
-				</div>
 			</div>
-
-			{[
-				{ label: "Pendiente", count: pending, color: "#f59e0b" },
-				{ label: "Preparando", count: preparing, color: "#3b82f6" },
-				{ label: "En camino", count: onTheWay, color: "#f59e0b" },
-				{ label: "Entregados", count: delivered, color: "#10b981" },
-			].map(({ label, count, color }) => (
-				<div key={label} className="card p-4 flex flex-col gap-2">
-					<div className="flex items-center gap-2">
-						<span
-							style={{
-								width: 8,
-								height: 8,
-								borderRadius: "50%",
-								background: color,
-								flexShrink: 0,
-							}}
-						/>
-						<span
-							className="font-display text-ink-disabled uppercase"
-							style={{ fontSize: 9, letterSpacing: "0.2em" }}
-						>
-							{label}
-						</span>
-					</div>
-					<span
-						className="font-kds"
-						style={{ fontSize: 36, lineHeight: 1, color }}
-					>
-						{count}
-					</span>
-				</div>
-			))}
+			<KpiCard label="Pendientes" value={pending} color="#f59e0b" icon={Zap} />
+			<KpiCard
+				label="Preparando"
+				value={preparing}
+				color="#3b82f6"
+				icon={Flame}
+			/>
+			<KpiCard
+				label="En camino"
+				value={onTheWay}
+				color="#10b981"
+				icon={Truck}
+			/>
 		</div>
 	);
 }
 
-// ─── New order modal ──────────────────────────────────────────────────────────
+// --- New order modal --------------------------------------------------------
 
 function NewOrderModal({
 	onClose,
@@ -561,26 +612,40 @@ function NewOrderModal({
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				background: "rgba(0,0,0,0.6)",
-				backdropFilter: "blur(4px)",
+				padding: 16,
+				background: "rgba(0,0,0,0.7)",
+				backdropFilter: "blur(8px)",
 			}}
 			onClick={onClose}
 		>
 			<div
-				className="card w-full animate-slide-up"
-				style={{ maxWidth: 400, margin: "0 16px" }}
+				className="animate-slide-up"
+				style={{
+					background: "var(--s1)",
+					border: "1px solid var(--s4)",
+					borderRadius: 16,
+					width: "100%",
+					maxWidth: 560,
+					maxHeight: "90vh",
+					overflowY: "auto",
+					boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+				}}
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div
 					className="flex items-center justify-between"
-					style={{ padding: "16px 20px", borderBottom: "1px solid var(--s3)" }}
+					style={{
+						padding: "16px 20px",
+						borderBottom: "1px solid var(--s3)",
+						background: "var(--s2)",
+					}}
 				>
-					<h3
-						className="font-display text-ink-primary"
-						style={{ fontSize: 14, fontWeight: 700 }}
+					<h2
+						className="font-display"
+						style={{ fontSize: 16, fontWeight: 700, color: "#f5f5f5" }}
 					>
 						Nueva orden de delivery
-					</h3>
+					</h2>
 					<button
 						className="btn-ghost"
 						style={{ padding: "4px 6px" }}
@@ -592,7 +657,7 @@ function NewOrderModal({
 
 				<div
 					style={{
-						padding: "20px",
+						padding: 20,
 						display: "flex",
 						flexDirection: "column",
 						gap: 16,
@@ -605,16 +670,20 @@ function NewOrderModal({
 							placeholder: "Nombre del cliente",
 						},
 						{
-							label: "Dirección",
+							label: "Direccion",
 							key: "address",
-							placeholder: "Dirección de entrega",
+							placeholder: "Direccion de entrega",
 						},
-						{ label: "Teléfono", key: "phone", placeholder: "Opcional" },
+						{ label: "Telefono", key: "phone", placeholder: "Opcional" },
 					].map(({ label, key, placeholder }) => (
 						<div key={key}>
 							<label
-								className="font-display text-ink-disabled uppercase block mb-1.5"
-								style={{ fontSize: 9, letterSpacing: "0.2em" }}
+								className="font-display uppercase block mb-1.5"
+								style={{
+									fontSize: 9,
+									letterSpacing: "0.2em",
+									color: "#888",
+								}}
 							>
 								{label}
 							</label>
@@ -633,10 +702,14 @@ function NewOrderModal({
 
 					<div>
 						<label
-							className="font-display text-ink-disabled uppercase block mb-1.5"
-							style={{ fontSize: 9, letterSpacing: "0.2em" }}
+							className="font-display uppercase block mb-1.5"
+							style={{
+								fontSize: 9,
+								letterSpacing: "0.2em",
+								color: "#888",
+							}}
 						>
-							Método de pago
+							Metodo de pago
 						</label>
 						<div
 							className="grid gap-2"
@@ -703,7 +776,7 @@ function NewOrderModal({
 	);
 }
 
-// ─── Filter tabs ──────────────────────────────────────────────────────────────
+// --- Filter tabs ------------------------------------------------------------
 
 type FilterKey = "all" | DeliveryStatus;
 
@@ -715,7 +788,7 @@ const FILTER_TABS: { key: FilterKey; label: string }[] = [
 	{ key: "delivered", label: "Entregados" },
 ];
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// --- Page -------------------------------------------------------------------
 
 export default function DeliveryPage() {
 	const [orders, setOrders] = useState<DeliveryOrder[]>([]);
@@ -761,188 +834,209 @@ export default function DeliveryPage() {
 			: orders.filter((o) => o.status === key).length;
 
 	return (
-		<div
-			className="min-h-screen p-5 md:p-7 pb-10"
-			style={{ background: "var(--s0)" }}
-		>
-			{/* Header */}
-			<div className="flex items-center justify-between mb-7">
-				<div>
-					<div className="flex items-center gap-2 mb-1">
+		<div style={{ minHeight: "100vh", background: "var(--s0)" }}>
+			<div
+				style={{ padding: "28px 24px 48px", maxWidth: 1200, margin: "0 auto" }}
+			>
+				{/* Header */}
+				<div
+					className="flex items-center justify-between animate-fade-in"
+					style={{ marginBottom: 8 }}
+				>
+					<div className="flex items-center gap-3">
 						<div
 							style={{
 								width: 3,
-								height: 20,
-								borderRadius: 3,
+								height: 24,
+								borderRadius: 2,
 								background: "var(--gold)",
 							}}
 						/>
-						<h1
-							className="font-display text-ink-primary"
-							style={{ fontSize: 22, fontWeight: 700 }}
-						>
-							Delivery
-						</h1>
-					</div>
-					<div className="font-body text-ink-disabled" style={{ fontSize: 12 }}>
-						{activeOrders.length} pedidos activos
-					</div>
-				</div>
-				<button
-					onClick={() => setShowModal(true)}
-					className="btn-primary"
-					style={{ padding: "10px 20px" }}
-				>
-					<Plus size={13} />
-					Nueva orden
-				</button>
-			</div>
-
-			<div className="divider-gold mb-7" />
-
-			<div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-				<StatsRow orders={orders} />
-
-				{/* Filter tabs */}
-				<div className="flex items-center gap-1.5 flex-wrap">
-					{FILTER_TABS.map((tab) => {
-						const count = countFor(tab.key);
-						const isActive = filter === tab.key;
-						return (
-							<button
-								key={tab.key}
-								onClick={() => setFilter(tab.key)}
-								className="flex items-center gap-2"
+						<div>
+							<h1
+								className="font-display"
 								style={{
-									padding: "8px 16px",
-									borderRadius: 12,
-									border: `1px solid ${isActive ? "#f59e0b" : "var(--s3)"}`,
-									background: isActive ? "#f59e0b" : "var(--s2)",
-									color: isActive ? "#0a0a0a" : "#666",
-									fontFamily: "var(--font-syne)",
-									fontWeight: 600,
-									fontSize: 11,
-									cursor: "pointer",
-									transition: "all 0.15s",
-									boxShadow: isActive ? "0 0 8px rgba(245,158,11,0.3)" : "none",
+									fontSize: 22,
+									fontWeight: 700,
+									color: "#f5f5f5",
+									lineHeight: 1.1,
 								}}
 							>
-								{tab.label}
-								<span
-									className="font-kds"
+								Delivery
+							</h1>
+							<p
+								className="font-body"
+								style={{ fontSize: 12, color: "#666", marginTop: 2 }}
+							>
+								{activeOrders.length} pedidos activos
+							</p>
+						</div>
+					</div>
+					<button
+						onClick={() => setShowModal(true)}
+						className="btn-primary"
+						style={{ padding: "10px 20px" }}
+					>
+						<Plus size={13} />
+						Nueva orden
+					</button>
+				</div>
+				<div className="divider-gold" style={{ marginBottom: 28 }} />
+
+				<div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+					<StatsRow orders={orders} />
+
+					{/* Filter tabs */}
+					<div className="flex items-center gap-1.5 flex-wrap">
+						{FILTER_TABS.map((tab) => {
+							const count = countFor(tab.key);
+							const isActive = filter === tab.key;
+							return (
+								<button
+									key={tab.key}
+									onClick={() => setFilter(tab.key)}
+									className="flex items-center gap-2"
 									style={{
-										fontSize: 14,
-										lineHeight: 1,
-										color: isActive ? "rgba(0,0,0,0.6)" : "#555",
+										padding: "8px 16px",
+										borderRadius: 12,
+										border: `1px solid ${isActive ? "#f59e0b" : "var(--s3)"}`,
+										background: isActive ? "#f59e0b" : "var(--s2)",
+										color: isActive ? "#0a0a0a" : "#666",
+										fontFamily: "var(--font-syne)",
+										fontWeight: 600,
+										fontSize: 11,
+										cursor: "pointer",
+										transition: "all 0.15s",
+										boxShadow: isActive
+											? "0 0 8px rgba(245,158,11,0.3)"
+											: "none",
 									}}
 								>
-									{count}
-								</span>
-							</button>
-						);
-					})}
-				</div>
+									{tab.label}
+									<span
+										className="font-kds"
+										style={{
+											fontSize: 14,
+											lineHeight: 1,
+											color: isActive ? "rgba(0,0,0,0.6)" : "#555",
+										}}
+									>
+										{count}
+									</span>
+								</button>
+							);
+						})}
+					</div>
 
-				{/* Orders grid */}
-				{filtered.length === 0 ? (
-					<div
-						className="card flex flex-col items-center justify-center gap-4"
-						style={{ padding: 56 }}
-					>
+					{/* Orders grid */}
+					{filtered.length === 0 ? (
 						<div
 							style={{
-								width: 64,
-								height: 64,
+								background: "var(--s1)",
+								border: "1px solid var(--s4)",
 								borderRadius: 16,
-								background: "var(--s2)",
-								border: "1px solid var(--s3)",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
+								overflow: "hidden",
+								boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
 							}}
 						>
-							<Truck size={28} style={{ color: "#555" }} />
-						</div>
-						<div style={{ textAlign: "center" }}>
-							<p
-								className="font-display text-ink-secondary"
-								style={{ fontSize: 14, fontWeight: 700 }}
+							<div
+								className="flex flex-col items-center justify-center"
+								style={{ padding: "48px 20px" }}
 							>
-								Sin pedidos
-							</p>
-							<p
-								className="font-body text-ink-disabled mt-1"
-								style={{ fontSize: 12 }}
-							>
-								{filter === "all"
-									? "No hay órdenes de delivery"
-									: `No hay órdenes con estado "${FILTER_TABS.find((t) => t.key === filter)?.label}"`}
-							</p>
+								<Truck size={32} style={{ color: "#333", marginBottom: 8 }} />
+								<span
+									className="font-display"
+									style={{
+										fontSize: 14,
+										fontWeight: 700,
+										color: "#ccc",
+										marginBottom: 4,
+									}}
+								>
+									Sin pedidos
+								</span>
+								<span
+									className="font-body"
+									style={{ fontSize: 13, color: "#555", marginBottom: 16 }}
+								>
+									{filter === "all"
+										? "No hay ordenes de delivery"
+										: `No hay ordenes con estado "${FILTER_TABS.find((t) => t.key === filter)?.label}"`}
+								</span>
+								<button
+									onClick={() => setShowModal(true)}
+									className="btn-primary"
+									style={{ padding: "8px 20px", fontSize: 12 }}
+								>
+									<Plus size={13} />
+									Crear primera orden
+								</button>
+							</div>
 						</div>
-						<button
-							onClick={() => setShowModal(true)}
-							className="btn-primary mt-1"
-							style={{ padding: "8px 20px", fontSize: 12 }}
-						>
-							<Plus size={13} />
-							Crear primera orden
-						</button>
-					</div>
-				) : (
-					<div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-						{filtered.map((order) => (
-							<DeliveryCard
-								key={order.id}
-								order={order}
-								onAdvance={advanceStatus}
-							/>
-						))}
-					</div>
-				)}
+					) : (
+						<div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+							{filtered.map((order) => (
+								<DeliveryCard
+									key={order.id}
+									order={order}
+									onAdvance={advanceStatus}
+								/>
+							))}
+						</div>
+					)}
 
-				{/* Info note */}
-				<div className="card flex items-start gap-3" style={{ padding: 20 }}>
+					{/* Info note */}
 					<div
 						style={{
-							width: 36,
-							height: 36,
-							borderRadius: 10,
-							background: "rgba(245,158,11,0.1)",
-							border: "1px solid rgba(245,158,11,0.2)",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							flexShrink: 0,
+							background: "var(--s1)",
+							border: "1px solid var(--s4)",
+							borderRadius: 16,
+							overflow: "hidden",
+							boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
 						}}
 					>
-						<Package size={15} style={{ color: "#f59e0b" }} />
-					</div>
-					<div>
 						<div
-							className="font-display text-ink-primary mb-1"
-							style={{ fontSize: 12, fontWeight: 700 }}
+							className="flex items-center gap-2.5"
+							style={{
+								padding: "14px 20px",
+								borderBottom: "1px solid var(--s3)",
+								background: "var(--s2)",
+							}}
 						>
-							Gestión de Delivery
+							<Package size={14} style={{ color: "var(--gold)" }} />
+							<span
+								className="font-display uppercase"
+								style={{
+									fontSize: 11,
+									letterSpacing: "0.15em",
+									color: "#ccc",
+									fontWeight: 600,
+								}}
+							>
+								Gestion de Delivery
+							</span>
 						</div>
-						<p
-							className="font-body text-ink-disabled"
-							style={{ fontSize: 12, lineHeight: 1.6 }}
-						>
-							Las órdenes de delivery se sincronizan con cocina y barra en
-							tiempo real. Avanzá el estado de cada pedido para mantener al
-							repartidor y al cliente informados. Los pedidos urgentes (&gt;30
-							min) se marcan en rojo automáticamente.
-						</p>
+						<div style={{ padding: "16px 20px" }}>
+							<p
+								className="font-body"
+								style={{ fontSize: 12, color: "#666", lineHeight: 1.6 }}
+							>
+								Las ordenes de delivery se sincronizan con cocina y barra en
+								tiempo real. Avanza el estado de cada pedido para mantener al
+								repartidor y al cliente informados. Los pedidos urgentes (&gt;30
+								min) se marcan en rojo automaticamente.
+							</p>
+						</div>
 					</div>
 				</div>
-			</div>
 
-			{showModal && (
-				<NewOrderModal
-					onClose={() => setShowModal(false)}
-					onCreated={fetchOrders}
-				/>
-			)}
+				{showModal && (
+					<NewOrderModal
+						onClose={() => setShowModal(false)}
+						onCreated={fetchOrders}
+					/>
+				)}
+			</div>
 		</div>
 	);
 }

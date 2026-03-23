@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { MapPin, Navigation, Radio } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { RepartidorPin } from "./AdminFleetMap";
 
@@ -80,79 +81,98 @@ export default function AdminRepartidoresPage() {
 				height: "100vh",
 				gap: 0,
 				minHeight: 0,
+				background: "var(--s0)",
 			}}
 		>
 			{/* Header */}
-			<div
-				style={{
-					padding: "20px 24px 16px",
-					borderBottom: "1px solid var(--s3)",
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "space-between",
-					flexShrink: 0,
-				}}
-			>
-				<div>
-					<h1
-						style={{
-							fontSize: 18,
-							fontWeight: 700,
-							color: "var(--ink-primary)",
-							margin: 0,
-						}}
-					>
-						Mapa de Repartidores
-					</h1>
-					<p
-						style={{
-							fontSize: 11,
-							color: "var(--ink-tertiary)",
-							margin: "2px 0 0",
-						}}
-					>
-						Pedidos en camino en tiempo real · actualiza cada 5 s
-					</p>
-				</div>
-				<div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-					<div
-						style={{
-							padding: "6px 14px",
-							borderRadius: 10,
-							background:
-								pins.length > 0 ? "rgba(16,185,129,0.1)" : "var(--surface-2)",
-							border: `1px solid ${pins.length > 0 ? "rgba(16,185,129,0.25)" : "var(--s3)"}`,
-							color: pins.length > 0 ? "#10b981" : "var(--ink-tertiary)",
-							fontSize: 13,
-							fontWeight: 700,
-						}}
-					>
-						{pins.length} con GPS activo
+			<div style={{ padding: "20px 24px 0", flexShrink: 0 }}>
+				<div
+					className="flex items-center justify-between animate-fade-in"
+					style={{ marginBottom: 8 }}
+				>
+					<div className="flex items-center gap-3">
+						<div
+							style={{
+								width: 3,
+								height: 24,
+								borderRadius: 2,
+								background: "var(--gold)",
+							}}
+						/>
+						<div>
+							<h1
+								className="font-display"
+								style={{
+									fontSize: 22,
+									fontWeight: 700,
+									color: "#f5f5f5",
+									lineHeight: 1.1,
+								}}
+							>
+								MAPA DE REPARTIDORES
+							</h1>
+							<p
+								className="font-body"
+								style={{ fontSize: 12, color: "#666", marginTop: 2 }}
+							>
+								Pedidos en camino en tiempo real - actualiza cada 5s
+							</p>
+						</div>
 					</div>
-					{lastRefresh && (
-						<span style={{ fontSize: 11, color: "var(--ink-tertiary)" }}>
-							{lastRefresh.toLocaleTimeString("es-AR", {
-								hour: "2-digit",
-								minute: "2-digit",
-								second: "2-digit",
-							})}
-						</span>
-					)}
+					<div className="flex items-center gap-3">
+						<div
+							style={{
+								padding: "6px 14px",
+								borderRadius: 10,
+								background:
+									pins.length > 0 ? "rgba(34,197,94,0.12)" : "var(--s2)",
+								border: `1px solid ${pins.length > 0 ? "rgba(34,197,94,0.3)" : "var(--s3)"}`,
+								display: "flex",
+								alignItems: "center",
+								gap: 6,
+							}}
+						>
+							<Radio
+								size={12}
+								style={{ color: pins.length > 0 ? "#22c55e" : "#666" }}
+							/>
+							<span
+								className="font-display"
+								style={{
+									fontSize: 12,
+									fontWeight: 700,
+									color: pins.length > 0 ? "#22c55e" : "#666",
+								}}
+							>
+								{pins.length} con GPS activo
+							</span>
+						</div>
+						{lastRefresh && (
+							<span
+								className="font-body"
+								style={{ fontSize: 11, color: "#666" }}
+							>
+								{lastRefresh.toLocaleTimeString("es-AR", {
+									hour: "2-digit",
+									minute: "2-digit",
+									second: "2-digit",
+								})}
+							</span>
+						)}
+					</div>
 				</div>
+				<div className="divider-gold" style={{ marginBottom: 0 }} />
 			</div>
 
-			{/* Body — row on desktop, column on mobile */}
+			{/* Body */}
 			<div
 				className="flex-col md:flex-row"
-				style={{
-					flex: 1,
-					display: "flex",
-					overflow: "hidden",
-					minHeight: 0,
-				}}
+				style={{ flex: 1, display: "flex", overflow: "hidden", minHeight: 0 }}
 			>
 				{/* Map */}
-				<div style={{ flex: 1, position: "relative", minWidth: 0, minHeight: 300 }}>
+				<div
+					style={{ flex: 1, position: "relative", minWidth: 0, minHeight: 300 }}
+				>
 					{orders.length === 0 ? (
 						<div
 							style={{
@@ -162,21 +182,14 @@ export default function AdminRepartidoresPage() {
 								alignItems: "center",
 								justifyContent: "center",
 								gap: 12,
-								color: "var(--ink-tertiary)",
+								color: "#666",
 							}}
 						>
-							<svg
-								width="40"
-								height="40"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								strokeWidth="1.5"
+							<MapPin size={40} style={{ color: "#444" }} />
+							<p
+								className="font-body"
+								style={{ fontSize: 13, margin: 0, color: "#666" }}
 							>
-								<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-								<circle cx="12" cy="10" r="3" />
-							</svg>
-							<p style={{ fontSize: 13, margin: 0 }}>
 								No hay pedidos en camino ahora
 							</p>
 						</div>
@@ -185,7 +198,7 @@ export default function AdminRepartidoresPage() {
 					)}
 				</div>
 
-				{/* Sidebar list — right rail on desktop, scrollable section on mobile */}
+				{/* Sidebar */}
 				<div
 					style={{
 						width: "100%",
@@ -201,33 +214,35 @@ export default function AdminRepartidoresPage() {
 				>
 					<div
 						style={{
-							padding: "12px 16px",
+							padding: "14px 16px",
 							borderBottom: "1px solid var(--s3)",
+							background: "var(--s2)",
 						}}
 					>
-						<p
-							style={{
-								fontSize: 9,
-								letterSpacing: "0.2em",
-								textTransform: "uppercase",
-								color: "var(--ink-tertiary)",
-								margin: 0,
-							}}
-						>
-							Pedidos activos ({orders.length})
-						</p>
+						<div className="flex items-center gap-2">
+							<Navigation size={12} style={{ color: "var(--gold)" }} />
+							<span
+								className="font-display uppercase"
+								style={{
+									fontSize: 10,
+									letterSpacing: "0.15em",
+									color: "#ccc",
+									fontWeight: 600,
+								}}
+							>
+								Pedidos activos ({orders.length})
+							</span>
+						</div>
 					</div>
 
 					{orders.length === 0 ? (
-						<div
-							style={{
-								padding: 24,
-								textAlign: "center",
-								color: "var(--ink-tertiary)",
-								fontSize: 12,
-							}}
-						>
-							Sin pedidos en camino
+						<div style={{ padding: 24, textAlign: "center" }}>
+							<p
+								className="font-body"
+								style={{ fontSize: 12, color: "#666", margin: 0 }}
+							>
+								Sin pedidos en camino
+							</p>
 						</div>
 					) : (
 						<div
@@ -250,7 +265,7 @@ export default function AdminRepartidoresPage() {
 									<div
 										key={order.id}
 										style={{
-											background: "var(--surface-2)",
+											background: "var(--s2)",
 											border: "1px solid var(--s3)",
 											borderRadius: 12,
 											padding: "10px 12px",
@@ -267,30 +282,25 @@ export default function AdminRepartidoresPage() {
 											}}
 										>
 											<span
+												className="font-display"
 												style={{
 													fontSize: 13,
 													fontWeight: 700,
-													color: "var(--ink-primary)",
+													color: "#f5f5f5",
 												}}
 											>
 												{order.customerName}
 											</span>
 											<span
-												style={{
-													fontSize: 11,
-													fontWeight: 700,
-													color: "var(--brand-500)",
-												}}
+												className="font-kds"
+												style={{ fontSize: 13, color: "var(--gold)" }}
 											>
 												{formatCurrency(order.total)}
 											</span>
 										</div>
 										<span
-											style={{
-												fontSize: 11,
-												color: "var(--ink-tertiary)",
-												lineHeight: 1.3,
-											}}
+											className="font-body"
+											style={{ fontSize: 11, color: "#888", lineHeight: 1.3 }}
 										>
 											{order.address}
 										</span>
@@ -311,7 +321,7 @@ export default function AdminRepartidoresPage() {
 													color: hasGps
 														? isStale
 															? "#f59e0b"
-															: "#10b981"
+															: "#22c55e"
 														: "#555",
 												}}
 											>
@@ -323,7 +333,7 @@ export default function AdminRepartidoresPage() {
 														background: hasGps
 															? isStale
 																? "#f59e0b"
-																: "#10b981"
+																: "#22c55e"
 															: "#333",
 														flexShrink: 0,
 													}}
@@ -335,7 +345,8 @@ export default function AdminRepartidoresPage() {
 													: "Sin GPS"}
 											</span>
 											<span
-												style={{ fontSize: 10, color: "var(--ink-tertiary)" }}
+												className="font-body"
+												style={{ fontSize: 10, color: "#666" }}
 											>
 												Pedido {formatTime(order.createdAt)}
 											</span>
@@ -344,16 +355,12 @@ export default function AdminRepartidoresPage() {
 								);
 							})}
 
-							{/* Orders without GPS */}
 							{noGps.length > 0 && (
 								<p
-									style={{
-										fontSize: 10,
-										color: "var(--ink-tertiary)",
-										margin: "4px 4px 0",
-									}}
+									className="font-body"
+									style={{ fontSize: 10, color: "#666", margin: "4px 4px 0" }}
 								>
-									{noGps.length} pedido(s) sin GPS activo aún
+									{noGps.length} pedido(s) sin GPS activo aun
 								</p>
 							)}
 						</div>

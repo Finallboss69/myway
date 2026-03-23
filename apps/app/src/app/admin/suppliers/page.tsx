@@ -25,7 +25,7 @@ import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import { printDocument, printCurrency } from "@/lib/print";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// --- Types ---
 
 interface Supplier {
 	id: string;
@@ -88,7 +88,7 @@ const EMPTY_LINE: InvoiceItem = {
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("es-AR");
 
-// ─── KPI Card ────────────────────────────────────────────────────────────────
+// --- KPI Card ---
 
 function KpiCard({
 	icon: Icon,
@@ -96,69 +96,143 @@ function KpiCard({
 	value,
 	label,
 }: {
-	icon: React.ComponentType<{ size?: number }>;
+	icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;
 	color: string;
 	value: string | number;
 	label: string;
 }) {
 	return (
-		<div className="card animate-fade-in flex items-center gap-4 px-5 py-4 min-w-[180px]">
+		<div
+			style={{
+				background: "var(--s1)",
+				border: `1px solid ${color}25`,
+				borderRadius: 16,
+				padding: "24px 22px 20px",
+				position: "relative",
+				overflow: "hidden",
+			}}
+		>
 			<div
-				className="flex items-center justify-center rounded-xl"
 				style={{
-					width: 42,
-					height: 42,
-					background: `${color}15`,
+					position: "absolute",
+					top: 0,
+					left: "20%",
+					right: "20%",
+					height: 1,
+					background: `linear-gradient(90deg, transparent, ${color}50, transparent)`,
 				}}
-			>
-				<Icon size={20} />
-			</div>
-			<div>
-				<p
-					className="font-display text-xl font-bold leading-none"
-					style={{ color }}
+			/>
+			<div
+				style={{
+					position: "absolute",
+					top: 0,
+					right: 0,
+					width: 120,
+					height: 120,
+					background: `radial-gradient(circle at 100% 0%, ${color}12 0%, transparent 70%)`,
+					pointerEvents: "none",
+				}}
+			/>
+			<div style={{ position: "relative", zIndex: 1 }}>
+				<div
+					className="flex items-center justify-between"
+					style={{ marginBottom: 16 }}
+				>
+					<div
+						className="font-display uppercase"
+						style={{
+							fontSize: 10,
+							letterSpacing: "0.2em",
+							color: "#888",
+							fontWeight: 600,
+						}}
+					>
+						{label}
+					</div>
+					<div
+						style={{
+							width: 34,
+							height: 34,
+							borderRadius: 10,
+							background: `${color}15`,
+							border: `1px solid ${color}30`,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+					>
+						<Icon size={16} style={{ color }} />
+					</div>
+				</div>
+				<div
+					className="font-kds"
+					style={{ fontSize: 36, lineHeight: 1, color }}
 				>
 					{value}
-				</p>
-				<p className="font-body text-xs text-ink-tertiary mt-0.5 uppercase tracking-wider">
-					{label}
-				</p>
+				</div>
 			</div>
 		</div>
 	);
 }
 
-// ─── Status badge ────────────────────────────────────────────────────────────
+// --- Status badge ---
 
 function StatusBadge({ status }: { status: string }) {
-	const map: Record<string, string> = {
-		pending: "badge-pending",
-		paid: "badge-available",
-		overdue: "badge-cancelled",
+	const map: Record<string, { label: string; color: string; bg: string }> = {
+		pending: {
+			label: "Pendiente",
+			color: "#f59e0b",
+			bg: "rgba(245,158,11,0.12)",
+		},
+		paid: { label: "Pagada", color: "#10b981", bg: "rgba(16,185,129,0.12)" },
+		overdue: { label: "Vencida", color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
 	};
-	const labels: Record<string, string> = {
-		pending: "Pendiente",
-		paid: "Pagada",
-		overdue: "Vencida",
+	const s = map[status] ?? {
+		label: "Pendiente",
+		color: "#888",
+		bg: "rgba(136,136,136,0.12)",
 	};
 	return (
-		<span className={`badge ${map[status] ?? "badge-pending"}`}>
-			{labels[status] ?? "Pendiente"}
+		<span
+			style={{
+				background: s.bg,
+				color: s.color,
+				border: `1px solid ${s.color}33`,
+				borderRadius: 99,
+				fontSize: 9,
+				fontFamily: "var(--font-syne)",
+				fontWeight: 700,
+				letterSpacing: "0.15em",
+				padding: "2px 8px",
+				textTransform: "uppercase",
+			}}
+		>
+			{s.label}
 		</span>
 	);
 }
 
-// ─── Field label ─────────────────────────────────────────────────────────────
+// --- Field label ---
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
 	return (
-		<label className="font-body text-xs font-medium text-ink-secondary uppercase tracking-wider block mb-1.5">
+		<label
+			className="font-display uppercase"
+			style={{
+				fontSize: 9,
+				letterSpacing: "0.2em",
+				color: "#888",
+				fontWeight: 600,
+				display: "block",
+				marginBottom: 6,
+			}}
+		>
 			{children}
 		</label>
 	);
 }
 
-// ─── Modal shell ─────────────────────────────────────────────────────────────
+// --- Modal shell ---
 
 function Modal({
 	open,
@@ -176,40 +250,61 @@ function Modal({
 	if (!open) return null;
 	return (
 		<div
-			className="fixed inset-0 z-[100] flex items-center justify-center animate-fade-in"
-			style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}
+			style={{
+				position: "fixed",
+				inset: 0,
+				zIndex: 50,
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				padding: 16,
+				background: "rgba(0,0,0,0.7)",
+				backdropFilter: "blur(8px)",
+			}}
 			onClick={onClose}
 		>
 			<div
-				className="card animate-scale-in"
 				style={{
+					background: "var(--s1)",
+					border: "1px solid var(--s4)",
+					borderRadius: 16,
 					width: "100%",
-					maxWidth: wide ? 680 : 520,
+					maxWidth: wide ? 680 : 560,
 					maxHeight: "90vh",
-					overflow: "auto",
+					overflowY: "auto",
+					boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
 				}}
 				onClick={(e) => e.stopPropagation()}
 			>
-				{/* Header */}
 				<div
-					className="flex items-center justify-between px-6 py-4"
-					style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+					className="flex items-center justify-between"
+					style={{
+						padding: "16px 20px",
+						borderBottom: "1px solid var(--s3)",
+						background: "var(--s2)",
+					}}
 				>
-					<h3 className="font-display text-base font-semibold text-ink-primary">
+					<h2
+						className="font-display"
+						style={{ fontSize: 16, fontWeight: 700, color: "#f5f5f5" }}
+					>
 						{title}
-					</h3>
-					<button className="btn-ghost p-1.5 rounded-lg" onClick={onClose}>
-						<X size={16} className="text-ink-tertiary" />
+					</h2>
+					<button
+						className="btn-ghost"
+						style={{ padding: 6 }}
+						onClick={onClose}
+					>
+						<X size={16} style={{ color: "#666" }} />
 					</button>
 				</div>
-				{/* Body */}
-				<div className="px-6 py-5">{children}</div>
+				<div style={{ padding: 20 }}>{children}</div>
 			</div>
 		</div>
 	);
 }
 
-// ─── Confirm dialog ──────────────────────────────────────────────────────────
+// --- Confirm dialog ---
 
 function ConfirmDialog({
 	open,
@@ -225,37 +320,69 @@ function ConfirmDialog({
 	if (!open) return null;
 	return (
 		<div
-			className="fixed inset-0 z-[110] flex items-center justify-center animate-fade-in"
-			style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}
+			style={{
+				position: "fixed",
+				inset: 0,
+				zIndex: 60,
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				padding: 16,
+				background: "rgba(0,0,0,0.7)",
+				backdropFilter: "blur(8px)",
+			}}
 			onClick={onCancel}
 		>
 			<div
-				className="card animate-scale-in px-6 py-5"
-				style={{ maxWidth: 400, width: "100%" }}
+				style={{
+					background: "var(--s1)",
+					border: "1px solid var(--s4)",
+					borderRadius: 16,
+					width: "100%",
+					maxWidth: 400,
+					boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+					padding: 20,
+				}}
 				onClick={(e) => e.stopPropagation()}
 			>
-				<div className="flex items-start gap-3 mb-5">
+				<div className="flex items-start gap-3" style={{ marginBottom: 20 }}>
 					<div
-						className="flex items-center justify-center rounded-xl shrink-0"
 						style={{
 							width: 40,
 							height: 40,
+							borderRadius: 12,
 							background: "rgba(239,68,68,0.12)",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							flexShrink: 0,
 						}}
 					>
-						<AlertCircle size={20} className="text-red-400" />
+						<AlertCircle size={20} style={{ color: "#ef4444" }} />
 					</div>
-					<p className="font-body text-sm text-ink-secondary leading-relaxed pt-2">
+					<p
+						className="font-body"
+						style={{
+							fontSize: 13,
+							color: "#aaa",
+							lineHeight: 1.5,
+							paddingTop: 8,
+						}}
+					>
 						{message}
 					</p>
 				</div>
 				<div className="flex gap-3 justify-end">
-					<button className="btn-ghost text-sm" onClick={onCancel}>
+					<button
+						className="btn-ghost"
+						style={{ fontSize: 13 }}
+						onClick={onCancel}
+					>
 						Cancelar
 					</button>
 					<button
-						className="btn-primary text-sm"
-						style={{ background: "#ef4444" }}
+						className="btn-primary"
+						style={{ fontSize: 13, background: "#ef4444" }}
 						onClick={onConfirm}
 					>
 						Confirmar
@@ -266,7 +393,7 @@ function ConfirmDialog({
 	);
 }
 
-// ─── Main page ───────────────────────────────────────────────────────────────
+// --- Main page ---
 
 export default function SuppliersPage() {
 	const [tab, setTab] = useState<Tab>("suppliers");
@@ -308,7 +435,7 @@ export default function SuppliersPage() {
 	const [payInvoiceId, setPayInvoiceId] = useState<string | null>(null);
 	const [payMethod, setPayMethod] = useState("efectivo");
 
-	// ─── Fetchers ──────────────────────────────────────────────────────────────
+	// --- Fetchers ---
 
 	const fetchSuppliers = useCallback(async () => {
 		try {
@@ -340,12 +467,13 @@ export default function SuppliersPage() {
 		);
 	}, [fetchSuppliers, fetchInvoices]);
 
-	// ─── Stats ─────────────────────────────────────────────────────────────────
+	// --- Stats ---
 
 	const pendingInvoices = invoices.filter(
 		(i) => i.status === "pending" || i.status === "overdue",
 	);
 	const totalOwed = pendingInvoices.reduce((s, i) => s + i.total, 0);
+
 	const handlePrint = () => {
 		const rows = suppliers
 			.map((s) => {
@@ -374,7 +502,7 @@ export default function SuppliersPage() {
 		});
 	};
 
-	// ─── Supplier CRUD ─────────────────────────────────────────────────────────
+	// --- Supplier CRUD ---
 
 	const openNewSupplier = () => {
 		setEditingSupplier(null);
@@ -431,7 +559,7 @@ export default function SuppliersPage() {
 		});
 	};
 
-	// ─── Invoice CRUD ──────────────────────────────────────────────────────────
+	// --- Invoice CRUD ---
 
 	const openNewInvoice = () => {
 		setInvForm({
@@ -531,26 +659,35 @@ export default function SuppliersPage() {
 		});
 	};
 
-	// ─── Render ────────────────────────────────────────────────────────────────
+	// --- Render ---
 
 	if (loading) {
 		return (
-			<div className="flex items-center justify-center h-screen">
+			<div
+				style={{
+					minHeight: "100vh",
+					background: "var(--s0)",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+				}}
+			>
 				<div className="flex flex-col items-center gap-3 animate-fade-in">
 					<div
-						className="rounded-full animate-pulse"
 						style={{
 							width: 48,
 							height: 48,
-							background: "rgba(var(--gold-rgb, 212 175 55), 0.1)",
+							borderRadius: 99,
+							background: "rgba(245,158,11,0.1)",
 							display: "flex",
 							alignItems: "center",
 							justifyContent: "center",
 						}}
+						className="animate-pulse"
 					>
-						<Truck size={22} className="text-ink-tertiary" />
+						<Truck size={22} style={{ color: "#666" }} />
 					</div>
-					<p className="font-body text-sm text-ink-disabled">
+					<p className="font-body" style={{ fontSize: 13, color: "#555" }}>
 						Cargando proveedores...
 					</p>
 				</div>
@@ -559,290 +696,749 @@ export default function SuppliersPage() {
 	}
 
 	return (
-		<div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
-			{/* ── Header ──────────────────────────────────────────────────────── */}
-			<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-				<div className="flex items-center gap-3">
-					<div
-						className="rounded-md"
-						style={{
-							width: 4,
-							height: 28,
-							background: "var(--gold)",
-						}}
-					/>
-					<div>
-						<h1 className="font-display text-[22px] font-bold text-ink-primary leading-none">
-							Proveedores
-						</h1>
-						<p className="font-body text-xs text-ink-tertiary mt-1">
-							Gestion de proveedores y cuentas por pagar
-						</p>
-					</div>
-				</div>
-				<button
-					className="btn-ghost flex items-center gap-2 text-sm"
-					onClick={handlePrint}
-				>
-					<Printer size={15} />
-					Imprimir reporte
-				</button>
-			</div>
-
-			{/* ── KPI Cards ───────────────────────────────────────────────────── */}
-			<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-				<KpiCard
-					icon={Truck}
-					color="var(--gold)"
-					value={suppliers.length}
-					label="Proveedores"
-				/>
-				<KpiCard
-					icon={FileText}
-					color="#60a5fa"
-					value={invoices.length}
-					label="Facturas"
-				/>
-				<KpiCard
-					icon={Clock}
-					color="#f59e0b"
-					value={pendingInvoices.length}
-					label="Pendientes"
-				/>
-				<KpiCard
-					icon={DollarSign}
-					color="#ef4444"
-					value={formatCurrency(totalOwed)}
-					label="Deuda total"
-				/>
-			</div>
-
-			{/* ── Tabs ────────────────────────────────────────────────────────── */}
+		<div style={{ minHeight: "100vh", background: "var(--s0)" }}>
 			<div
-				className="flex gap-0"
-				style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+				style={{ padding: "28px 24px 48px", maxWidth: 1200, margin: "0 auto" }}
 			>
-				{(
-					[
-						["suppliers", "Proveedores", Truck],
-						["invoices", "Facturas", FileText],
-					] as const
-				).map(([key, label, Icon]) => {
-					const active = tab === key;
-					return (
-						<button
-							key={key}
-							className="relative font-display text-sm px-5 py-3 transition-colors"
+				{/* --- Header --- */}
+				<div
+					className="flex items-center justify-between animate-fade-in"
+					style={{ marginBottom: 8 }}
+				>
+					<div className="flex items-center gap-3">
+						<div
 							style={{
-								color: active ? "var(--gold)" : "rgba(255,255,255,0.35)",
-								letterSpacing: "0.08em",
+								width: 3,
+								height: 24,
+								borderRadius: 2,
+								background: "var(--gold)",
 							}}
-							onClick={() => setTab(key)}
-						>
-							<span className="flex items-center gap-2">
-								<Icon size={14} />
-								{label}
-							</span>
-							{active && (
-								<span
-									className="absolute bottom-0 left-0 right-0 h-[2px]"
-									style={{ background: "var(--gold)" }}
-								/>
-							)}
-						</button>
-					);
-				})}
-			</div>
-
-			{/* ── Suppliers tab ────────────────────────────────────────────────── */}
-			{tab === "suppliers" && (
-				<div className="space-y-5 animate-slide-up">
-					<div className="flex justify-end">
-						<button
-							className="btn-primary flex items-center gap-2 text-sm"
-							onClick={openNewSupplier}
-						>
-							<Plus size={15} /> Nuevo Proveedor
-						</button>
-					</div>
-
-					{suppliers.length === 0 ? (
-						<div className="card p-16 text-center animate-fade-in">
-							<div
-								className="mx-auto mb-4 flex items-center justify-center rounded-2xl"
+						/>
+						<div>
+							<h1
+								className="font-display"
 								style={{
-									width: 64,
-									height: 64,
-									background: "rgba(255,255,255,0.03)",
+									fontSize: 22,
+									fontWeight: 700,
+									color: "#f5f5f5",
+									lineHeight: 1.1,
 								}}
 							>
-								<Package size={28} className="text-ink-disabled" />
-							</div>
-							<p className="font-display text-sm text-ink-tertiary">
-								No hay proveedores registrados
-							</p>
-							<p className="font-body text-xs text-ink-disabled mt-1">
-								Agrega tu primer proveedor para comenzar
+								PROVEEDORES
+							</h1>
+							<p
+								className="font-body"
+								style={{ fontSize: 12, color: "#666", marginTop: 2 }}
+							>
+								Gestion de proveedores y cuentas por pagar
 							</p>
 						</div>
-					) : (
-						<div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-							{suppliers.map((s) => {
-								const isExpanded = expandedSupplierId === s.id;
-								const supplierInvoices = invoices.filter(
-									(i) =>
-										i.supplier?.id === s.id &&
-										(i.status === "pending" || i.status === "overdue"),
-								);
-								const owed = supplierInvoices.reduce(
-									(sum, i) => sum + i.total,
-									0,
-								);
-								return (
-									<div
-										key={s.id}
-										className="card p-0 overflow-hidden transition-all hover:ring-1 hover:ring-white/[0.06]"
-									>
+					</div>
+					<button
+						className="btn-ghost flex items-center gap-2"
+						style={{ fontSize: 12 }}
+						onClick={handlePrint}
+					>
+						<Printer size={14} />
+						Imprimir reporte
+					</button>
+				</div>
+				<div className="divider-gold" style={{ marginBottom: 28 }} />
+
+				{/* --- KPI Cards --- */}
+				<div
+					style={{
+						display: "grid",
+						gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+						gap: 16,
+						marginBottom: 28,
+					}}
+				>
+					<KpiCard
+						icon={Truck}
+						color="#f59e0b"
+						value={suppliers.length}
+						label="Proveedores"
+					/>
+					<KpiCard
+						icon={FileText}
+						color="#3b82f6"
+						value={invoices.length}
+						label="Facturas"
+					/>
+					<KpiCard
+						icon={Clock}
+						color="#f59e0b"
+						value={pendingInvoices.length}
+						label="Pendientes"
+					/>
+					<KpiCard
+						icon={DollarSign}
+						color="#ef4444"
+						value={formatCurrency(totalOwed)}
+						label="Deuda total"
+					/>
+				</div>
+
+				{/* --- Tabs --- */}
+				<div
+					className="flex gap-0"
+					style={{ borderBottom: "1px solid var(--s3)", marginBottom: 24 }}
+				>
+					{(
+						[
+							["suppliers", "Proveedores", Truck],
+							["invoices", "Facturas", FileText],
+						] as const
+					).map(([key, label, Icon]) => {
+						const active = tab === key;
+						return (
+							<button
+								key={key}
+								style={{
+									position: "relative",
+									padding: "12px 20px",
+									background: "transparent",
+									border: "none",
+									cursor: "pointer",
+									color: active ? "var(--gold)" : "#555",
+									letterSpacing: "0.08em",
+									fontSize: 12,
+									fontFamily: "var(--font-syne)",
+									fontWeight: 600,
+								}}
+								onClick={() => setTab(key)}
+							>
+								<span className="flex items-center gap-2">
+									<Icon size={14} />
+									{label}
+								</span>
+								{active && (
+									<span
+										style={{
+											position: "absolute",
+											bottom: 0,
+											left: 0,
+											right: 0,
+											height: 2,
+											background: "var(--gold)",
+										}}
+									/>
+								)}
+							</button>
+						);
+					})}
+				</div>
+
+				{/* --- Suppliers tab --- */}
+				{tab === "suppliers" && (
+					<div className="animate-fade-in">
+						<div className="flex justify-end" style={{ marginBottom: 16 }}>
+							<button
+								className="btn-primary flex items-center gap-2"
+								style={{ fontSize: 12 }}
+								onClick={openNewSupplier}
+							>
+								<Plus size={14} /> Nuevo Proveedor
+							</button>
+						</div>
+
+						{suppliers.length === 0 ? (
+							<div
+								style={{
+									background: "var(--s1)",
+									border: "1px solid var(--s4)",
+									borderRadius: 16,
+									padding: "60px 32px",
+									textAlign: "center",
+								}}
+							>
+								<div
+									style={{
+										width: 64,
+										height: 64,
+										borderRadius: 16,
+										background: "rgba(255,255,255,0.03)",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										margin: "0 auto 16px",
+									}}
+								>
+									<Package size={28} style={{ color: "#444" }} />
+								</div>
+								<p
+									className="font-display"
+									style={{ fontSize: 13, color: "#888" }}
+								>
+									No hay proveedores registrados
+								</p>
+								<p
+									className="font-body"
+									style={{ fontSize: 12, color: "#555", marginTop: 4 }}
+								>
+									Agrega tu primer proveedor para comenzar
+								</p>
+							</div>
+						) : (
+							<div
+								style={{
+									display: "grid",
+									gap: 12,
+									gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+								}}
+							>
+								{suppliers.map((s) => {
+									const isExpanded = expandedSupplierId === s.id;
+									const supplierInvoices = invoices.filter(
+										(i) =>
+											i.supplier?.id === s.id &&
+											(i.status === "pending" || i.status === "overdue"),
+									);
+									const owed = supplierInvoices.reduce(
+										(sum, i) => sum + i.total,
+										0,
+									);
+									return (
 										<div
-											className="p-5 cursor-pointer transition-colors hover:bg-white/[0.02]"
-											onClick={() =>
-												setExpandedSupplierId(isExpanded ? null : s.id)
-											}
+											key={s.id}
+											style={{
+												background: "var(--s1)",
+												border: "1px solid var(--s4)",
+												borderRadius: 16,
+												overflow: "hidden",
+												boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+											}}
 										>
-											<div className="flex items-start justify-between">
-												<div className="flex items-center gap-3">
-													<div
-														className="flex items-center justify-center rounded-lg shrink-0"
-														style={{
-															width: 38,
-															height: 38,
-															background:
-																"linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.04))",
-														}}
-													>
-														<Truck size={16} style={{ color: "var(--gold)" }} />
+											<div
+												style={{
+													padding: "16px 20px",
+													cursor: "pointer",
+													transition: "background 0.15s",
+												}}
+												onClick={() =>
+													setExpandedSupplierId(isExpanded ? null : s.id)
+												}
+												onMouseEnter={(e) =>
+													(e.currentTarget.style.background = "var(--s2)")
+												}
+												onMouseLeave={(e) =>
+													(e.currentTarget.style.background = "transparent")
+												}
+											>
+												<div className="flex items-start justify-between">
+													<div className="flex items-center gap-3">
+														<div
+															style={{
+																width: 38,
+																height: 38,
+																borderRadius: 10,
+																background:
+																	"linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.04))",
+																display: "flex",
+																alignItems: "center",
+																justifyContent: "center",
+																flexShrink: 0,
+															}}
+														>
+															<Truck
+																size={16}
+																style={{ color: "var(--gold)" }}
+															/>
+														</div>
+														<div>
+															<h3
+																className="font-display"
+																style={{
+																	fontSize: 14,
+																	fontWeight: 600,
+																	color: "#f5f5f5",
+																}}
+															>
+																{s.name}
+															</h3>
+															{s.cuit && (
+																<span
+																	className="font-body"
+																	style={{ fontSize: 11, color: "#555" }}
+																>
+																	CUIT: {s.cuit}
+																</span>
+															)}
+														</div>
+													</div>
+													{isExpanded ? (
+														<ChevronUp size={14} style={{ color: "#555" }} />
+													) : (
+														<ChevronDown size={14} style={{ color: "#555" }} />
+													)}
+												</div>
+
+												<div className="flex gap-5" style={{ marginTop: 14 }}>
+													<div>
+														<p
+															className="font-display uppercase"
+															style={{
+																fontSize: 9,
+																letterSpacing: "0.2em",
+																color: "#555",
+															}}
+														>
+															Facturas
+														</p>
+														<p
+															className="font-kds"
+															style={{ fontSize: 18, color: "#f5f5f5" }}
+														>
+															{s._count?.invoices ?? 0}
+														</p>
 													</div>
 													<div>
-														<h3 className="font-display text-sm font-semibold text-ink-primary">
-															{s.name}
-														</h3>
-														{s.cuit && (
-															<span className="font-body text-xs text-ink-disabled">
-																CUIT: {s.cuit}
-															</span>
-														)}
+														<p
+															className="font-display uppercase"
+															style={{
+																fontSize: 9,
+																letterSpacing: "0.2em",
+																color: "#555",
+															}}
+														>
+															Deuda
+														</p>
+														<p
+															className="font-kds"
+															style={{
+																fontSize: 18,
+																color: owed > 0 ? "#f59e0b" : "#10b981",
+															}}
+														>
+															{formatCurrency(owed)}
+														</p>
 													</div>
 												</div>
-												{isExpanded ? (
-													<ChevronUp size={14} className="text-ink-disabled" />
-												) : (
-													<ChevronDown
-														size={14}
-														className="text-ink-disabled"
-													/>
-												)}
 											</div>
 
-											{/* Mini stats */}
-											<div className="flex gap-5 mt-4">
-												<div>
-													<p className="font-body text-[10px] text-ink-disabled uppercase tracking-wider">
-														Facturas
-													</p>
-													<p className="font-display text-sm font-bold text-ink-primary">
-														{s._count?.invoices ?? 0}
-													</p>
-												</div>
-												<div>
-													<p className="font-body text-[10px] text-ink-disabled uppercase tracking-wider">
-														Deuda
-													</p>
-													<p
-														className="font-display text-sm font-bold"
+											{isExpanded && (
+												<div
+													style={{
+														padding: "0 20px 16px",
+														borderTop: "1px solid var(--s3)",
+													}}
+												>
+													<div
 														style={{
-															color: owed > 0 ? "#f59e0b" : "var(--green)",
+															paddingTop: 12,
+															display: "flex",
+															flexDirection: "column",
+															gap: 8,
 														}}
 													>
-														{formatCurrency(owed)}
-													</p>
+														{s.phone && (
+															<div
+																className="flex items-center gap-2.5 font-body"
+																style={{ fontSize: 12, color: "#aaa" }}
+															>
+																<Phone size={13} style={{ color: "#555" }} />
+																{s.phone}
+															</div>
+														)}
+														{s.email && (
+															<div
+																className="flex items-center gap-2.5 font-body"
+																style={{ fontSize: 12, color: "#aaa" }}
+															>
+																<Mail size={13} style={{ color: "#555" }} />
+																{s.email}
+															</div>
+														)}
+														{s.address && (
+															<div
+																className="flex items-center gap-2.5 font-body"
+																style={{ fontSize: 12, color: "#aaa" }}
+															>
+																<MapPin size={13} style={{ color: "#555" }} />
+																{s.address}
+															</div>
+														)}
+														{s.notes && (
+															<p
+																className="font-body"
+																style={{
+																	fontSize: 11,
+																	color: "#555",
+																	fontStyle: "italic",
+																	paddingLeft: 25,
+																}}
+															>
+																{s.notes}
+															</p>
+														)}
+													</div>
+													<div
+														style={{
+															height: 1,
+															background: "var(--s3)",
+															margin: "12px 0",
+														}}
+													/>
+													<div className="flex gap-2">
+														<button
+															className="btn-ghost flex items-center gap-1.5"
+															style={{ fontSize: 11 }}
+															onClick={() => openEditSupplier(s)}
+														>
+															<Edit3 size={12} /> Editar
+														</button>
+														<button
+															className="btn-ghost flex items-center gap-1.5"
+															style={{ fontSize: 11, color: "#ef4444" }}
+															onClick={() => deleteSupplier(s)}
+														>
+															<Trash2 size={12} /> Eliminar
+														</button>
+													</div>
 												</div>
-											</div>
+											)}
 										</div>
+									);
+								})}
+							</div>
+						)}
+					</div>
+				)}
 
-										{isExpanded && (
-											<div
-												className="px-5 pb-5 space-y-2.5 animate-slide-up"
+				{/* --- Invoices tab --- */}
+				{tab === "invoices" && (
+					<div className="animate-fade-in">
+						<div
+							className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between"
+							style={{ marginBottom: 16 }}
+						>
+							<div className="flex gap-3 flex-wrap">
+								<div style={{ position: "relative" }}>
+									<Search
+										size={14}
+										style={{
+											position: "absolute",
+											left: 12,
+											top: "50%",
+											transform: "translateY(-50%)",
+											color: "#555",
+											pointerEvents: "none",
+										}}
+									/>
+									<select
+										className="input-base"
+										value={filterSupplier}
+										onChange={(e) => setFilterSupplier(e.target.value)}
+										style={{ minWidth: 200, fontSize: 12, paddingLeft: 34 }}
+									>
+										<option value="">Todos los proveedores</option>
+										{suppliers.map((s) => (
+											<option key={s.id} value={s.id}>
+												{s.name}
+											</option>
+										))}
+									</select>
+								</div>
+								<select
+									className="input-base"
+									value={filterStatus}
+									onChange={(e) => setFilterStatus(e.target.value)}
+									style={{ minWidth: 160, fontSize: 12 }}
+								>
+									<option value="">Todos los estados</option>
+									<option value="pending">Pendiente</option>
+									<option value="paid">Pagada</option>
+									<option value="overdue">Vencida</option>
+								</select>
+							</div>
+							<button
+								className="btn-primary flex items-center gap-2"
+								style={{ fontSize: 12 }}
+								onClick={openNewInvoice}
+							>
+								<Plus size={14} /> Nueva Factura
+							</button>
+						</div>
+
+						{invoices.length === 0 ? (
+							<div
+								style={{
+									background: "var(--s1)",
+									border: "1px solid var(--s4)",
+									borderRadius: 16,
+									padding: "60px 32px",
+									textAlign: "center",
+								}}
+							>
+								<div
+									style={{
+										width: 64,
+										height: 64,
+										borderRadius: 16,
+										background: "rgba(255,255,255,0.03)",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										margin: "0 auto 16px",
+									}}
+								>
+									<FileText size={28} style={{ color: "#444" }} />
+								</div>
+								<p
+									className="font-display"
+									style={{ fontSize: 13, color: "#888" }}
+								>
+									No hay facturas registradas
+								</p>
+								<p
+									className="font-body"
+									style={{ fontSize: 12, color: "#555", marginTop: 4 }}
+								>
+									Crea una factura desde el boton superior
+								</p>
+							</div>
+						) : (
+							<div
+								style={{
+									background: "var(--s1)",
+									border: "1px solid var(--s4)",
+									borderRadius: 16,
+									overflow: "hidden",
+									boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+								}}
+							>
+								{/* Section header */}
+								<div
+									className="flex items-center gap-2.5"
+									style={{
+										padding: "14px 20px",
+										borderBottom: "1px solid var(--s3)",
+										background: "var(--s2)",
+									}}
+								>
+									<FileText size={14} style={{ color: "var(--gold)" }} />
+									<span
+										className="font-display uppercase"
+										style={{
+											fontSize: 11,
+											letterSpacing: "0.15em",
+											color: "#ccc",
+											fontWeight: 600,
+										}}
+									>
+										LISTADO DE FACTURAS
+									</span>
+								</div>
+
+								{/* Table header - desktop */}
+								<div
+									className="hidden md:grid font-display uppercase"
+									style={{
+										gridTemplateColumns:
+											"1.5fr 1fr 0.8fr 0.8fr 1fr 0.7fr 0.8fr",
+										padding: "10px 20px",
+										fontSize: 9,
+										letterSpacing: "0.2em",
+										color: "#555",
+										fontWeight: 600,
+										borderBottom: "1px solid var(--s3)",
+									}}
+								>
+									<span>Proveedor</span>
+									<span>Nro Factura</span>
+									<span>Fecha</span>
+									<span>Vencimiento</span>
+									<span style={{ textAlign: "right" }}>Total</span>
+									<span style={{ textAlign: "center" }}>Estado</span>
+									<span />
+								</div>
+
+								{/* Rows */}
+								{invoices.map((inv) => (
+									<div
+										key={inv.id}
+										style={{
+											padding: "12px 20px",
+											borderBottom: "1px solid var(--s3)",
+											transition: "background 0.15s",
+										}}
+										onMouseEnter={(e) =>
+											(e.currentTarget.style.background = "var(--s2)")
+										}
+										onMouseLeave={(e) =>
+											(e.currentTarget.style.background = "transparent")
+										}
+									>
+										<div
+											className="md:grid md:items-center"
+											style={{
+												gridTemplateColumns:
+													"1.5fr 1fr 0.8fr 0.8fr 1fr 0.7fr 0.8fr",
+											}}
+										>
+											<span
+												className="font-body"
 												style={{
-													borderTop: "1px solid rgba(255,255,255,0.04)",
+													fontSize: 13,
+													fontWeight: 500,
+													color: "#f5f5f5",
 												}}
 											>
-												<div className="pt-3 space-y-2">
-													{s.phone && (
-														<div className="flex items-center gap-2.5 font-body text-xs text-ink-secondary">
-															<Phone size={13} className="text-ink-disabled" />
-															{s.phone}
-														</div>
-													)}
-													{s.email && (
-														<div className="flex items-center gap-2.5 font-body text-xs text-ink-secondary">
-															<Mail size={13} className="text-ink-disabled" />
-															{s.email}
-														</div>
-													)}
-													{s.address && (
-														<div className="flex items-center gap-2.5 font-body text-xs text-ink-secondary">
-															<MapPin size={13} className="text-ink-disabled" />
-															{s.address}
-														</div>
-													)}
-													{s.notes && (
-														<p className="font-body text-xs text-ink-disabled italic pl-[25px]">
-															{s.notes}
-														</p>
-													)}
-												</div>
-												<div className="divider" />
-												<div className="flex gap-2">
+												{inv.supplier?.name ?? "\u2014"}
+											</span>
+											<span
+												className="font-body"
+												style={{ fontSize: 13, color: "#aaa" }}
+											>
+												{inv.number}
+											</span>
+											<span
+												className="font-body"
+												style={{ fontSize: 11, color: "#666" }}
+											>
+												{fmtDate(inv.date)}
+											</span>
+											<span
+												className="font-body"
+												style={{ fontSize: 11, color: "#666" }}
+											>
+												{inv.dueDate ? fmtDate(inv.dueDate) : "\u2014"}
+											</span>
+											<span
+												className="font-kds"
+												style={{
+													fontSize: 14,
+													textAlign: "right",
+													color: "var(--gold)",
+												}}
+											>
+												{formatCurrency(inv.total)}
+											</span>
+											<span style={{ textAlign: "center" }}>
+												<StatusBadge status={inv.status} />
+											</span>
+											<div
+												className="flex gap-1 justify-end"
+												style={{ marginTop: 0 }}
+											>
+												{inv.status !== "paid" && (
 													<button
-														className="btn-ghost text-xs flex items-center gap-1.5"
-														onClick={() => openEditSupplier(s)}
+														className="btn-ghost flex items-center gap-1"
+														style={{ fontSize: 11, color: "#10b981" }}
+														onClick={() => {
+															setPayInvoiceId(inv.id);
+															setPayMethod("efectivo");
+														}}
 													>
-														<Edit3 size={12} /> Editar
+														<CheckCircle size={13} /> Pagar
 													</button>
-													<button
-														className="btn-ghost text-xs flex items-center gap-1.5 text-red-400 hover:text-red-300"
-														onClick={() => deleteSupplier(s)}
-													>
-														<Trash2 size={12} /> Eliminar
-													</button>
-												</div>
+												)}
+												<button
+													className="btn-ghost"
+													style={{ padding: 6, color: "#ef4444" }}
+													onClick={() => deleteInvoice(inv)}
+												>
+													<Trash2 size={13} />
+												</button>
 											</div>
-										)}
+										</div>
 									</div>
-								);
-							})}
-						</div>
-					)}
-				</div>
-			)}
+								))}
+							</div>
+						)}
+					</div>
+				)}
 
-			{/* ── Invoices tab ─────────────────────────────────────────────────── */}
-			{tab === "invoices" && (
-				<div className="space-y-5 animate-slide-up">
-					<div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-						<div className="flex gap-3 flex-wrap">
-							<div className="relative">
-								<Search
-									size={14}
-									className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-disabled pointer-events-none"
+				{/* --- Supplier modal --- */}
+				<Modal
+					open={showSupplierModal}
+					onClose={() => setShowSupplierModal(false)}
+					title={editingSupplier ? "Editar Proveedor" : "Nuevo Proveedor"}
+				>
+					<div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+						{(
+							[
+								["name", "Nombre *", "text"],
+								["cuit", "CUIT", "text"],
+								["address", "Direccion", "text"],
+								["phone", "Telefono", "text"],
+								["email", "Email", "email"],
+							] as const
+						).map(([key, label, type]) => (
+							<div key={key}>
+								<FieldLabel>{label}</FieldLabel>
+								<input
+									className="input-base"
+									type={type}
+									value={supplierForm[key]}
+									onChange={(e) =>
+										setSupplierForm((f) => ({ ...f, [key]: e.target.value }))
+									}
+									style={{ width: "100%", fontSize: 13 }}
 								/>
+							</div>
+						))}
+						<div>
+							<FieldLabel>Notas</FieldLabel>
+							<textarea
+								className="input-base"
+								rows={3}
+								value={supplierForm.notes}
+								onChange={(e) =>
+									setSupplierForm((f) => ({ ...f, notes: e.target.value }))
+								}
+								style={{ width: "100%", fontSize: 13 }}
+							/>
+						</div>
+						<div
+							className="flex justify-end gap-3"
+							style={{ paddingTop: 12, borderTop: "1px solid var(--s3)" }}
+						>
+							<button
+								className="btn-ghost"
+								style={{ fontSize: 13 }}
+								onClick={() => setShowSupplierModal(false)}
+							>
+								Cancelar
+							</button>
+							<button
+								className="btn-primary"
+								style={{ fontSize: 13 }}
+								onClick={saveSupplier}
+							>
+								Guardar
+							</button>
+						</div>
+					</div>
+				</Modal>
+
+				{/* --- Invoice modal --- */}
+				<Modal
+					open={showInvoiceModal}
+					onClose={() => setShowInvoiceModal(false)}
+					title="Nueva Factura Proveedor"
+					wide
+				>
+					<div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+						<div
+							style={{
+								display: "grid",
+								gridTemplateColumns: "1fr 1fr",
+								gap: 16,
+							}}
+						>
+							<div style={{ gridColumn: "1 / -1" }}>
+								<FieldLabel>Proveedor *</FieldLabel>
 								<select
-									className="input-base text-sm pl-9"
-									value={filterSupplier}
-									onChange={(e) => setFilterSupplier(e.target.value)}
-									style={{ minWidth: 200 }}
+									className="input-base"
+									value={invForm.supplierId}
+									onChange={(e) =>
+										setInvForm((f) => ({ ...f, supplierId: e.target.value }))
+									}
+									style={{ width: "100%", fontSize: 13 }}
 								>
-									<option value="">Todos los proveedores</option>
+									<option value="">Seleccionar...</option>
 									{suppliers.map((s) => (
 										<option key={s.id} value={s.id}>
 											{s.name}
@@ -850,456 +1446,293 @@ export default function SuppliersPage() {
 									))}
 								</select>
 							</div>
-							<select
-								className="input-base text-sm"
-								value={filterStatus}
-								onChange={(e) => setFilterStatus(e.target.value)}
-								style={{ minWidth: 160 }}
-							>
-								<option value="">Todos los estados</option>
-								<option value="pending">Pendiente</option>
-								<option value="paid">Pagada</option>
-								<option value="overdue">Vencida</option>
-							</select>
-						</div>
-						<button
-							className="btn-primary flex items-center gap-2 text-sm"
-							onClick={openNewInvoice}
-						>
-							<Plus size={15} /> Nueva Factura
-						</button>
-					</div>
-
-					{invoices.length === 0 ? (
-						<div className="card p-16 text-center animate-fade-in">
-							<div
-								className="mx-auto mb-4 flex items-center justify-center rounded-2xl"
-								style={{
-									width: 64,
-									height: 64,
-									background: "rgba(255,255,255,0.03)",
-								}}
-							>
-								<FileText size={28} className="text-ink-disabled" />
+							<div>
+								<FieldLabel>Nro Factura *</FieldLabel>
+								<input
+									className="input-base"
+									value={invForm.number}
+									onChange={(e) =>
+										setInvForm((f) => ({ ...f, number: e.target.value }))
+									}
+									style={{ width: "100%", fontSize: 13 }}
+								/>
 							</div>
-							<p className="font-display text-sm text-ink-tertiary">
-								No hay facturas registradas
-							</p>
-							<p className="font-body text-xs text-ink-disabled mt-1">
-								Crea una factura desde el boton superior
-							</p>
-						</div>
-					) : (
-						<div className="card p-0 overflow-hidden">
-							{/* Table header - desktop */}
-							<div
-								className="hidden md:grid font-body text-[10px] font-medium uppercase tracking-wider text-ink-disabled px-5 py-3"
-								style={{
-									gridTemplateColumns: "1.5fr 1fr 0.8fr 0.8fr 1fr 0.7fr 0.8fr",
-									borderBottom: "1px solid rgba(255,255,255,0.04)",
-								}}
-							>
-								<span>Proveedor</span>
-								<span>Nro Factura</span>
-								<span>Fecha</span>
-								<span>Vencimiento</span>
-								<span className="text-right">Total</span>
-								<span className="text-center">Estado</span>
-								<span />
+							<div>
+								<FieldLabel>Fecha *</FieldLabel>
+								<input
+									className="input-base"
+									type="date"
+									value={invForm.date}
+									onChange={(e) =>
+										setInvForm((f) => ({ ...f, date: e.target.value }))
+									}
+									style={{ width: "100%", fontSize: 13 }}
+								/>
 							</div>
+							<div>
+								<FieldLabel>Vencimiento</FieldLabel>
+								<input
+									className="input-base"
+									type="date"
+									value={invForm.dueDate}
+									onChange={(e) =>
+										setInvForm((f) => ({ ...f, dueDate: e.target.value }))
+									}
+									style={{ width: "100%", fontSize: 13 }}
+								/>
+							</div>
+							<div>
+								<FieldLabel>Foto URL</FieldLabel>
+								<input
+									className="input-base"
+									value={invForm.photoUrl}
+									onChange={(e) =>
+										setInvForm((f) => ({ ...f, photoUrl: e.target.value }))
+									}
+									placeholder="https://..."
+									style={{ width: "100%", fontSize: 13 }}
+								/>
+							</div>
+						</div>
 
-							{/* Rows */}
-							{invoices.map((inv, idx) => (
-								<div
-									key={inv.id}
-									className="transition-colors hover:bg-white/[0.02]"
-									style={{
-										borderBottom:
-											idx < invoices.length - 1
-												? "1px solid rgba(255,255,255,0.03)"
-												: "none",
-									}}
+						{/* Line items */}
+						<div>
+							<div
+								className="flex items-center justify-between"
+								style={{ marginBottom: 12 }}
+							>
+								<FieldLabel>Items</FieldLabel>
+								<button
+									className="btn-ghost flex items-center gap-1.5"
+									style={{ fontSize: 11 }}
+									onClick={addLine}
 								>
+									<Plus size={13} /> Agregar linea
+								</button>
+							</div>
+
+							<div
+								className="hidden md:grid font-display uppercase"
+								style={{
+									gridTemplateColumns: "2fr 0.6fr 1fr 0.6fr auto",
+									gap: 8,
+									marginBottom: 8,
+									fontSize: 9,
+									letterSpacing: "0.2em",
+									color: "#555",
+									fontWeight: 600,
+									paddingLeft: 4,
+								}}
+							>
+								<span>Descripcion</span>
+								<span style={{ textAlign: "center" }}>Cant.</span>
+								<span style={{ textAlign: "right" }}>Precio unit.</span>
+								<span style={{ textAlign: "center" }}>IVA</span>
+								<span style={{ width: 28 }} />
+							</div>
+
+							<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+								{invLines.map((line, idx) => (
 									<div
-										className="md:grid md:items-center px-5 py-3.5"
+										key={idx}
 										style={{
-											gridTemplateColumns:
-												"1.5fr 1fr 0.8fr 0.8fr 1fr 0.7fr 0.8fr",
+											display: "grid",
+											gridTemplateColumns: "2fr 0.6fr 1fr 0.6fr auto",
+											gap: 8,
 										}}
 									>
-										<span className="font-body text-sm font-medium text-ink-primary">
-											{inv.supplier?.name ?? "\u2014"}
-										</span>
-										<span className="font-body text-sm text-ink-secondary">
-											{inv.number}
-										</span>
-										<span className="font-body text-xs text-ink-tertiary">
-											{fmtDate(inv.date)}
-										</span>
-										<span className="font-body text-xs text-ink-tertiary">
-											{inv.dueDate ? fmtDate(inv.dueDate) : "\u2014"}
-										</span>
-										<span
-											className="font-display text-sm font-bold text-right"
-											style={{ color: "var(--gold)" }}
+										<input
+											className="input-base"
+											placeholder="Descripcion"
+											value={line.description}
+											onChange={(e) =>
+												updateLine(idx, "description", e.target.value)
+											}
+											style={{ fontSize: 12 }}
+										/>
+										<input
+											className="input-base"
+											type="number"
+											min={0}
+											step={1}
+											value={line.quantity}
+											onChange={(e) =>
+												updateLine(idx, "quantity", Number(e.target.value))
+											}
+											style={{ fontSize: 12, textAlign: "center" }}
+										/>
+										<input
+											className="input-base"
+											type="number"
+											min={0}
+											step={0.01}
+											placeholder="Precio unit."
+											value={line.unitPrice || ""}
+											onChange={(e) =>
+												updateLine(idx, "unitPrice", Number(e.target.value))
+											}
+											style={{ fontSize: 12, textAlign: "right" }}
+										/>
+										<select
+											className="input-base"
+											value={line.ivaRate}
+											onChange={(e) =>
+												updateLine(idx, "ivaRate", Number(e.target.value))
+											}
+											style={{ fontSize: 12 }}
 										>
-											{formatCurrency(inv.total)}
-										</span>
-										<span className="text-center">
-											<StatusBadge status={inv.status} />
-										</span>
-										<div className="flex gap-1 justify-end mt-2 md:mt-0">
-											{inv.status !== "paid" && (
-												<button
-													className="btn-ghost text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
-													onClick={() => {
-														setPayInvoiceId(inv.id);
-														setPayMethod("efectivo");
-													}}
-												>
-													<CheckCircle size={13} /> Pagar
-												</button>
-											)}
-											<button
-												className="btn-ghost text-xs p-1.5 text-red-400 hover:text-red-300"
-												onClick={() => deleteInvoice(inv)}
-											>
-												<Trash2 size={13} />
-											</button>
-										</div>
+											<option value={0}>0%</option>
+											<option value={10.5}>10.5%</option>
+											<option value={21}>21%</option>
+											<option value={27}>27%</option>
+										</select>
+										<button
+											className="btn-ghost"
+											style={{ padding: 6, color: "#ef4444" }}
+											onClick={() => removeLine(idx)}
+										>
+											<X size={14} />
+										</button>
 									</div>
-								</div>
-							))}
-						</div>
-					)}
-				</div>
-			)}
-
-			{/* ── Supplier modal ───────────────────────────────────────────────── */}
-			<Modal
-				open={showSupplierModal}
-				onClose={() => setShowSupplierModal(false)}
-				title={editingSupplier ? "Editar Proveedor" : "Nuevo Proveedor"}
-			>
-				<div className="space-y-4">
-					{(
-						[
-							["name", "Nombre *", "text"],
-							["cuit", "CUIT", "text"],
-							["address", "Direccion", "text"],
-							["phone", "Telefono", "text"],
-							["email", "Email", "email"],
-						] as const
-					).map(([key, label, type]) => (
-						<div key={key}>
-							<FieldLabel>{label}</FieldLabel>
-							<input
-								className="input-base w-full text-sm"
-								type={type}
-								value={supplierForm[key]}
-								onChange={(e) =>
-									setSupplierForm((f) => ({ ...f, [key]: e.target.value }))
-								}
-							/>
-						</div>
-					))}
-					<div>
-						<FieldLabel>Notas</FieldLabel>
-						<textarea
-							className="input-base w-full text-sm"
-							rows={3}
-							value={supplierForm.notes}
-							onChange={(e) =>
-								setSupplierForm((f) => ({ ...f, notes: e.target.value }))
-							}
-						/>
-					</div>
-					<div
-						className="flex justify-end gap-3 pt-3"
-						style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
-					>
-						<button
-							className="btn-ghost text-sm"
-							onClick={() => setShowSupplierModal(false)}
-						>
-							Cancelar
-						</button>
-						<button className="btn-primary text-sm" onClick={saveSupplier}>
-							Guardar
-						</button>
-					</div>
-				</div>
-			</Modal>
-
-			{/* ── Invoice modal ─────────────────────────────────────────────────── */}
-			<Modal
-				open={showInvoiceModal}
-				onClose={() => setShowInvoiceModal(false)}
-				title="Nueva Factura Proveedor"
-				wide
-			>
-				<div className="space-y-5">
-					<div className="grid grid-cols-2 gap-4">
-						<div className="col-span-2">
-							<FieldLabel>Proveedor *</FieldLabel>
-							<select
-								className="input-base w-full text-sm"
-								value={invForm.supplierId}
-								onChange={(e) =>
-									setInvForm((f) => ({ ...f, supplierId: e.target.value }))
-								}
-							>
-								<option value="">Seleccionar...</option>
-								{suppliers.map((s) => (
-									<option key={s.id} value={s.id}>
-										{s.name}
-									</option>
 								))}
-							</select>
+							</div>
 						</div>
-						<div>
-							<FieldLabel>Nro Factura *</FieldLabel>
-							<input
-								className="input-base w-full text-sm"
-								value={invForm.number}
-								onChange={(e) =>
-									setInvForm((f) => ({ ...f, number: e.target.value }))
-								}
-							/>
-						</div>
-						<div>
-							<FieldLabel>Fecha *</FieldLabel>
-							<input
-								className="input-base w-full text-sm"
-								type="date"
-								value={invForm.date}
-								onChange={(e) =>
-									setInvForm((f) => ({ ...f, date: e.target.value }))
-								}
-							/>
-						</div>
-						<div>
-							<FieldLabel>Vencimiento</FieldLabel>
-							<input
-								className="input-base w-full text-sm"
-								type="date"
-								value={invForm.dueDate}
-								onChange={(e) =>
-									setInvForm((f) => ({ ...f, dueDate: e.target.value }))
-								}
-							/>
-						</div>
-						<div>
-							<FieldLabel>Foto URL</FieldLabel>
-							<input
-								className="input-base w-full text-sm"
-								value={invForm.photoUrl}
-								onChange={(e) =>
-									setInvForm((f) => ({ ...f, photoUrl: e.target.value }))
-								}
-								placeholder="https://..."
-							/>
-						</div>
-					</div>
 
-					{/* Line items */}
-					<div>
-						<div className="flex items-center justify-between mb-3">
-							<FieldLabel>Items</FieldLabel>
+						{/* Totals */}
+						<div style={{ height: 1, background: "var(--s3)" }} />
+						<div
+							style={{ textAlign: "right", fontSize: 13 }}
+							className="font-body"
+						>
+							<div className="flex justify-end gap-6">
+								<span style={{ color: "#666" }}>Subtotal:</span>
+								<span style={{ color: "#aaa", width: 112 }}>
+									{formatCurrency(invSubtotal)}
+								</span>
+							</div>
+							<div className="flex justify-end gap-6" style={{ marginTop: 4 }}>
+								<span style={{ color: "#666" }}>IVA:</span>
+								<span style={{ color: "#aaa", width: 112 }}>
+									{formatCurrency(invIva)}
+								</span>
+							</div>
+							<div className="flex justify-end gap-6" style={{ marginTop: 8 }}>
+								<span
+									className="font-display"
+									style={{ fontWeight: 700, color: "var(--gold)" }}
+								>
+									Total:
+								</span>
+								<span
+									className="font-kds"
+									style={{ fontSize: 18, color: "var(--gold)", width: 112 }}
+								>
+									{formatCurrency(invTotal)}
+								</span>
+							</div>
+						</div>
+
+						<div>
+							<FieldLabel>Notas</FieldLabel>
+							<textarea
+								className="input-base"
+								rows={2}
+								value={invForm.notes}
+								onChange={(e) =>
+									setInvForm((f) => ({ ...f, notes: e.target.value }))
+								}
+								style={{ width: "100%", fontSize: 13 }}
+							/>
+						</div>
+
+						<div
+							className="flex justify-end gap-3"
+							style={{ paddingTop: 12, borderTop: "1px solid var(--s3)" }}
+						>
 							<button
-								className="btn-ghost text-xs flex items-center gap-1.5"
-								onClick={addLine}
+								className="btn-ghost"
+								style={{ fontSize: 13 }}
+								onClick={() => setShowInvoiceModal(false)}
 							>
-								<Plus size={13} /> Agregar linea
+								Cancelar
+							</button>
+							<button
+								className="btn-primary"
+								style={{ fontSize: 13 }}
+								onClick={saveInvoice}
+							>
+								Guardar Factura
 							</button>
 						</div>
+					</div>
+				</Modal>
 
-						{/* Line header */}
+				{/* --- Pay modal --- */}
+				<Modal
+					open={!!payInvoiceId}
+					onClose={() => setPayInvoiceId(null)}
+					title="Registrar Pago"
+				>
+					<div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 						<div
-							className="hidden md:grid gap-2 mb-2 font-body text-[10px] uppercase tracking-wider text-ink-disabled px-1"
-							style={{ gridTemplateColumns: "2fr 0.6fr 1fr 0.6fr auto" }}
+							style={{
+								width: 52,
+								height: 52,
+								borderRadius: 12,
+								background: "rgba(16,185,129,0.1)",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								margin: "0 auto",
+							}}
 						>
-							<span>Descripcion</span>
-							<span className="text-center">Cant.</span>
-							<span className="text-right">Precio unit.</span>
-							<span className="text-center">IVA</span>
-							<span style={{ width: 28 }} />
+							<CheckCircle size={24} style={{ color: "#10b981" }} />
 						</div>
-
-						<div className="space-y-2">
-							{invLines.map((line, idx) => (
-								<div
-									key={idx}
-									className="grid gap-2"
-									style={{ gridTemplateColumns: "2fr 0.6fr 1fr 0.6fr auto" }}
-								>
-									<input
-										className="input-base text-xs"
-										placeholder="Descripcion"
-										value={line.description}
-										onChange={(e) =>
-											updateLine(idx, "description", e.target.value)
-										}
-									/>
-									<input
-										className="input-base text-xs text-center"
-										type="number"
-										min={0}
-										step={1}
-										value={line.quantity}
-										onChange={(e) =>
-											updateLine(idx, "quantity", Number(e.target.value))
-										}
-									/>
-									<input
-										className="input-base text-xs text-right"
-										type="number"
-										min={0}
-										step={0.01}
-										placeholder="Precio unit."
-										value={line.unitPrice || ""}
-										onChange={(e) =>
-											updateLine(idx, "unitPrice", Number(e.target.value))
-										}
-									/>
-									<select
-										className="input-base text-xs"
-										value={line.ivaRate}
-										onChange={(e) =>
-											updateLine(idx, "ivaRate", Number(e.target.value))
-										}
-									>
-										<option value={0}>0%</option>
-										<option value={10.5}>10.5%</option>
-										<option value={21}>21%</option>
-										<option value={27}>27%</option>
-									</select>
-									<button
-										className="btn-ghost p-1.5 text-red-400 hover:text-red-300"
-										onClick={() => removeLine(idx)}
-									>
-										<X size={14} />
-									</button>
-								</div>
-							))}
-						</div>
-					</div>
-
-					{/* Totals */}
-					<div className="divider" />
-					<div className="space-y-1.5 text-right text-sm font-body">
-						<div className="flex justify-end gap-6">
-							<span className="text-ink-tertiary">Subtotal:</span>
-							<span className="text-ink-secondary w-28">
-								{formatCurrency(invSubtotal)}
-							</span>
-						</div>
-						<div className="flex justify-end gap-6">
-							<span className="text-ink-tertiary">IVA:</span>
-							<span className="text-ink-secondary w-28">
-								{formatCurrency(invIva)}
-							</span>
-						</div>
-						<div className="flex justify-end gap-6 pt-1">
-							<span
-								className="font-display font-bold"
-								style={{ color: "var(--gold)" }}
+						<div>
+							<FieldLabel>Metodo de pago</FieldLabel>
+							<select
+								className="input-base"
+								value={payMethod}
+								onChange={(e) => setPayMethod(e.target.value)}
+								style={{ width: "100%", fontSize: 13 }}
 							>
-								Total:
-							</span>
-							<span
-								className="font-display text-lg font-bold w-28"
-								style={{ color: "var(--gold)" }}
+								<option value="efectivo">Efectivo</option>
+								<option value="transferencia">Transferencia</option>
+								<option value="cheque">Cheque</option>
+								<option value="mercadopago">MercadoPago</option>
+								<option value="tarjeta">Tarjeta</option>
+							</select>
+						</div>
+						<div
+							className="flex justify-end gap-3"
+							style={{ paddingTop: 12, borderTop: "1px solid var(--s3)" }}
+						>
+							<button
+								className="btn-ghost"
+								style={{ fontSize: 13 }}
+								onClick={() => setPayInvoiceId(null)}
 							>
-								{formatCurrency(invTotal)}
-							</span>
+								Cancelar
+							</button>
+							<button
+								className="btn-primary"
+								style={{ fontSize: 13 }}
+								onClick={markPaid}
+							>
+								Confirmar Pago
+							</button>
 						</div>
 					</div>
+				</Modal>
 
-					<div>
-						<FieldLabel>Notas</FieldLabel>
-						<textarea
-							className="input-base w-full text-sm"
-							rows={2}
-							value={invForm.notes}
-							onChange={(e) =>
-								setInvForm((f) => ({ ...f, notes: e.target.value }))
-							}
-						/>
-					</div>
-
-					<div
-						className="flex justify-end gap-3 pt-3"
-						style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
-					>
-						<button
-							className="btn-ghost text-sm"
-							onClick={() => setShowInvoiceModal(false)}
-						>
-							Cancelar
-						</button>
-						<button className="btn-primary text-sm" onClick={saveInvoice}>
-							Guardar Factura
-						</button>
-					</div>
-				</div>
-			</Modal>
-
-			{/* ── Pay modal ────────────────────────────────────────────────────── */}
-			<Modal
-				open={!!payInvoiceId}
-				onClose={() => setPayInvoiceId(null)}
-				title="Registrar Pago"
-			>
-				<div className="space-y-5">
-					<div
-						className="flex items-center justify-center rounded-xl mx-auto"
-						style={{
-							width: 52,
-							height: 52,
-							background: "rgba(34,197,94,0.1)",
-						}}
-					>
-						<CheckCircle size={24} className="text-green-400" />
-					</div>
-					<div>
-						<FieldLabel>Metodo de pago</FieldLabel>
-						<select
-							className="input-base w-full text-sm"
-							value={payMethod}
-							onChange={(e) => setPayMethod(e.target.value)}
-						>
-							<option value="efectivo">Efectivo</option>
-							<option value="transferencia">Transferencia</option>
-							<option value="cheque">Cheque</option>
-							<option value="mercadopago">MercadoPago</option>
-							<option value="tarjeta">Tarjeta</option>
-						</select>
-					</div>
-					<div
-						className="flex justify-end gap-3 pt-3"
-						style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
-					>
-						<button
-							className="btn-ghost text-sm"
-							onClick={() => setPayInvoiceId(null)}
-						>
-							Cancelar
-						</button>
-						<button className="btn-primary text-sm" onClick={markPaid}>
-							Confirmar Pago
-						</button>
-					</div>
-				</div>
-			</Modal>
-
-			{/* ── Confirm dialog ───────────────────────────────────────────────── */}
-			<ConfirmDialog
-				open={!!confirm}
-				message={confirm?.message ?? ""}
-				onConfirm={() => confirm?.action()}
-				onCancel={() => setConfirm(null)}
-			/>
+				{/* --- Confirm dialog --- */}
+				<ConfirmDialog
+					open={!!confirm}
+					message={confirm?.message ?? ""}
+					onConfirm={() => confirm?.action()}
+					onCancel={() => setConfirm(null)}
+				/>
+			</div>
 		</div>
 	);
 }

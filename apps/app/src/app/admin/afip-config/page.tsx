@@ -13,6 +13,10 @@ import {
 	Smartphone,
 	ToggleLeft,
 	ToggleRight,
+	Building2,
+	Key,
+	Zap,
+	Globe,
 } from "lucide-react";
 
 interface AfipConfig {
@@ -54,7 +58,6 @@ export default function AfipConfigPage() {
 	const [saved, setSaved] = useState(false);
 	const [error, setError] = useState("");
 
-	// Form state
 	const [cuit, setCuit] = useState("");
 	const [razonSocial, setRazonSocial] = useState("");
 	const [taxRegime, setTaxRegime] = useState("monotributo");
@@ -80,7 +83,7 @@ export default function AfipConfigPage() {
 			setAutoInvoiceCash(data.autoInvoiceCash ?? false);
 			setAutoInvoiceCard(data.autoInvoiceCard ?? false);
 		} catch {
-			setError("Error cargando configuración");
+			setError("Error cargando configuracion");
 		} finally {
 			setLoading(false);
 		}
@@ -119,7 +122,7 @@ export default function AfipConfigPage() {
 			setSaved(true);
 			setTimeout(() => setSaved(false), 3000);
 		} catch {
-			setError("Error guardando configuración");
+			setError("Error guardando configuracion");
 		} finally {
 			setSaving(false);
 		}
@@ -139,22 +142,44 @@ export default function AfipConfigPage() {
 		<button
 			type="button"
 			onClick={() => onChange(!value)}
-			className="flex items-center gap-3 w-full rounded-xl transition-colors"
+			className="flex items-center gap-3 w-full transition-colors"
 			style={{
-				padding: "14px 16px",
+				padding: "14px 20px",
+				borderRadius: 14,
 				background: value ? "rgba(245,158,11,0.08)" : "var(--s2)",
 				border: `1px solid ${value ? "rgba(245,158,11,0.3)" : "var(--s3)"}`,
+				cursor: "pointer",
+				textAlign: "left",
+			}}
+			onMouseEnter={(e) => {
+				if (!value)
+					(e.currentTarget as HTMLButtonElement).style.background = "var(--s3)";
+			}}
+			onMouseLeave={(e) => {
+				if (!value)
+					(e.currentTarget as HTMLButtonElement).style.background = "var(--s2)";
 			}}
 		>
-			<Icon
-				size={18}
-				style={{ color: value ? "var(--gold)" : "var(--ink-tertiary)" }}
-			/>
+			<div
+				style={{
+					width: 34,
+					height: 34,
+					borderRadius: 10,
+					background: value ? "rgba(245,158,11,0.15)" : "rgba(136,136,136,0.1)",
+					border: `1px solid ${value ? "rgba(245,158,11,0.3)" : "var(--s4)"}`,
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					flexShrink: 0,
+				}}
+			>
+				<Icon size={16} style={{ color: value ? "var(--gold)" : "#666" }} />
+			</div>
 			<span
-				className="font-body flex-1 text-left"
+				className="font-body flex-1"
 				style={{
 					fontSize: 13,
-					color: value ? "var(--ink-primary)" : "var(--ink-secondary)",
+					color: value ? "#f5f5f5" : "#888",
 				}}
 			>
 				{label}
@@ -162,474 +187,719 @@ export default function AfipConfigPage() {
 			{value ? (
 				<ToggleRight size={22} style={{ color: "var(--gold)" }} />
 			) : (
-				<ToggleLeft size={22} style={{ color: "var(--ink-disabled)" }} />
+				<ToggleLeft size={22} style={{ color: "#555" }} />
 			)}
 		</button>
 	);
 
 	if (loading) {
 		return (
-			<div
-				className="flex items-center justify-center"
-				style={{ minHeight: "60vh" }}
-			>
+			<div style={{ minHeight: "100vh", background: "var(--s0)" }}>
 				<div
-					className="font-display text-ink-tertiary"
-					style={{ fontSize: 13 }}
+					className="flex items-center justify-center"
+					style={{ minHeight: "60vh" }}
 				>
-					Cargando configuración...
+					<div
+						className="font-display"
+						style={{ fontSize: 13, color: "#666", letterSpacing: "0.15em" }}
+					>
+						Cargando configuracion...
+					</div>
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div style={{ padding: "24px 20px 60px", maxWidth: 900, margin: "0 auto" }}>
-			{/* Header */}
+		<div style={{ minHeight: "100vh", background: "var(--s0)" }}>
 			<div
-				className="flex items-center gap-4 flex-wrap"
-				style={{ marginBottom: 28 }}
+				style={{ padding: "28px 24px 48px", maxWidth: 1200, margin: "0 auto" }}
 			>
+				{/* Header */}
 				<div
-					className="flex items-center justify-center"
-					style={{
-						width: 44,
-						height: 44,
-						borderRadius: 12,
-						background: "rgba(245,158,11,0.12)",
-						border: "1px solid rgba(245,158,11,0.25)",
-					}}
+					className="flex items-center justify-between animate-fade-in"
+					style={{ marginBottom: 8 }}
 				>
-					<Settings size={22} style={{ color: "var(--gold)" }} />
-				</div>
-				<div>
-					<h1
-						className="font-kds text-ink-primary"
-						style={{ fontSize: 40, lineHeight: 1 }}
-					>
-						CONFIGURACIÓN AFIP
-					</h1>
-					<p
-						className="font-body text-ink-tertiary"
-						style={{ fontSize: 12, marginTop: 2 }}
-					>
-						Facturación electrónica y reglas de facturación automática
-					</p>
-				</div>
-				{config?.certPem === "***configured***" && (
-					<div
-						className="badge flex items-center gap-1.5"
-						style={{
-							background: "rgba(16,185,129,0.1)",
-							border: "1px solid rgba(16,185,129,0.3)",
-							color: "#10b981",
-							marginLeft: "auto",
-						}}
-					>
-						<Shield size={11} />
-						Certificado Configurado
-					</div>
-				)}
-			</div>
-
-			{error && (
-				<div
-					className="card flex items-center gap-2"
-					style={{
-						marginBottom: 16,
-						padding: "12px 16px",
-						borderColor: "rgba(239,68,68,0.3)",
-						background: "rgba(239,68,68,0.05)",
-					}}
-				>
-					<AlertTriangle size={14} style={{ color: "#ef4444" }} />
-					<span
-						className="font-body"
-						style={{ fontSize: 12, color: "#ef4444" }}
-					>
-						{error}
-					</span>
-				</div>
-			)}
-
-			{/* Datos Fiscales */}
-			<section style={{ marginBottom: 28 }}>
-				<div
-					className="font-display text-ink-disabled uppercase"
-					style={{ fontSize: 9, letterSpacing: "0.25em", marginBottom: 12 }}
-				>
-					DATOS FISCALES
-				</div>
-				<div className="card" style={{ padding: 20 }}>
-					<div
-						className="grid gap-4"
-						style={{
-							gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-						}}
-					>
-						<div>
-							<label
-								className="font-display text-ink-tertiary uppercase block"
-								style={{ fontSize: 9, letterSpacing: "0.2em", marginBottom: 6 }}
-							>
-								CUIT
-							</label>
-							<input
-								className="input-base w-full"
-								value={cuit}
-								onChange={(e) => setCuit(e.target.value)}
-								placeholder="20-12345678-9"
-							/>
-						</div>
-						<div>
-							<label
-								className="font-display text-ink-tertiary uppercase block"
-								style={{ fontSize: 9, letterSpacing: "0.2em", marginBottom: 6 }}
-							>
-								Razón Social
-							</label>
-							<input
-								className="input-base w-full"
-								value={razonSocial}
-								onChange={(e) => setRazonSocial(e.target.value)}
-								placeholder="MY WAY OLIVOS S.R.L."
-							/>
-						</div>
-						<div>
-							<label
-								className="font-display text-ink-tertiary uppercase block"
-								style={{ fontSize: 9, letterSpacing: "0.2em", marginBottom: 6 }}
-							>
-								Punto de Venta
-							</label>
-							<input
-								className="input-base w-full"
-								type="number"
-								min={1}
-								value={puntoVenta}
-								onChange={(e) => setPuntoVenta(parseInt(e.target.value) || 1)}
-							/>
-						</div>
-					</div>
-				</div>
-			</section>
-
-			{/* Régimen Tributario */}
-			<section style={{ marginBottom: 28 }}>
-				<div
-					className="font-display text-ink-disabled uppercase"
-					style={{ fontSize: 9, letterSpacing: "0.25em", marginBottom: 12 }}
-				>
-					RÉGIMEN TRIBUTARIO
-				</div>
-				<div
-					className="grid gap-3"
-					style={{
-						gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-					}}
-				>
-					{TAX_REGIMES.map((r) => (
-						<button
-							key={r.value}
-							type="button"
-							onClick={() => setTaxRegime(r.value)}
-							className="card text-left transition-colors"
+					<div className="flex items-center gap-3">
+						<div
 							style={{
-								padding: "16px 18px",
-								cursor: "pointer",
-								borderColor:
-									taxRegime === r.value ? "rgba(245,158,11,0.4)" : "var(--s3)",
-								background:
-									taxRegime === r.value ? "rgba(245,158,11,0.06)" : undefined,
+								width: 3,
+								height: 24,
+								borderRadius: 2,
+								background: "var(--gold)",
 							}}
-						>
-							<div
-								className="flex items-center gap-2"
-								style={{ marginBottom: 4 }}
-							>
-								<div
-									style={{
-										width: 8,
-										height: 8,
-										borderRadius: "50%",
-										background:
-											taxRegime === r.value ? "var(--gold)" : "var(--s4)",
-									}}
-								/>
-								<span
-									className="font-display text-ink-primary"
-									style={{ fontSize: 13, fontWeight: 600 }}
-								>
-									{r.label}
-								</span>
-							</div>
-							<p
-								className="font-body text-ink-tertiary"
-								style={{ fontSize: 11, lineHeight: 1.4 }}
-							>
-								{r.desc}
-							</p>
-						</button>
-					))}
-				</div>
-			</section>
-
-			{/* Entorno */}
-			<section style={{ marginBottom: 28 }}>
-				<div
-					className="font-display text-ink-disabled uppercase"
-					style={{ fontSize: 9, letterSpacing: "0.25em", marginBottom: 12 }}
-				>
-					ENTORNO
-				</div>
-				<div className="flex gap-3">
-					{(["testing", "production"] as const).map((env) => (
-						<button
-							key={env}
-							type="button"
-							onClick={() => setEnvironment(env)}
-							className="card flex items-center gap-2 transition-colors"
-							style={{
-								padding: "12px 20px",
-								cursor: "pointer",
-								borderColor:
-									environment === env
-										? env === "production"
-											? "rgba(16,185,129,0.4)"
-											: "rgba(245,158,11,0.4)"
-										: "var(--s3)",
-								background:
-									environment === env
-										? env === "production"
-											? "rgba(16,185,129,0.06)"
-											: "rgba(245,158,11,0.06)"
-										: undefined,
-							}}
-						>
-							<div
+						/>
+						<div>
+							<h1
+								className="font-display"
 								style={{
-									width: 8,
-									height: 8,
-									borderRadius: "50%",
-									background:
-										environment === env
-											? env === "production"
-												? "#10b981"
-												: "var(--gold)"
-											: "var(--s4)",
+									fontSize: 22,
+									fontWeight: 700,
+									color: "#f5f5f5",
+									lineHeight: 1.1,
 								}}
-							/>
+							>
+								CONFIGURACION AFIP
+							</h1>
+							<p
+								className="font-body"
+								style={{ fontSize: 12, color: "#666", marginTop: 2 }}
+							>
+								Facturacion electronica y reglas de facturacion automatica
+							</p>
+						</div>
+					</div>
+					{config?.certPem === "***configured***" && (
+						<div
+							className="flex items-center gap-1.5"
+							style={{
+								padding: "6px 14px",
+								borderRadius: 99,
+								background: "rgba(16,185,129,0.1)",
+								border: "1px solid rgba(16,185,129,0.3)",
+							}}
+						>
+							<Shield size={11} style={{ color: "#10b981" }} />
 							<span
 								className="font-display uppercase"
 								style={{
-									fontSize: 11,
-									letterSpacing: "0.15em",
-									color:
-										environment === env
-											? "var(--ink-primary)"
-											: "var(--ink-tertiary)",
+									fontSize: 9,
+									letterSpacing: "0.12em",
+									color: "#10b981",
+									fontWeight: 600,
 								}}
 							>
-								{env === "testing" ? "Homologación" : "Producción"}
+								Certificado Configurado
 							</span>
-						</button>
-					))}
-				</div>
-				{environment === "production" && (
-					<div
-						className="flex items-center gap-2 mt-2"
-						style={{ padding: "8px 12px" }}
-					>
-						<AlertTriangle size={12} style={{ color: "#f59e0b" }} />
-						<span
-							className="font-body"
-							style={{ fontSize: 11, color: "#f59e0b" }}
-						>
-							Las facturas emitidas en producción son fiscalmente válidas
-						</span>
-					</div>
-				)}
-			</section>
-
-			{/* Certificados */}
-			<section style={{ marginBottom: 28 }}>
-				<div
-					className="font-display text-ink-disabled uppercase"
-					style={{ fontSize: 9, letterSpacing: "0.25em", marginBottom: 12 }}
-				>
-					CERTIFICADOS AFIP
-				</div>
-				<div className="card" style={{ padding: 20 }}>
-					<div className="grid gap-4">
-						<div>
-							<label
-								className="font-display text-ink-tertiary uppercase block"
-								style={{ fontSize: 9, letterSpacing: "0.2em", marginBottom: 6 }}
-							>
-								Certificado (.pem)
-							</label>
-							<textarea
-								className="input-base w-full"
-								rows={4}
-								value={certPem}
-								onChange={(e) => setCertPem(e.target.value)}
-								placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
-								style={{ fontFamily: "monospace", fontSize: 11 }}
-							/>
-							{config?.certPem === "***configured***" && !certPem && (
-								<span
-									className="font-body text-green-500"
-									style={{ fontSize: 10, marginTop: 4, display: "block" }}
-								>
-									Certificado ya configurado (dejar vacío para mantener)
-								</span>
-							)}
 						</div>
-						<div>
-							<label
-								className="font-display text-ink-tertiary uppercase block"
-								style={{ fontSize: 9, letterSpacing: "0.2em", marginBottom: 6 }}
-							>
-								Clave Privada (.key)
-							</label>
-							<textarea
-								className="input-base w-full"
-								rows={4}
-								value={keyPem}
-								onChange={(e) => setKeyPem(e.target.value)}
-								placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"
-								style={{ fontFamily: "monospace", fontSize: 11 }}
-							/>
-							{config?.keyPem === "***configured***" && !keyPem && (
-								<span
-									className="font-body text-green-500"
-									style={{ fontSize: 10, marginTop: 4, display: "block" }}
-								>
-									Clave ya configurada (dejar vacío para mantener)
-								</span>
-							)}
-						</div>
-					</div>
-				</div>
-			</section>
-
-			{/* Facturación Automática */}
-			<section style={{ marginBottom: 32 }}>
-				<div
-					className="font-display text-ink-disabled uppercase"
-					style={{ fontSize: 9, letterSpacing: "0.25em", marginBottom: 12 }}
-				>
-					FACTURACIÓN AUTOMÁTICA
-				</div>
-				<p
-					className="font-body text-ink-tertiary"
-					style={{ fontSize: 11, marginBottom: 12, lineHeight: 1.5 }}
-				>
-					Elegí qué medios de pago generan factura automáticamente al cerrar una
-					orden. Las que no estén activadas se pueden facturar manualmente desde
-					la sección Facturación.
-				</p>
-				<div className="grid gap-3">
-					<Toggle
-						value={autoInvoiceMP}
-						onChange={setAutoInvoiceMP}
-						label="MercadoPago — Facturar automáticamente"
-						icon={Smartphone}
-					/>
-					<Toggle
-						value={autoInvoiceCash}
-						onChange={setAutoInvoiceCash}
-						label="Efectivo — Facturar automáticamente"
-						icon={Banknote}
-					/>
-					<Toggle
-						value={autoInvoiceCard}
-						onChange={setAutoInvoiceCard}
-						label="Tarjeta — Facturar automáticamente"
-						icon={CreditCard}
-					/>
-				</div>
-			</section>
-
-			{/* Save */}
-			<div
-				className="flex items-center gap-3 justify-end"
-				style={{
-					padding: "16px 0",
-					borderTop: "1px solid var(--s3)",
-				}}
-			>
-				{saved && (
-					<div className="flex items-center gap-1.5 animate-fade-in">
-						<CheckCircle2 size={14} style={{ color: "#10b981" }} />
-						<span
-							className="font-body"
-							style={{ fontSize: 12, color: "#10b981" }}
-						>
-							Guardado
-						</span>
-					</div>
-				)}
-				<button
-					className="btn-primary flex items-center gap-2"
-					onClick={handleSave}
-					disabled={saving}
-				>
-					{saving ? (
-						<span className="font-display" style={{ fontSize: 11 }}>
-							Guardando...
-						</span>
-					) : (
-						<>
-							<Save size={14} />
-							<span className="font-display" style={{ fontSize: 11 }}>
-								Guardar Configuración
-							</span>
-						</>
 					)}
-				</button>
-			</div>
+				</div>
+				<div className="divider-gold" style={{ marginBottom: 28 }} />
 
-			{/* Info */}
-			<div
-				className="card"
-				style={{
-					padding: 16,
-					marginTop: 16,
-					borderColor: "rgba(59,130,246,0.2)",
-					background: "rgba(59,130,246,0.03)",
-				}}
-			>
-				<div className="flex items-start gap-3">
-					<FileText
-						size={16}
-						style={{ color: "#3b82f6", flexShrink: 0, marginTop: 2 }}
-					/>
-					<div>
-						<p
-							className="font-display text-ink-secondary"
-							style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}
+				{/* Error */}
+				{error && (
+					<div
+						style={{
+							marginBottom: 16,
+							padding: "12px 20px",
+							borderRadius: 12,
+							background: "rgba(239,68,68,0.06)",
+							border: "1px solid rgba(239,68,68,0.2)",
+							display: "flex",
+							alignItems: "center",
+							gap: 10,
+						}}
+					>
+						<AlertTriangle size={14} style={{ color: "#ef4444" }} />
+						<span
+							className="font-body"
+							style={{ fontSize: 12, color: "#ef4444" }}
 						>
-							¿Cómo obtener el certificado?
-						</p>
-						<ol
-							className="font-body text-ink-tertiary"
+							{error}
+						</span>
+					</div>
+				)}
+
+				<div className="grid gap-6" style={{ gridTemplateColumns: "1fr 1fr" }}>
+					{/* Left column */}
+					<div className="flex flex-col gap-6">
+						{/* Datos Fiscales */}
+						<div
 							style={{
-								fontSize: 11,
-								lineHeight: 1.6,
-								paddingLeft: 16,
-								margin: 0,
+								background: "var(--s1)",
+								border: "1px solid var(--s4)",
+								borderRadius: 16,
+								overflow: "hidden",
+								boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
 							}}
 						>
-							<li>Ingresá a AFIP con tu CUIT y clave fiscal</li>
-							<li>
-								Andá a &ldquo;Administración de Certificados Digitales&rdquo;
-							</li>
-							<li>Creá un nuevo certificado para &ldquo;Web Service&rdquo;</li>
-							<li>Descargá el .pem y pegá el contenido arriba</li>
-							<li>Generá la clave privada (.key) y pegala también</li>
-						</ol>
+							<div
+								className="flex items-center justify-between"
+								style={{
+									padding: "14px 20px",
+									borderBottom: "1px solid var(--s3)",
+									background: "var(--s2)",
+								}}
+							>
+								<div className="flex items-center gap-2.5">
+									<Building2 size={14} style={{ color: "var(--gold)" }} />
+									<span
+										className="font-display uppercase"
+										style={{
+											fontSize: 11,
+											letterSpacing: "0.15em",
+											color: "#ccc",
+											fontWeight: 600,
+										}}
+									>
+										DATOS FISCALES
+									</span>
+								</div>
+							</div>
+							<div style={{ padding: 20 }}>
+								<div className="flex flex-col gap-4">
+									<div>
+										<label
+											className="font-display uppercase block"
+											style={{
+												fontSize: 9,
+												letterSpacing: "0.2em",
+												marginBottom: 6,
+												color: "#888",
+											}}
+										>
+											CUIT
+										</label>
+										<input
+											className="input-base w-full"
+											value={cuit}
+											onChange={(e) => setCuit(e.target.value)}
+											placeholder="20-12345678-9"
+										/>
+									</div>
+									<div>
+										<label
+											className="font-display uppercase block"
+											style={{
+												fontSize: 9,
+												letterSpacing: "0.2em",
+												marginBottom: 6,
+												color: "#888",
+											}}
+										>
+											Razon Social
+										</label>
+										<input
+											className="input-base w-full"
+											value={razonSocial}
+											onChange={(e) => setRazonSocial(e.target.value)}
+											placeholder="MY WAY OLIVOS S.R.L."
+										/>
+									</div>
+									<div>
+										<label
+											className="font-display uppercase block"
+											style={{
+												fontSize: 9,
+												letterSpacing: "0.2em",
+												marginBottom: 6,
+												color: "#888",
+											}}
+										>
+											Punto de Venta
+										</label>
+										<input
+											className="input-base w-full"
+											type="number"
+											min={1}
+											value={puntoVenta}
+											onChange={(e) =>
+												setPuntoVenta(parseInt(e.target.value) || 1)
+											}
+										/>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						{/* Regimen Tributario */}
+						<div
+							style={{
+								background: "var(--s1)",
+								border: "1px solid var(--s4)",
+								borderRadius: 16,
+								overflow: "hidden",
+								boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+							}}
+						>
+							<div
+								className="flex items-center justify-between"
+								style={{
+									padding: "14px 20px",
+									borderBottom: "1px solid var(--s3)",
+									background: "var(--s2)",
+								}}
+							>
+								<div className="flex items-center gap-2.5">
+									<FileText size={14} style={{ color: "var(--gold)" }} />
+									<span
+										className="font-display uppercase"
+										style={{
+											fontSize: 11,
+											letterSpacing: "0.15em",
+											color: "#ccc",
+											fontWeight: 600,
+										}}
+									>
+										REGIMEN TRIBUTARIO
+									</span>
+								</div>
+							</div>
+							<div style={{ padding: 16 }}>
+								<div className="flex flex-col gap-3">
+									{TAX_REGIMES.map((r) => (
+										<button
+											key={r.value}
+											type="button"
+											onClick={() => setTaxRegime(r.value)}
+											className="text-left transition-colors"
+											style={{
+												padding: "14px 16px",
+												borderRadius: 12,
+												cursor: "pointer",
+												border: `1px solid ${taxRegime === r.value ? "rgba(245,158,11,0.4)" : "var(--s3)"}`,
+												background:
+													taxRegime === r.value
+														? "rgba(245,158,11,0.06)"
+														: "var(--s2)",
+											}}
+											onMouseEnter={(e) => {
+												if (taxRegime !== r.value)
+													(
+														e.currentTarget as HTMLButtonElement
+													).style.background = "var(--s3)";
+											}}
+											onMouseLeave={(e) => {
+												if (taxRegime !== r.value)
+													(
+														e.currentTarget as HTMLButtonElement
+													).style.background = "var(--s2)";
+											}}
+										>
+											<div
+												className="flex items-center gap-2"
+												style={{ marginBottom: 4 }}
+											>
+												<div
+													style={{
+														width: 8,
+														height: 8,
+														borderRadius: "50%",
+														background:
+															taxRegime === r.value ? "var(--gold)" : "#555",
+													}}
+												/>
+												<span
+													className="font-display"
+													style={{
+														fontSize: 13,
+														fontWeight: 600,
+														color: taxRegime === r.value ? "#f5f5f5" : "#aaa",
+													}}
+												>
+													{r.label}
+												</span>
+											</div>
+											<p
+												className="font-body"
+												style={{
+													fontSize: 11,
+													lineHeight: 1.4,
+													color: "#666",
+													marginLeft: 16,
+												}}
+											>
+												{r.desc}
+											</p>
+										</button>
+									))}
+								</div>
+							</div>
+						</div>
+
+						{/* Entorno */}
+						<div
+							style={{
+								background: "var(--s1)",
+								border: "1px solid var(--s4)",
+								borderRadius: 16,
+								overflow: "hidden",
+								boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+							}}
+						>
+							<div
+								className="flex items-center justify-between"
+								style={{
+									padding: "14px 20px",
+									borderBottom: "1px solid var(--s3)",
+									background: "var(--s2)",
+								}}
+							>
+								<div className="flex items-center gap-2.5">
+									<Globe size={14} style={{ color: "var(--gold)" }} />
+									<span
+										className="font-display uppercase"
+										style={{
+											fontSize: 11,
+											letterSpacing: "0.15em",
+											color: "#ccc",
+											fontWeight: 600,
+										}}
+									>
+										ENTORNO
+									</span>
+								</div>
+							</div>
+							<div style={{ padding: 16 }}>
+								<div className="flex gap-3">
+									{(["testing", "production"] as const).map((env) => {
+										const active = environment === env;
+										const envColor =
+											env === "production" ? "#10b981" : "var(--gold)";
+										return (
+											<button
+												key={env}
+												type="button"
+												onClick={() => setEnvironment(env)}
+												className="flex items-center gap-2 flex-1 transition-colors"
+												style={{
+													padding: "14px 18px",
+													borderRadius: 12,
+													cursor: "pointer",
+													border: `1px solid ${active ? (env === "production" ? "rgba(16,185,129,0.4)" : "rgba(245,158,11,0.4)") : "var(--s3)"}`,
+													background: active
+														? env === "production"
+															? "rgba(16,185,129,0.06)"
+															: "rgba(245,158,11,0.06)"
+														: "var(--s2)",
+												}}
+												onMouseEnter={(e) => {
+													if (!active)
+														(
+															e.currentTarget as HTMLButtonElement
+														).style.background = "var(--s3)";
+												}}
+												onMouseLeave={(e) => {
+													if (!active)
+														(
+															e.currentTarget as HTMLButtonElement
+														).style.background = "var(--s2)";
+												}}
+											>
+												<div
+													style={{
+														width: 8,
+														height: 8,
+														borderRadius: "50%",
+														background: active ? envColor : "#555",
+													}}
+												/>
+												<span
+													className="font-display uppercase"
+													style={{
+														fontSize: 11,
+														letterSpacing: "0.15em",
+														color: active ? "#f5f5f5" : "#666",
+													}}
+												>
+													{env === "testing" ? "Homologacion" : "Produccion"}
+												</span>
+											</button>
+										);
+									})}
+								</div>
+								{environment === "production" && (
+									<div
+										className="flex items-center gap-2"
+										style={{
+											padding: "10px 14px",
+											marginTop: 10,
+											borderRadius: 10,
+											background: "rgba(245,158,11,0.06)",
+											border: "1px solid rgba(245,158,11,0.15)",
+										}}
+									>
+										<AlertTriangle size={12} style={{ color: "#f59e0b" }} />
+										<span
+											className="font-body"
+											style={{ fontSize: 11, color: "#f59e0b" }}
+										>
+											Las facturas emitidas en produccion son fiscalmente
+											validas
+										</span>
+									</div>
+								)}
+							</div>
+						</div>
 					</div>
+
+					{/* Right column */}
+					<div className="flex flex-col gap-6">
+						{/* Certificados */}
+						<div
+							style={{
+								background: "var(--s1)",
+								border: "1px solid var(--s4)",
+								borderRadius: 16,
+								overflow: "hidden",
+								boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+							}}
+						>
+							<div
+								className="flex items-center justify-between"
+								style={{
+									padding: "14px 20px",
+									borderBottom: "1px solid var(--s3)",
+									background: "var(--s2)",
+								}}
+							>
+								<div className="flex items-center gap-2.5">
+									<Key size={14} style={{ color: "var(--gold)" }} />
+									<span
+										className="font-display uppercase"
+										style={{
+											fontSize: 11,
+											letterSpacing: "0.15em",
+											color: "#ccc",
+											fontWeight: 600,
+										}}
+									>
+										CERTIFICADOS AFIP
+									</span>
+								</div>
+							</div>
+							<div style={{ padding: 20 }}>
+								<div className="flex flex-col gap-4">
+									<div>
+										<label
+											className="font-display uppercase block"
+											style={{
+												fontSize: 9,
+												letterSpacing: "0.2em",
+												marginBottom: 6,
+												color: "#888",
+											}}
+										>
+											Certificado (.pem)
+										</label>
+										<textarea
+											className="input-base w-full"
+											rows={4}
+											value={certPem}
+											onChange={(e) => setCertPem(e.target.value)}
+											placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+											style={{ fontFamily: "monospace", fontSize: 11 }}
+										/>
+										{config?.certPem === "***configured***" && !certPem && (
+											<span
+												className="font-body"
+												style={{
+													fontSize: 10,
+													marginTop: 4,
+													display: "block",
+													color: "#10b981",
+												}}
+											>
+												Certificado ya configurado (dejar vacio para mantener)
+											</span>
+										)}
+									</div>
+									<div>
+										<label
+											className="font-display uppercase block"
+											style={{
+												fontSize: 9,
+												letterSpacing: "0.2em",
+												marginBottom: 6,
+												color: "#888",
+											}}
+										>
+											Clave Privada (.key)
+										</label>
+										<textarea
+											className="input-base w-full"
+											rows={4}
+											value={keyPem}
+											onChange={(e) => setKeyPem(e.target.value)}
+											placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"
+											style={{ fontFamily: "monospace", fontSize: 11 }}
+										/>
+										{config?.keyPem === "***configured***" && !keyPem && (
+											<span
+												className="font-body"
+												style={{
+													fontSize: 10,
+													marginTop: 4,
+													display: "block",
+													color: "#10b981",
+												}}
+											>
+												Clave ya configurada (dejar vacio para mantener)
+											</span>
+										)}
+									</div>
+								</div>
+							</div>
+						</div>
+
+						{/* Facturacion Automatica */}
+						<div
+							style={{
+								background: "var(--s1)",
+								border: "1px solid var(--s4)",
+								borderRadius: 16,
+								overflow: "hidden",
+								boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+							}}
+						>
+							<div
+								className="flex items-center justify-between"
+								style={{
+									padding: "14px 20px",
+									borderBottom: "1px solid var(--s3)",
+									background: "var(--s2)",
+								}}
+							>
+								<div className="flex items-center gap-2.5">
+									<Zap size={14} style={{ color: "var(--gold)" }} />
+									<span
+										className="font-display uppercase"
+										style={{
+											fontSize: 11,
+											letterSpacing: "0.15em",
+											color: "#ccc",
+											fontWeight: 600,
+										}}
+									>
+										FACTURACION AUTOMATICA
+									</span>
+								</div>
+							</div>
+							<div style={{ padding: 20 }}>
+								<p
+									className="font-body"
+									style={{
+										fontSize: 11,
+										marginBottom: 16,
+										lineHeight: 1.5,
+										color: "#666",
+									}}
+								>
+									Elegi que medios de pago generan factura automaticamente al
+									cerrar una orden. Las que no esten activadas se pueden
+									facturar manualmente desde la seccion Facturacion.
+								</p>
+								<div className="flex flex-col gap-3">
+									<Toggle
+										value={autoInvoiceMP}
+										onChange={setAutoInvoiceMP}
+										label="MercadoPago — Facturar automaticamente"
+										icon={Smartphone}
+									/>
+									<Toggle
+										value={autoInvoiceCash}
+										onChange={setAutoInvoiceCash}
+										label="Efectivo — Facturar automaticamente"
+										icon={Banknote}
+									/>
+									<Toggle
+										value={autoInvoiceCard}
+										onChange={setAutoInvoiceCard}
+										label="Tarjeta — Facturar automaticamente"
+										icon={CreditCard}
+									/>
+								</div>
+							</div>
+						</div>
+
+						{/* Info */}
+						<div
+							style={{
+								background: "var(--s1)",
+								border: "1px solid rgba(59,130,246,0.2)",
+								borderRadius: 16,
+								overflow: "hidden",
+								boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+							}}
+						>
+							<div
+								className="flex items-center justify-between"
+								style={{
+									padding: "14px 20px",
+									borderBottom: "1px solid rgba(59,130,246,0.15)",
+									background: "rgba(59,130,246,0.04)",
+								}}
+							>
+								<div className="flex items-center gap-2.5">
+									<Settings size={14} style={{ color: "#3b82f6" }} />
+									<span
+										className="font-display uppercase"
+										style={{
+											fontSize: 11,
+											letterSpacing: "0.15em",
+											color: "#3b82f6",
+											fontWeight: 600,
+										}}
+									>
+										COMO OBTENER EL CERTIFICADO
+									</span>
+								</div>
+							</div>
+							<div style={{ padding: 20 }}>
+								<ol
+									className="font-body"
+									style={{
+										fontSize: 11,
+										lineHeight: 1.8,
+										paddingLeft: 16,
+										margin: 0,
+										color: "#888",
+									}}
+								>
+									<li>Ingresa a AFIP con tu CUIT y clave fiscal</li>
+									<li>
+										Anda a &ldquo;Administracion de Certificados
+										Digitales&rdquo;
+									</li>
+									<li>
+										Crea un nuevo certificado para &ldquo;Web Service&rdquo;
+									</li>
+									<li>Descarga el .pem y pega el contenido arriba</li>
+									<li>Genera la clave privada (.key) y pegala tambien</li>
+								</ol>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				{/* Save bar */}
+				<div
+					className="flex items-center gap-3 justify-end"
+					style={{
+						padding: "20px 0 0",
+						marginTop: 28,
+						borderTop: "1px solid var(--s3)",
+					}}
+				>
+					{saved && (
+						<div className="flex items-center gap-1.5 animate-fade-in">
+							<CheckCircle2 size={14} style={{ color: "#10b981" }} />
+							<span
+								className="font-body"
+								style={{ fontSize: 12, color: "#10b981" }}
+							>
+								Guardado
+							</span>
+						</div>
+					)}
+					<button
+						className="btn-primary flex items-center gap-2"
+						onClick={handleSave}
+						disabled={saving}
+					>
+						{saving ? (
+							<span className="font-display" style={{ fontSize: 11 }}>
+								Guardando...
+							</span>
+						) : (
+							<>
+								<Save size={14} />
+								<span className="font-display" style={{ fontSize: 11 }}>
+									Guardar Configuracion
+								</span>
+							</>
+						)}
+					</button>
 				</div>
 			</div>
 		</div>
