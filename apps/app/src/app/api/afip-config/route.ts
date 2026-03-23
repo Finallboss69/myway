@@ -1,0 +1,63 @@
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+
+export async function GET() {
+	try {
+		let config = await db.afipConfig.findUnique({ where: { id: "singleton" } });
+		if (!config) {
+			config = await db.afipConfig.create({ data: { id: "singleton" } });
+		}
+		// Strip sensitive cert data from response
+		return NextResponse.json({
+			...config,
+			certPem: config.certPem ? "***configured***" : null,
+			keyPem: config.keyPem ? "***configured***" : null,
+		});
+	} catch (e) {
+		return NextResponse.json({ error: String(e) }, { status: 500 });
+	}
+}
+
+export async function PUT(req: Request) {
+	try {
+		const body = await req.json();
+		const {
+			cuit,
+			razonSocial,
+			taxRegime,
+			puntoVenta,
+			certPem,
+			keyPem,
+			environment,
+			autoInvoiceMP,
+			autoInvoiceCash,
+			autoInvoiceCard,
+		} = body;
+
+		const data: Record<string, unknown> = {};
+		if (cuit !== undefined) data.cuit = cuit;
+		if (razonSocial !== undefined) data.razonSocial = razonSocial;
+		if (taxRegime !== undefined) data.taxRegime = taxRegime;
+		if (puntoVenta !== undefined) data.puntoVenta = puntoVenta;
+		if (certPem !== undefined) data.certPem = certPem;
+		if (keyPem !== undefined) data.keyPem = keyPem;
+		if (environment !== undefined) data.environment = environment;
+		if (autoInvoiceMP !== undefined) data.autoInvoiceMP = autoInvoiceMP;
+		if (autoInvoiceCash !== undefined) data.autoInvoiceCash = autoInvoiceCash;
+		if (autoInvoiceCard !== undefined) data.autoInvoiceCard = autoInvoiceCard;
+
+		const config = await db.afipConfig.upsert({
+			where: { id: "singleton" },
+			update: data,
+			create: { id: "singleton", ...data },
+		});
+
+		return NextResponse.json({
+			...config,
+			certPem: config.certPem ? "***configured***" : null,
+			keyPem: config.keyPem ? "***configured***" : null,
+		});
+	} catch (e) {
+		return NextResponse.json({ error: String(e) }, { status: 500 });
+	}
+}

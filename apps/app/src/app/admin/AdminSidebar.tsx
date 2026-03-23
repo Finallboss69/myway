@@ -14,6 +14,11 @@ import {
 	LogOut,
 	X,
 	QrCode,
+	Package,
+	FileText,
+	Wallet,
+	DollarSign,
+	Settings,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -60,6 +65,41 @@ const NAV_ITEMS = [
 		section: "GESTIÓN",
 	},
 	{
+		href: "/admin/suppliers",
+		label: "Proveedores",
+		icon: Package,
+		exact: false,
+		section: "ADMINISTRACIÓN",
+	},
+	{
+		href: "/admin/invoices",
+		label: "Facturación",
+		icon: FileText,
+		exact: false,
+		section: "ADMINISTRACIÓN",
+	},
+	{
+		href: "/admin/expenses",
+		label: "Gastos",
+		icon: DollarSign,
+		exact: false,
+		section: "ADMINISTRACIÓN",
+	},
+	{
+		href: "/admin/cash-register",
+		label: "Caja",
+		icon: Wallet,
+		exact: false,
+		section: "ADMINISTRACIÓN",
+	},
+	{
+		href: "/admin/afip-config",
+		label: "Config AFIP",
+		icon: Settings,
+		exact: false,
+		section: "ADMINISTRACIÓN",
+	},
+	{
 		href: "/admin/analytics",
 		label: "Analíticas",
 		icon: BarChart3,
@@ -76,7 +116,7 @@ const NAV_ITEMS = [
 ];
 
 // Group nav items by section
-const SECTIONS = ["GESTIÓN", "REPORTES"] as const;
+const SECTIONS = ["GESTIÓN", "ADMINISTRACIÓN", "REPORTES"] as const;
 
 interface AdminSidebarProps {
 	open: boolean;

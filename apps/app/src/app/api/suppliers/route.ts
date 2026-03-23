@@ -1,0 +1,37 @@
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+
+export async function GET() {
+	try {
+		const suppliers = await db.supplier.findMany({
+			orderBy: { name: "asc" },
+			include: { _count: { select: { invoices: true } } },
+		});
+		return NextResponse.json(suppliers);
+	} catch (e) {
+		return NextResponse.json({ error: String(e) }, { status: 500 });
+	}
+}
+
+export async function POST(req: Request) {
+	try {
+		const body = await req.json();
+		const { name, cuit, address, phone, email, notes } = body;
+		if (!name?.trim()) {
+			return NextResponse.json({ error: "name required" }, { status: 400 });
+		}
+		const supplier = await db.supplier.create({
+			data: {
+				name: name.trim(),
+				cuit: cuit?.trim() || null,
+				address: address?.trim() || null,
+				phone: phone?.trim() || null,
+				email: email?.trim() || null,
+				notes: notes?.trim() || null,
+			},
+		});
+		return NextResponse.json(supplier, { status: 201 });
+	} catch (e) {
+		return NextResponse.json({ error: String(e) }, { status: 500 });
+	}
+}

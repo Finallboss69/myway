@@ -116,3 +116,147 @@ model Ingredient {
   alertThreshold Float
   costPerUnit    Float
 }
+
+// ─── Accounting Module ───────────────────────────────────────
+
+model Supplier {
+  id        String            @id @default(cuid())
+  name      String
+  cuit      String?
+  address   String?
+  phone     String?
+  email     String?
+  notes     String?
+  createdAt DateTime          @default(now())
+  invoices  SupplierInvoice[]
+  expenses  Expense[]
+}
+
+model SupplierInvoice {
+  id            String              @id @default(cuid())
+  supplierId    String
+  supplier      Supplier            @relation(fields: [supplierId], references: [id])
+  number        String
+  date          DateTime
+  dueDate       DateTime?
+  subtotal      Float
+  iva           Float               @default(0)
+  iibb          Float               @default(0)
+  otherTaxes    Float               @default(0)
+  total         Float
+  photoUrl      String?
+  status        String              @default("pending")
+  paidAt        DateTime?
+  paymentMethod String?
+  notes         String?
+  createdAt     DateTime            @default(now())
+  items         SupplierInvoiceItem[]
+  expense       Expense?
+}
+
+model SupplierInvoiceItem {
+  id        String          @id @default(cuid())
+  invoiceId String
+  invoice   SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float
+  unitPrice   Float
+  ivaRate     Float           @default(21)
+  subtotal    Float
+}
+
+model AfipConfig {
+  id              String   @id @default("singleton")
+  cuit            String   @default("")
+  razonSocial     String   @default("")
+  taxRegime       String   @default("monotributo")
+  puntoVenta      Int      @default(1)
+  certPem         String?
+  keyPem          String?
+  environment     String   @default("testing")
+  autoInvoiceMP   Boolean  @default(false)
+  autoInvoiceCash Boolean  @default(false)
+  autoInvoiceCard Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  orderId       String?
+  number        Int
+  type          String
+  puntoVenta    Int
+  cae           String?
+  caeExpiry     DateTime?
+  customerCuit  String?
+  customerName  String?
+  subtotal      Float
+  iva21         Float    @default(0)
+  iva105        Float    @default(0)
+  percIIBB      Float    @default(0)
+  otherTaxes    Float    @default(0)
+  total         Float
+  afipResponse  String?
+  status        String   @default("draft")
+  createdAt     DateTime @default(now())
+  items         InvoiceItem[]
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Float
+  unitPrice   Float
+  ivaRate     Float   @default(21)
+  subtotal    Float
+}
+
+model ExpenseCategory {
+  id       String    @id @default(cuid())
+  name     String
+  icon     String    @default("📦")
+  order    Int       @default(0)
+  expenses Expense[]
+}
+
+model Expense {
+  id                String           @id @default(cuid())
+  categoryId        String
+  category          ExpenseCategory  @relation(fields: [categoryId], references: [id])
+  supplierId        String?
+  supplier          Supplier?        @relation(fields: [supplierId], references: [id])
+  supplierInvoiceId String?          @unique
+  supplierInvoice   SupplierInvoice? @relation(fields: [supplierInvoiceId], references: [id])
+  description       String
+  amount            Float
+  date              DateTime
+  paymentMethod     String?
+  notes             String?
+  createdAt         DateTime         @default(now())
+}
+
+model CashRegister {
+  id             String         @id @default(cuid())
+  date           DateTime
+  openedAt       DateTime       @default(now())
+  closedAt       DateTime?
+  openingBalance Float
+  closingBalance Float?
+  status         String         @default("open")
+  movements      CashMovement[]
+}
+
+model CashMovement {
+  id            String       @id @default(cuid())
+  registerId    String
+  register      CashRegister @relation(fields: [registerId], references: [id])
+  type          String
+  amount        Float
+  concept       String
+  paymentMethod String?
+  orderId       String?
+  expenseId     String?
+  createdAt     DateTime     @default(now())
+}
