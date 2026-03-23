@@ -551,10 +551,15 @@ function AgregarTab({
 	async function handleSend() {
 		if (cart.size === 0) return;
 		setSending(true);
-		const waiterName =
-			typeof window !== "undefined"
-				? (localStorage.getItem("myway_waiter_name") ?? undefined)
-				: undefined;
+		let waiterName: string | undefined;
+		try {
+			const stored = sessionStorage.getItem("myway-waiter-staff");
+			if (stored) {
+				waiterName = (JSON.parse(stored) as { name: string }).name;
+			}
+		} catch {
+			// ignore
+		}
 
 		const items = Array.from(cart.values()).map((i) => ({
 			productId: i.productId,

@@ -272,7 +272,17 @@ export default function WaiterTablesPage() {
 
 	useEffect(() => {
 		if (typeof window !== "undefined") {
-			setWaiterName(localStorage.getItem("myway_waiter_name") ?? "Mozo");
+			try {
+				const stored = sessionStorage.getItem("myway-waiter-staff");
+				if (stored) {
+					const staff = JSON.parse(stored) as { name: string };
+					setWaiterName(staff.name);
+				} else {
+					setWaiterName("Mozo");
+				}
+			} catch {
+				setWaiterName("Mozo");
+			}
 		}
 	}, []);
 
