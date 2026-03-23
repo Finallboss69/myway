@@ -10,6 +10,7 @@ interface Category {
 	id: string;
 	name: string;
 	icon: string;
+	order: number;
 }
 
 interface Product {
@@ -29,6 +30,7 @@ function formatCurrency(n: number) {
 
 function IntroLoader({ onDone }: { onDone: () => void }) {
 	const [fading, setFading] = useState(false);
+	const videoRef = useRef<HTMLVideoElement>(null);
 
 	useEffect(() => {
 		const t = setTimeout(() => {
@@ -37,6 +39,21 @@ function IntroLoader({ onDone }: { onDone: () => void }) {
 		}, 3200);
 		return () => clearTimeout(t);
 	}, [onDone]);
+
+	// Force play on mobile — many browsers block autoplay
+	useEffect(() => {
+		const vid = videoRef.current;
+		if (!vid) return;
+		const tryPlay = () => {
+			vid.play().catch(() => {
+				// Video blocked by browser — intro still shows with static bg
+			});
+		};
+		// Try immediately, and also after user interaction
+		tryPlay();
+		document.addEventListener("touchstart", tryPlay, { once: true });
+		return () => document.removeEventListener("touchstart", tryPlay);
+	}, []);
 
 	return (
 		<div
@@ -55,11 +72,14 @@ function IntroLoader({ onDone }: { onDone: () => void }) {
 			}}
 		>
 			<video
+				ref={videoRef}
 				src="/media/intro.mp4"
 				autoPlay
 				muted
 				playsInline
 				loop
+				preload="auto"
+				poster="/media/pool-hero.jpg"
 				style={{
 					position: "absolute",
 					inset: 0,
@@ -554,17 +574,29 @@ function MenuSection() {
 			fetch("/api/products?available=true").then((r) => r.json()),
 		])
 			.then(([cats, prods]) => {
-				setCategories(Array.isArray(cats) ? cats : []);
+				setCategories(
+					(Array.isArray(cats) ? cats : []).sort(
+						(a: Category, b: Category) => a.order - b.order,
+					),
+				);
 				setProducts(Array.isArray(prods) ? prods : []);
 			})
 			.catch(console.error)
 			.finally(() => setLoading(false));
 	}, []);
 
+	// Group products by category, respecting category order
+	const grouped = categories
+		.map((cat) => ({
+			category: cat,
+			items: products.filter((p) => p.categoryId === cat.id && p.isAvailable),
+		}))
+		.filter((g) => g.items.length > 0);
+
 	const filtered =
 		active === "all"
-			? products.filter((p) => p.isAvailable)
-			: products.filter((p) => p.categoryId === active && p.isAvailable);
+			? grouped
+			: grouped.filter((g) => g.category.id === active);
 
 	return (
 		<section
@@ -659,14 +691,7 @@ function MenuSection() {
 					<style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
 				</div>
 			) : (
-				<div
-					style={{
-						background: "#0a0a0a",
-						border: "1px solid #1a1a1a",
-						borderRadius: 20,
-						overflow: "hidden",
-					}}
-				>
+				<div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 					{filtered.length === 0 ? (
 						<div
 							style={{
@@ -674,50 +699,98 @@ function MenuSection() {
 								textAlign: "center",
 								color: "#444",
 								fontSize: 14,
+								background: "#0a0a0a",
+								border: "1px solid #1a1a1a",
+								borderRadius: 20,
 							}}
 						>
 							No hay productos en esta categoría
 						</div>
 					) : (
-						filtered.map((product, i) => (
-							<div
-								key={product.id}
-								style={{
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "space-between",
-									gap: 16,
-									padding: "16px 24px",
-									borderTop: i > 0 ? "1px solid #141414" : "none",
-									transition: "background 0.15s",
-								}}
-							>
-								<div style={{ flex: 1, minWidth: 0 }}>
-									<p style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>
-										{product.name}
-									</p>
-									{product.description && (
-										<p
-											style={{
-												fontSize: 12,
-												color: "#555",
-												margin: "4px 0 0",
-											}}
-										>
-											{product.description}
-										</p>
-									)}
-								</div>
-								<span
+						filtered.map(({ category, items }) => (
+							<div key={category.id}>
+								{/* Section header */}
+								<div
 									style={{
-										fontSize: 16,
-										fontWeight: 700,
-										color: "#f59e0b",
-										flexShrink: 0,
+										display: "flex",
+										alignItems: "center",
+										gap: 8,
+										marginBottom: 12,
 									}}
 								>
-									{formatCurrency(product.price)}
-								</span>
+									<span style={{ fontSize: 20 }}>{category.icon}</span>
+									<span
+										style={{
+											fontSize: 11,
+											fontWeight: 800,
+											letterSpacing: "0.15em",
+											textTransform: "uppercase",
+											color: "#888",
+										}}
+									>
+										{category.name}
+									</span>
+									<span style={{ fontSize: 10, color: "#333" }}>
+										({items.length})
+									</span>
+								</div>
+								{/* Products */}
+								<div
+									style={{
+										background: "#0a0a0a",
+										border: "1px solid #1a1a1a",
+										borderRadius: 20,
+										overflow: "hidden",
+									}}
+								>
+									{items.map((product, i) => (
+										<div
+											key={product.id}
+											style={{
+												display: "flex",
+												alignItems: "center",
+												justifyContent: "space-between",
+												gap: 16,
+												padding: "16px 24px",
+												borderTop: i > 0 ? "1px solid #141414" : "none",
+												transition: "background 0.15s",
+											}}
+										>
+											<div style={{ flex: 1, minWidth: 0 }}>
+												<p
+													style={{
+														fontSize: 14,
+														fontWeight: 700,
+														margin: 0,
+													}}
+												>
+													{product.name}
+												</p>
+												{product.description && (
+													<p
+														style={{
+															fontSize: 12,
+															color: "#555",
+															margin: "4px 0 0",
+														}}
+													>
+														{product.description}
+													</p>
+												)}
+											</div>
+											<span
+												style={{
+													fontSize: 16,
+													fontWeight: 700,
+													color: "#f59e0b",
+													flexShrink: 0,
+												}}
+											>
+												{formatCurrency(product.price)}
+											</span>
+										</div>
+									))}
+								</div>
 							</div>
 						))
 					)}

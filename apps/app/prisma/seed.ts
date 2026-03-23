@@ -167,13 +167,26 @@ async function main() {
 
 	// ── Categories ─────────────────────────────────────────────────────────────
 	const categories = [
-		{ id: "c1", name: "Tragos", icon: "🍹", order: 0 },
-		{ id: "c2", name: "Cervezas", icon: "🍺", order: 1 },
-		{ id: "c3", name: "Vinos & Espumantes", icon: "🍷", order: 2 },
-		{ id: "c4", name: "Medidas", icon: "🥃", order: 3 },
-		{ id: "c5", name: "Comida", icon: "🍔", order: 4 },
-		{ id: "c6", name: "Sin Alcohol", icon: "🥤", order: 5 },
-		{ id: "c7", name: "Pool", icon: "🎱", order: 6 },
+		// ── Tragos ──
+		{ id: "c1", name: "Recomendados", icon: "🍹", order: 0 },
+		{ id: "c1b", name: "De Autor", icon: "✨", order: 1 },
+		{ id: "c1c", name: "Directos", icon: "🧊", order: 2 },
+		{ id: "c1d", name: "Clásicos", icon: "🥂", order: 3 },
+		// ── Bebidas ──
+		{ id: "c2", name: "Cervezas", icon: "🍺", order: 4 },
+		{ id: "c4", name: "Medidas", icon: "🥃", order: 5 },
+		{ id: "c4b", name: "Bottle Service", icon: "🍾", order: 6 },
+		{ id: "c3", name: "Vinos & Espumantes", icon: "🍷", order: 7 },
+		{ id: "c6", name: "Sin Alcohol", icon: "🥤", order: 8 },
+		// ── Comida ──
+		{ id: "c5a", name: "Hamburguesas", icon: "🍔", order: 9 },
+		{ id: "c5b", name: "Sandwiches", icon: "🥪", order: 10 },
+		{ id: "c5c", name: "Mex & Wraps", icon: "🌯", order: 11 },
+		{ id: "c5d", name: "Tapas", icon: "🍟", order: 12 },
+		{ id: "c5e", name: "Barbacoas", icon: "🔥", order: 13 },
+		{ id: "c5f", name: "Tablas", icon: "🪵", order: 14 },
+		// ── Pool ──
+		{ id: "c7", name: "Pool", icon: "🎱", order: 15 },
 	];
 	for (const c of categories) {
 		await db.category.upsert({
@@ -280,7 +293,7 @@ async function main() {
 		{
 			id: "p9",
 			name: "Hibiscus Tonic",
-			categoryId: "c1",
+			categoryId: "c1b",
 			target: "bar",
 			price: 8500,
 			description: "Almíbar de hibiscus, maracuyá, tónica",
@@ -290,7 +303,7 @@ async function main() {
 		{
 			id: "p10",
 			name: "Tirillín",
-			categoryId: "c1",
+			categoryId: "c1b",
 			target: "bar",
 			price: 8000,
 			description: "Almíbar, limón, vermouth rosado, vino tinto, seven up",
@@ -300,7 +313,7 @@ async function main() {
 		{
 			id: "p11",
 			name: "Froshy Beer",
-			categoryId: "c1",
+			categoryId: "c1b",
 			target: "bar",
 			price: 9000,
 			description: "Almíbar, campari, vermouth rosso, espuma de cerveza",
@@ -310,7 +323,7 @@ async function main() {
 		{
 			id: "p12",
 			name: "My Way Passion",
-			categoryId: "c1",
+			categoryId: "c1b",
 			target: "bar",
 			price: 9000,
 			description: "Almíbar, maracuyá, whisky, bitter angostura",
@@ -321,7 +334,7 @@ async function main() {
 		{
 			id: "p13",
 			name: "Fernet con Coca",
-			categoryId: "c1",
+			categoryId: "c1c",
 			target: "bar",
 			price: 8000,
 			description: "Fernet Branca + Coca-Cola",
@@ -331,7 +344,7 @@ async function main() {
 		{
 			id: "p14",
 			name: "Aperol Spritz",
-			categoryId: "c1",
+			categoryId: "c1c",
 			target: "bar",
 			price: 7000,
 			description: "Espumante, aperol, soda",
@@ -341,7 +354,7 @@ async function main() {
 		{
 			id: "p15",
 			name: "Cuba Libre",
-			categoryId: "c1",
+			categoryId: "c1c",
 			target: "bar",
 			price: 7000,
 			description: "Ron, coca cola",
@@ -351,7 +364,7 @@ async function main() {
 		{
 			id: "p16",
 			name: "Gin Tónico",
-			categoryId: "c1",
+			categoryId: "c1c",
 			target: "bar",
 			price: 7000,
 			description: "Gin, campari, tónica",
@@ -361,7 +374,7 @@ async function main() {
 		{
 			id: "p17",
 			name: "Garibaldi",
-			categoryId: "c1",
+			categoryId: "c1c",
 			target: "bar",
 			price: 7000,
 			description: "Campari, jugo de naranja",
@@ -371,7 +384,7 @@ async function main() {
 		{
 			id: "p18",
 			name: "Whiscoca",
-			categoryId: "c1",
+			categoryId: "c1c",
 			target: "bar",
 			price: 7000,
 			description: "Whisky, coca cola",
@@ -382,7 +395,7 @@ async function main() {
 		{
 			id: "p19",
 			name: "Negroni",
-			categoryId: "c1",
+			categoryId: "c1d",
 			target: "bar",
 			price: 8500,
 			description: "Gin, campari, vermouth rosso",
@@ -392,7 +405,7 @@ async function main() {
 		{
 			id: "p20",
 			name: "Old Fashioned",
-			categoryId: "c1",
+			categoryId: "c1d",
 			target: "bar",
 			price: 8500,
 			description: "Azúcar, whisky, bitter angostura",
@@ -402,7 +415,7 @@ async function main() {
 		{
 			id: "p21",
 			name: "Boulevardier",
-			categoryId: "c1",
+			categoryId: "c1d",
 			target: "bar",
 			price: 8500,
 			description: "Whisky, campari, vermouth",
@@ -412,7 +425,7 @@ async function main() {
 		{
 			id: "p22",
 			name: "Tom Collins",
-			categoryId: "c1",
+			categoryId: "c1d",
 			target: "bar",
 			price: 8000,
 			description: "Gin, almíbar, limón, soda",
@@ -422,7 +435,7 @@ async function main() {
 		{
 			id: "p23",
 			name: "Penicillin",
-			categoryId: "c1",
+			categoryId: "c1d",
 			target: "bar",
 			price: 8500,
 			description: "Whisky, limón, miel, jengibre",
@@ -432,7 +445,7 @@ async function main() {
 		{
 			id: "p24",
 			name: "Mint Julep",
-			categoryId: "c1",
+			categoryId: "c1d",
 			target: "bar",
 			price: 7000,
 			description: "Almíbar, limón, menta, whisky, soda",
@@ -710,7 +723,7 @@ async function main() {
 		{
 			id: "p64",
 			name: "Fernet Branca + Coca",
-			categoryId: "c4",
+			categoryId: "c4b",
 			target: "bar",
 			price: 60000,
 			description: "Botella completa",
@@ -720,7 +733,7 @@ async function main() {
 		{
 			id: "p65",
 			name: "Havana Club + Coca",
-			categoryId: "c4",
+			categoryId: "c4b",
 			target: "bar",
 			price: 60000,
 			description: "Botella completa",
@@ -730,7 +743,7 @@ async function main() {
 		{
 			id: "p66",
 			name: "Red Label + Coca/Speed",
-			categoryId: "c4",
+			categoryId: "c4b",
 			target: "bar",
 			price: 65000,
 			description: "Botella completa",
@@ -740,7 +753,7 @@ async function main() {
 		{
 			id: "p67",
 			name: "Black Label + Coca/Speed",
-			categoryId: "c4",
+			categoryId: "c4b",
 			target: "bar",
 			price: 75000,
 			description: "Botella completa",
@@ -750,7 +763,7 @@ async function main() {
 		{
 			id: "p68",
 			name: "Jagermeister + Speed",
-			categoryId: "c4",
+			categoryId: "c4b",
 			target: "bar",
 			price: 80000,
 			description: "Botella completa",
@@ -762,7 +775,7 @@ async function main() {
 		{
 			id: "p70",
 			name: "Americana",
-			categoryId: "c5",
+			categoryId: "c5a",
 			target: "kitchen",
 			price: 15000,
 			description:
@@ -773,7 +786,7 @@ async function main() {
 		{
 			id: "p71",
 			name: "Criolla",
-			categoryId: "c5",
+			categoryId: "c5a",
 			target: "kitchen",
 			price: 16000,
 			description:
@@ -784,7 +797,7 @@ async function main() {
 		{
 			id: "p72",
 			name: "Double",
-			categoryId: "c5",
+			categoryId: "c5a",
 			target: "kitchen",
 			price: 16000,
 			description: "Doble carne, doble panceta, doble queso, salsa BBQ",
@@ -794,7 +807,7 @@ async function main() {
 		{
 			id: "p73",
 			name: "Tex Mex",
-			categoryId: "c5",
+			categoryId: "c5a",
 			target: "kitchen",
 			price: 16000,
 			description:
@@ -805,7 +818,7 @@ async function main() {
 		{
 			id: "p74",
 			name: "Cheese Burger",
-			categoryId: "c5",
+			categoryId: "c5a",
 			target: "kitchen",
 			price: 13000,
 			description: "Con fritas",
@@ -815,7 +828,7 @@ async function main() {
 		{
 			id: "p75",
 			name: "Burger de Falafel",
-			categoryId: "c5",
+			categoryId: "c5a",
 			target: "kitchen",
 			price: 12000,
 			description:
@@ -827,7 +840,7 @@ async function main() {
 		{
 			id: "p76",
 			name: "Pulled Pork",
-			categoryId: "c5",
+			categoryId: "c5b",
 			target: "kitchen",
 			price: 15000,
 			description:
@@ -838,7 +851,7 @@ async function main() {
 		{
 			id: "p77",
 			name: "Cheese Philly Steak",
-			categoryId: "c5",
+			categoryId: "c5b",
 			target: "kitchen",
 			price: 15000,
 			description:
@@ -849,7 +862,7 @@ async function main() {
 		{
 			id: "p78",
 			name: "Chicken Sandwich",
-			categoryId: "c5",
+			categoryId: "c5b",
 			target: "kitchen",
 			price: 15000,
 			description: "Pollo, cheddar, lechuga, tomate, mayonesa, honey mustard",
@@ -860,7 +873,7 @@ async function main() {
 		{
 			id: "p79",
 			name: "Burrito Tex Way",
-			categoryId: "c5",
+			categoryId: "c5c",
 			target: "kitchen",
 			price: 15000,
 			description: "Ternera, arroz, sour cream, tomate, cebolla, salsa picante",
@@ -870,7 +883,7 @@ async function main() {
 		{
 			id: "p80",
 			name: "Wrap Chicken Caesar",
-			categoryId: "c5",
+			categoryId: "c5c",
 			target: "kitchen",
 			price: 15000,
 			description: "Lechuga crocante, pollo grillado, parmesano, salsa caesar",
@@ -880,7 +893,7 @@ async function main() {
 		{
 			id: "p81",
 			name: "Quesadilla de Cerdo",
-			categoryId: "c5",
+			categoryId: "c5c",
 			target: "kitchen",
 			price: 15000,
 			description: "Bondiola desmechada, mix de queso, cebolla caramelizada",
@@ -890,7 +903,7 @@ async function main() {
 		{
 			id: "p82",
 			name: "Quesadilla Vegetariana",
-			categoryId: "c5",
+			categoryId: "c5c",
 			target: "kitchen",
 			price: 13000,
 			description: "Queso tybo y cheddar, espinaca, tomate, choclo tostado",
@@ -901,7 +914,7 @@ async function main() {
 		{
 			id: "p83",
 			name: "Papas Fritas",
-			categoryId: "c5",
+			categoryId: "c5d",
 			target: "kitchen",
 			price: 10000,
 			description: null,
@@ -911,7 +924,7 @@ async function main() {
 		{
 			id: "p84",
 			name: "Papas c/ Cheddar",
-			categoryId: "c5",
+			categoryId: "c5d",
 			target: "kitchen",
 			price: 11000,
 			description: null,
@@ -921,7 +934,7 @@ async function main() {
 		{
 			id: "p85",
 			name: "Papas My Way",
-			categoryId: "c5",
+			categoryId: "c5d",
 			target: "kitchen",
 			price: 17000,
 			description: "Cheddar, panceta, cebolla de verdeo, huevo a la plancha",
@@ -931,7 +944,7 @@ async function main() {
 		{
 			id: "p86",
 			name: "Tortilla de Papas",
-			categoryId: "c5",
+			categoryId: "c5d",
 			target: "kitchen",
 			price: 12000,
 			description: null,
@@ -941,7 +954,7 @@ async function main() {
 		{
 			id: "p87",
 			name: "Karaage",
-			categoryId: "c5",
+			categoryId: "c5d",
 			target: "kitchen",
 			price: 18000,
 			description: "Bocados de pollo en tempura crocante",
@@ -951,7 +964,7 @@ async function main() {
 		{
 			id: "p88",
 			name: "Rabas",
-			categoryId: "c5",
+			categoryId: "c5d",
 			target: "kitchen",
 			price: 13000,
 			description: "Con dips de salsa a elección",
@@ -961,7 +974,7 @@ async function main() {
 		{
 			id: "p89",
 			name: "Bastones de Muzzarella",
-			categoryId: "c5",
+			categoryId: "c5d",
 			target: "kitchen",
 			price: 13000,
 			description: "Con dips de salsa a elección",
@@ -971,7 +984,7 @@ async function main() {
 		{
 			id: "p90",
 			name: "Buñuelos de Espinaca",
-			categoryId: "c5",
+			categoryId: "c5d",
 			target: "kitchen",
 			price: 13000,
 			description: "Rellenos, semillas y muzzarella",
@@ -982,7 +995,7 @@ async function main() {
 		{
 			id: "p91",
 			name: "BBQ Wings",
-			categoryId: "c5",
+			categoryId: "c5e",
 			target: "kitchen",
 			price: 13000,
 			description: "Alitas ahumadas con salsa barbacoa",
@@ -992,7 +1005,7 @@ async function main() {
 		{
 			id: "p92",
 			name: "BBQ Ribs",
-			categoryId: "c5",
+			categoryId: "c5e",
 			target: "kitchen",
 			price: 20000,
 			description: "Costillas de cerdo con salsa barbacoa de ananá",
@@ -1003,7 +1016,7 @@ async function main() {
 		{
 			id: "p93",
 			name: "Combo X2",
-			categoryId: "c5",
+			categoryId: "c5f",
 			target: "kitchen",
 			price: 35000,
 			description: "BBQ ribs, BBQ wings, karaage y papas",
@@ -1013,7 +1026,7 @@ async function main() {
 		{
 			id: "p94",
 			name: "Combo X4",
-			categoryId: "c5",
+			categoryId: "c5f",
 			target: "kitchen",
 			price: 70000,
 			description: "2 porciones BBQ ribs, BBQ wings, karaage y papas",
@@ -1023,7 +1036,7 @@ async function main() {
 		{
 			id: "p95",
 			name: "Combo Vegetariano",
-			categoryId: "c5",
+			categoryId: "c5f",
 			target: "kitchen",
 			price: 28000,
 			description:
