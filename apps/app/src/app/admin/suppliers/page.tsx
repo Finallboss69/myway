@@ -16,9 +16,11 @@ import {
 	ChevronDown,
 	ChevronUp,
 	Edit3,
+	Printer,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
+import { printDocument, printCurrency } from "@/lib/print";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -309,6 +311,34 @@ export default function SuppliersPage() {
 	);
 	const totalOwed = pendingInvoices.reduce((s, i) => s + i.total, 0);
 
+	const handlePrint = () => {
+		const rows = suppliers
+			.map((s) => {
+				const sInvoices = invoices.filter(
+					(i) =>
+						i.supplier?.id === s.id &&
+						(i.status === "pending" || i.status === "overdue"),
+				);
+				const owed = sInvoices.reduce((sum, i) => sum + i.total, 0);
+				return `<tr>
+					<td>${s.name}</td>
+					<td>${s.cuit ?? "—"}</td>
+					<td class="amount">${s._count?.invoices ?? 0}</td>
+					<td class="amount">${printCurrency(owed)}</td>
+				</tr>`;
+			})
+			.join("");
+		printDocument({
+			title: "Proveedores",
+			subtitle: `${suppliers.length} proveedores — Deuda total: ${printCurrency(totalOwed)}`,
+			content: `<table>
+				<thead><tr><th>Proveedor</th><th>CUIT</th><th style="text-align:right">Facturas</th><th style="text-align:right">Deuda</th></tr></thead>
+				<tbody>${rows}
+				<tr class="total-row"><td colspan="3">Total</td><td class="amount">${printCurrency(totalOwed)}</td></tr>
+				</tbody></table>`,
+		});
+	};
+
 	// ─── Supplier CRUD ─────────────────────────────────────────────────────────
 
 	const openNewSupplier = () => {
@@ -482,12 +512,23 @@ export default function SuppliersPage() {
 		<div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
 			{/* ── Header ──────────────────────────────────────────────────────── */}
 			<div className="flex flex-col md:flex-row md:items-end gap-4">
-				<h1
-					className="font-kds"
-					style={{ fontSize: 40, lineHeight: 1, color: "var(--gold)" }}
-				>
-					PROVEEDORES
-				</h1>
+				<div className="flex items-end gap-3">
+					<h1
+						className="font-kds"
+						style={{ fontSize: 40, lineHeight: 1, color: "var(--gold)" }}
+					>
+						PROVEEDORES
+					</h1>
+					<button
+						className="btn-ghost flex items-center gap-1.5"
+						onClick={handlePrint}
+					>
+						<Printer size={14} />
+						<span className="font-display" style={{ fontSize: 10 }}>
+							Imprimir
+						</span>
+					</button>
+				</div>
 				<div className="flex gap-3 flex-wrap">
 					<div className="card px-4 py-2 flex items-center gap-2">
 						<Truck size={14} style={{ color: "var(--gold)" }} />

@@ -1,116 +1,933 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-	Wallet,
+	DollarSign,
+	TrendingUp,
+	TrendingDown,
+	Vault,
 	Plus,
 	Minus,
 	Lock,
+	Unlock,
+	X,
 	Clock,
 	ChevronDown,
-	ChevronRight,
-	ArrowUpRight,
-	ArrowDownRight,
-	DollarSign,
+	ChevronUp,
+	AlertTriangle,
+	Banknote,
 	CreditCard,
 	Smartphone,
-	Banknote,
-	Send,
+	ArrowRightLeft,
+	History,
+	Printer,
 } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
+import { printDocument, printCurrency } from "@/lib/print";
 
-/* ─── Types ──────────────────────────────────────── */
-interface Movement {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface CashMovement {
 	id: string;
+	registerId: string;
 	type: "income" | "expense";
 	amount: number;
 	concept: string;
 	paymentMethod: string | null;
+	orderId: string | null;
+	expenseId: string | null;
 	createdAt: string;
 }
-interface Register {
+
+interface CashRegister {
 	id: string;
 	date: string;
-	openedAt: string;
-	closedAt: string | null;
+	status: "open" | "closed";
 	openingBalance: number;
 	closingBalance: number | null;
-	status: "open" | "closed";
-	movements?: Movement[];
+	closedAt: string | null;
+	movements?: CashMovement[];
 	_count?: { movements: number };
 }
 
-const fmt = (n: number) =>
-	"$\u00A0" +
-	n.toLocaleString("es-AR", {
-		minimumFractionDigits: 0,
-		maximumFractionDigits: 0,
-	});
+type ModalType = "income" | "expense" | "close" | null;
 
-const fmtTime = (iso: string) =>
-	new Date(iso).toLocaleTimeString("es-AR", {
+const PAYMENT_METHODS = [
+	{ value: "cash", label: "Efectivo", icon: Banknote, color: "#10b981" },
+	{
+		value: "mercadopago",
+		label: "MercadoPago",
+		icon: Smartphone,
+		color: "#3b82f6",
+	},
+	{ value: "card", label: "Tarjeta", icon: CreditCard, color: "#8b5cf6" },
+	{
+		value: "transfer",
+		label: "Transferencia",
+		icon: ArrowRightLeft,
+		color: "#f59e0b",
+	},
+];
+
+// ─── Section label ────────────────────────────────────────────────────────────
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+	return (
+		<div
+			className="font-display text-ink-disabled uppercase"
+			style={{ fontSize: 9, letterSpacing: "0.25em", marginBottom: 12 }}
+		>
+			{children}
+		</div>
+	);
+}
+
+// ─── Stat card ────────────────────────────────────────────────────────────────
+
+function StatCard({
+	label,
+	value,
+	icon: Icon,
+	color,
+}: {
+	label: string;
+	value: number;
+	icon: React.ElementType;
+	color: string;
+}) {
+	return (
+		<div
+			className="card"
+			style={{ padding: "18px 20px", flex: 1, minWidth: 160 }}
+		>
+			<div className="flex items-center gap-2 mb-2">
+				<div
+					style={{
+						width: 30,
+						height: 30,
+						borderRadius: 8,
+						background: `${color}18`,
+						border: `1px solid ${color}30`,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						flexShrink: 0,
+					}}
+				>
+					<Icon size={14} style={{ color }} />
+				</div>
+				<div
+					className="font-display text-ink-disabled uppercase"
+					style={{ fontSize: 9, letterSpacing: "0.25em" }}
+				>
+					{label}
+				</div>
+			</div>
+			<div className="font-kds" style={{ fontSize: 28, lineHeight: 1, color }}>
+				{formatCurrency(value)}
+			</div>
+		</div>
+	);
+}
+
+// ─── Movement row ─────────────────────────────────────────────────────────────
+
+function MovementRow({ movement }: { movement: CashMovement }) {
+	const isIncome = movement.type === "income";
+	const color = isIncome ? "#10b981" : "#ef4444";
+	const time = new Date(movement.createdAt).toLocaleTimeString("es-AR", {
 		hour: "2-digit",
 		minute: "2-digit",
 	});
+	const method = PAYMENT_METHODS.find(
+		(m) => m.value === movement.paymentMethod,
+	);
 
-const fmtDate = (iso: string) =>
-	new Date(iso).toLocaleDateString("es-AR", {
+	return (
+		<div
+			style={{
+				padding: "12px 18px",
+				background: "var(--s1)",
+				borderRadius: 10,
+				borderLeft: `3px solid ${color}`,
+				display: "flex",
+				alignItems: "center",
+				gap: 12,
+			}}
+		>
+			{/* Time */}
+			<div className="flex items-center gap-1" style={{ minWidth: 52 }}>
+				<Clock size={10} style={{ color: "#555" }} />
+				<span className="font-kds text-ink-disabled" style={{ fontSize: 14 }}>
+					{time}
+				</span>
+			</div>
+
+			{/* Concept */}
+			<div
+				className="font-body text-ink-secondary flex-1"
+				style={{ fontSize: 13 }}
+			>
+				{movement.concept}
+			</div>
+
+			{/* Payment method badge */}
+			{method && (
+				<span
+					style={{
+						fontSize: 8,
+						padding: "2px 8px",
+						borderRadius: 99,
+						fontFamily: "var(--font-syne)",
+						fontWeight: 700,
+						letterSpacing: "0.1em",
+						textTransform: "uppercase",
+						color: method.color,
+						background: `${method.color}18`,
+						border: `1px solid ${method.color}30`,
+					}}
+				>
+					{method.label}
+				</span>
+			)}
+
+			{/* Amount */}
+			<div
+				className="font-kds"
+				style={{ fontSize: 20, color, minWidth: 100, textAlign: "right" }}
+			>
+				{isIncome ? "+" : "-"} {formatCurrency(movement.amount)}
+			</div>
+		</div>
+	);
+}
+
+// ─── New movement modal ───────────────────────────────────────────────────────
+
+function NewMovementModal({
+	type,
+	onClose,
+	onSubmit,
+	submitting,
+}: {
+	type: "income" | "expense";
+	onClose: () => void;
+	onSubmit: (data: {
+		type: string;
+		amount: number;
+		concept: string;
+		paymentMethod: string;
+	}) => void;
+	submitting: boolean;
+}) {
+	const [amount, setAmount] = useState("");
+	const [concept, setConcept] = useState("");
+	const [paymentMethod, setPaymentMethod] = useState("cash");
+
+	const isIncome = type === "income";
+	const color = isIncome ? "#10b981" : "#ef4444";
+	const title = isIncome ? "Registrar Ingreso" : "Registrar Egreso";
+
+	const handleSubmit = () => {
+		const num = parseFloat(amount);
+		if (!num || num <= 0 || !concept.trim()) return;
+		onSubmit({ type, amount: num, concept: concept.trim(), paymentMethod });
+	};
+
+	return (
+		<div
+			style={{
+				position: "fixed",
+				inset: 0,
+				background: "rgba(0,0,0,0.7)",
+				backdropFilter: "blur(6px)",
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				zIndex: 1000,
+			}}
+			onClick={(e) => {
+				if (e.target === e.currentTarget && !submitting) onClose();
+			}}
+		>
+			<div
+				className="card-gold animate-scale-in"
+				style={{ width: 440, padding: "28px 28px 24px" }}
+			>
+				{/* Header */}
+				<div className="flex items-center justify-between mb-5">
+					<div className="flex items-center gap-2">
+						<div
+							style={{
+								width: 32,
+								height: 32,
+								borderRadius: 8,
+								background: `${color}18`,
+								border: `1px solid ${color}30`,
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+							}}
+						>
+							{isIncome ? (
+								<Plus size={16} style={{ color }} />
+							) : (
+								<Minus size={16} style={{ color }} />
+							)}
+						</div>
+						<div
+							className="font-display text-ink-primary uppercase"
+							style={{ fontSize: 13, letterSpacing: "0.2em", fontWeight: 600 }}
+						>
+							{title}
+						</div>
+					</div>
+					<button
+						className="btn-ghost"
+						style={{ padding: 8 }}
+						onClick={onClose}
+					>
+						<X size={16} />
+					</button>
+				</div>
+
+				{/* Amount */}
+				<SectionLabel>Monto</SectionLabel>
+				<div
+					style={{
+						background: "var(--s1)",
+						borderRadius: 12,
+						border: `1px solid ${color}30`,
+						padding: "16px 20px",
+						marginBottom: 20,
+						textAlign: "center",
+					}}
+				>
+					<div className="flex items-center justify-center gap-2">
+						<span
+							className="font-kds text-ink-disabled"
+							style={{ fontSize: 28 }}
+						>
+							$
+						</span>
+						<input
+							type="number"
+							placeholder="0"
+							value={amount}
+							onChange={(e) => setAmount(e.target.value)}
+							className="font-kds"
+							style={{
+								fontSize: 48,
+								lineHeight: 1,
+								color,
+								background: "transparent",
+								border: "none",
+								outline: "none",
+								textAlign: "center",
+								width: "100%",
+								maxWidth: 220,
+							}}
+							autoFocus
+						/>
+					</div>
+				</div>
+
+				{/* Concept */}
+				<SectionLabel>Concepto</SectionLabel>
+				<input
+					type="text"
+					placeholder={
+						isIncome ? "Ej: Venta de producto" : "Ej: Compra de insumos"
+					}
+					value={concept}
+					onChange={(e) => setConcept(e.target.value)}
+					className="input-base font-body"
+					style={{
+						width: "100%",
+						padding: "12px 16px",
+						fontSize: 13,
+						marginBottom: 20,
+					}}
+				/>
+
+				{/* Payment method */}
+				<SectionLabel>Metodo de pago</SectionLabel>
+				<div className="grid grid-cols-2 gap-2 mb-6">
+					{PAYMENT_METHODS.map(({ value, label, icon: Icon, color: mc }) => {
+						const selected = paymentMethod === value;
+						return (
+							<button
+								key={value}
+								onClick={() => setPaymentMethod(value)}
+								className="flex items-center gap-2 rounded-lg transition-all"
+								style={{
+									padding: "10px 12px",
+									background: selected ? `${mc}18` : "var(--s2)",
+									border: `1px solid ${selected ? mc : "var(--s3)"}`,
+									color: selected ? mc : "#888",
+									textAlign: "left",
+								}}
+							>
+								<Icon size={14} />
+								<span
+									className="font-display"
+									style={{ fontSize: 11, fontWeight: 600 }}
+								>
+									{label}
+								</span>
+							</button>
+						);
+					})}
+				</div>
+
+				{/* Submit */}
+				<button
+					onClick={handleSubmit}
+					disabled={submitting || !amount || !concept.trim()}
+					style={{
+						width: "100%",
+						padding: "14px 0",
+						borderRadius: 12,
+						background: color,
+						color: "#fff",
+						fontFamily: "var(--font-syne)",
+						fontWeight: 700,
+						fontSize: 13,
+						letterSpacing: "0.15em",
+						textTransform: "uppercase",
+						border: "none",
+						cursor: submitting ? "not-allowed" : "pointer",
+						opacity: submitting || !amount || !concept.trim() ? 0.5 : 1,
+					}}
+				>
+					{submitting
+						? "Registrando..."
+						: `Confirmar ${isIncome ? "Ingreso" : "Egreso"}`}
+				</button>
+			</div>
+		</div>
+	);
+}
+
+// ─── Close register modal ─────────────────────────────────────────────────────
+
+function CloseRegisterModal({
+	register,
+	income,
+	expenses,
+	onClose,
+	onConfirm,
+	submitting,
+}: {
+	register: CashRegister;
+	income: number;
+	expenses: number;
+	onClose: () => void;
+	onConfirm: (actualBalance: number) => void;
+	submitting: boolean;
+}) {
+	const calculatedBalance = register.openingBalance + income - expenses;
+	const [actualBalance, setActualBalance] = useState(
+		calculatedBalance.toString(),
+	);
+	const actual = parseFloat(actualBalance) || 0;
+	const diff = actual - calculatedBalance;
+
+	return (
+		<div
+			style={{
+				position: "fixed",
+				inset: 0,
+				background: "rgba(0,0,0,0.7)",
+				backdropFilter: "blur(6px)",
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				zIndex: 1000,
+			}}
+			onClick={(e) => {
+				if (e.target === e.currentTarget && !submitting) onClose();
+			}}
+		>
+			<div
+				className="card-gold animate-scale-in"
+				style={{ width: 460, padding: "28px 28px 24px" }}
+			>
+				{/* Header */}
+				<div className="flex items-center justify-between mb-5">
+					<div className="flex items-center gap-2">
+						<div
+							style={{
+								width: 32,
+								height: 32,
+								borderRadius: 8,
+								background: "rgba(245,158,11,0.15)",
+								border: "1px solid rgba(245,158,11,0.3)",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+							}}
+						>
+							<Lock size={16} style={{ color: "var(--gold)" }} />
+						</div>
+						<div
+							className="font-display text-ink-primary uppercase"
+							style={{ fontSize: 13, letterSpacing: "0.2em", fontWeight: 600 }}
+						>
+							Cerrar Caja
+						</div>
+					</div>
+					<button
+						className="btn-ghost"
+						style={{ padding: 8 }}
+						onClick={onClose}
+					>
+						<X size={16} />
+					</button>
+				</div>
+
+				{/* Summary */}
+				<div
+					style={{
+						background: "var(--s1)",
+						borderRadius: 12,
+						padding: 20,
+						marginBottom: 20,
+					}}
+				>
+					<SectionLabel>Resumen del dia</SectionLabel>
+					<div className="flex flex-col gap-3">
+						{[
+							{
+								label: "Saldo Inicial",
+								value: register.openingBalance,
+								color: "#888",
+							},
+							{ label: "Ingresos", value: income, color: "#10b981" },
+							{ label: "Egresos", value: expenses, color: "#ef4444" },
+						].map(({ label, value, color }) => (
+							<div key={label} className="flex items-center justify-between">
+								<span
+									className="font-body text-ink-disabled"
+									style={{ fontSize: 13 }}
+								>
+									{label}
+								</span>
+								<span className="font-kds" style={{ fontSize: 20, color }}>
+									{formatCurrency(value)}
+								</span>
+							</div>
+						))}
+						<div
+							style={{
+								borderTop: "1px solid var(--s3)",
+								paddingTop: 12,
+								marginTop: 4,
+							}}
+							className="flex items-center justify-between"
+						>
+							<span
+								className="font-display text-ink-primary uppercase"
+								style={{
+									fontSize: 11,
+									letterSpacing: "0.15em",
+									fontWeight: 700,
+								}}
+							>
+								Saldo Calculado
+							</span>
+							<span
+								className="font-kds text-brand-500"
+								style={{ fontSize: 26, lineHeight: 1 }}
+							>
+								{formatCurrency(calculatedBalance)}
+							</span>
+						</div>
+					</div>
+				</div>
+
+				{/* Actual balance input */}
+				<SectionLabel>Saldo real en caja</SectionLabel>
+				<div
+					style={{
+						background: "var(--s1)",
+						borderRadius: 12,
+						border: "1px solid var(--s3)",
+						padding: "14px 20px",
+						marginBottom: 8,
+						textAlign: "center",
+					}}
+				>
+					<div className="flex items-center justify-center gap-2">
+						<span
+							className="font-kds text-ink-disabled"
+							style={{ fontSize: 24 }}
+						>
+							$
+						</span>
+						<input
+							type="number"
+							value={actualBalance}
+							onChange={(e) => setActualBalance(e.target.value)}
+							className="font-kds"
+							style={{
+								fontSize: 36,
+								lineHeight: 1,
+								color: "var(--gold)",
+								background: "transparent",
+								border: "none",
+								outline: "none",
+								textAlign: "center",
+								width: "100%",
+								maxWidth: 200,
+							}}
+						/>
+					</div>
+				</div>
+
+				{/* Difference */}
+				{diff !== 0 && (
+					<div
+						className="flex items-center gap-2 mb-6"
+						style={{
+							padding: "10px 14px",
+							borderRadius: 10,
+							background: "rgba(239,68,68,0.08)",
+							border: "1px solid rgba(239,68,68,0.2)",
+						}}
+					>
+						<AlertTriangle size={14} style={{ color: "#ef4444" }} />
+						<span
+							className="font-body"
+							style={{ fontSize: 12, color: "#ef4444" }}
+						>
+							Diferencia de {formatCurrency(Math.abs(diff))} (
+							{diff > 0 ? "sobrante" : "faltante"})
+						</span>
+					</div>
+				)}
+
+				{diff === 0 && <div style={{ marginBottom: 24 }} />}
+
+				{/* Confirm */}
+				<button
+					onClick={() => onConfirm(actual)}
+					disabled={submitting}
+					style={{
+						width: "100%",
+						padding: "14px 0",
+						borderRadius: 12,
+						background: "var(--gold)",
+						color: "#000",
+						fontFamily: "var(--font-syne)",
+						fontWeight: 700,
+						fontSize: 13,
+						letterSpacing: "0.15em",
+						textTransform: "uppercase",
+						border: "none",
+						cursor: submitting ? "not-allowed" : "pointer",
+						opacity: submitting ? 0.5 : 1,
+					}}
+				>
+					{submitting ? "Cerrando..." : "Confirmar Cierre de Caja"}
+				</button>
+			</div>
+		</div>
+	);
+}
+
+// ─── History row ──────────────────────────────────────────────────────────────
+
+function HistoryRow({ register }: { register: CashRegister }) {
+	const [expanded, setExpanded] = useState(false);
+	const [movements, setMovements] = useState<CashMovement[]>([]);
+	const [loading, setLoading] = useState(false);
+
+	const date = new Date(register.date).toLocaleDateString("es-AR", {
 		day: "2-digit",
 		month: "2-digit",
+		year: "numeric",
 	});
 
-const PAY_METHODS = [
-	{ value: "cash", label: "Efectivo", icon: Banknote },
-	{ value: "mercadopago", label: "MercadoPago", icon: Smartphone },
-	{ value: "card", label: "Tarjeta", icon: CreditCard },
-	{ value: "transfer", label: "Transferencia", icon: Send },
-];
+	const toggleExpand = async () => {
+		if (expanded) {
+			setExpanded(false);
+			return;
+		}
+		if (movements.length === 0) {
+			setLoading(true);
+			try {
+				const data = await apiFetch<CashRegister>(
+					`/api/cash-register/${register.id}`,
+				);
+				setMovements(data.movements ?? []);
+			} catch (e) {
+				console.error(e);
+			} finally {
+				setLoading(false);
+			}
+		}
+		setExpanded(true);
+	};
 
-/* ─── Component ──────────────────────────────────── */
-export default function CashRegisterPage() {
-	const [registers, setRegisters] = useState<Register[]>([]);
-	const [activeRegister, setActiveRegister] = useState<Register | null>(null);
-	const [loading, setLoading] = useState(true);
+	const count = register._count?.movements ?? movements.length;
 
-	// Open register
-	const [openBalance, setOpenBalance] = useState(0);
-	const [opening, setOpening] = useState(false);
+	return (
+		<div className="card" style={{ marginBottom: 8, overflow: "hidden" }}>
+			<button
+				onClick={toggleExpand}
+				className="w-full"
+				style={{
+					padding: "14px 18px",
+					display: "flex",
+					alignItems: "center",
+					gap: 14,
+					background: "transparent",
+					border: "none",
+					color: "inherit",
+					cursor: "pointer",
+					textAlign: "left",
+				}}
+			>
+				<div
+					style={{
+						width: 3,
+						height: 36,
+						borderRadius: 3,
+						background: "#6b7280",
+						flexShrink: 0,
+					}}
+				/>
+				<div style={{ minWidth: 80 }}>
+					<div
+						className="font-kds text-ink-secondary"
+						style={{ fontSize: 18, lineHeight: 1 }}
+					>
+						{date}
+					</div>
+				</div>
+				<div style={{ flex: 1, display: "flex", gap: 24 }}>
+					<div>
+						<div
+							className="font-display text-ink-disabled uppercase"
+							style={{ fontSize: 8, letterSpacing: "0.2em" }}
+						>
+							Apertura
+						</div>
+						<div
+							className="font-kds text-ink-tertiary"
+							style={{ fontSize: 16 }}
+						>
+							{formatCurrency(register.openingBalance)}
+						</div>
+					</div>
+					<div>
+						<div
+							className="font-display text-ink-disabled uppercase"
+							style={{ fontSize: 8, letterSpacing: "0.2em" }}
+						>
+							Cierre
+						</div>
+						<div
+							className="font-kds text-ink-tertiary"
+							style={{ fontSize: 16 }}
+						>
+							{formatCurrency(register.closingBalance ?? 0)}
+						</div>
+					</div>
+					<div>
+						<div
+							className="font-display text-ink-disabled uppercase"
+							style={{ fontSize: 8, letterSpacing: "0.2em" }}
+						>
+							Movimientos
+						</div>
+						<div
+							className="font-kds text-ink-tertiary"
+							style={{ fontSize: 16 }}
+						>
+							{count}
+						</div>
+					</div>
+				</div>
+				{expanded ? (
+					<ChevronUp size={16} style={{ color: "#555" }} />
+				) : (
+					<ChevronDown size={16} style={{ color: "#555" }} />
+				)}
+			</button>
 
-	// Movement modal
-	const [showMovement, setShowMovement] = useState(false);
-	const [movType, setMovType] = useState<"income" | "expense">("income");
-	const [movAmount, setMovAmount] = useState("");
-	const [movConcept, setMovConcept] = useState("");
-	const [movPayment, setMovPayment] = useState("cash");
+			{expanded && (
+				<div
+					style={{
+						padding: "0 18px 16px",
+						borderTop: "1px solid var(--s3)",
+					}}
+				>
+					{loading ? (
+						<div
+							className="font-body text-ink-disabled text-center py-6"
+							style={{ fontSize: 12 }}
+						>
+							Cargando movimientos...
+						</div>
+					) : movements.length === 0 ? (
+						<div
+							className="font-body text-ink-disabled text-center py-6"
+							style={{ fontSize: 12 }}
+						>
+							Sin movimientos
+						</div>
+					) : (
+						<div className="flex flex-col gap-2 mt-4">
+							{movements.map((m) => (
+								<MovementRow key={m.id} movement={m} />
+							))}
+						</div>
+					)}
+				</div>
+			)}
+		</div>
+	);
+}
+
+// ─── Open register card ───────────────────────────────────────────────────────
+
+function OpenRegisterCard({ onOpen }: { onOpen: (balance: number) => void }) {
+	const [balance, setBalance] = useState("");
 	const [submitting, setSubmitting] = useState(false);
 
-	// Close modal
-	const [showClose, setShowClose] = useState(false);
-	const [closing, setClosing] = useState(false);
+	const handleOpen = () => {
+		setSubmitting(true);
+		onOpen(parseFloat(balance) || 0);
+	};
 
-	// History expand
-	const [expandedId, setExpandedId] = useState<string | null>(null);
-	const [expandedMovements, setExpandedMovements] = useState<Movement[]>([]);
+	return (
+		<div
+			className="card-gold"
+			style={{
+				maxWidth: 460,
+				margin: "60px auto",
+				padding: "40px 36px",
+				textAlign: "center",
+			}}
+		>
+			<div
+				style={{
+					width: 64,
+					height: 64,
+					borderRadius: 16,
+					background: "rgba(245,158,11,0.12)",
+					border: "1px solid rgba(245,158,11,0.25)",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					margin: "0 auto 20px",
+				}}
+			>
+				<Unlock size={28} style={{ color: "var(--gold)" }} />
+			</div>
+			<div
+				className="font-kds text-ink-primary"
+				style={{ fontSize: 32, letterSpacing: "0.08em", marginBottom: 6 }}
+			>
+				ABRIR CAJA
+			</div>
+			<div
+				className="font-body text-ink-disabled"
+				style={{ fontSize: 13, marginBottom: 28 }}
+			>
+				Ingresa el saldo inicial para comenzar el dia
+			</div>
+
+			<SectionLabel>Saldo Inicial</SectionLabel>
+			<div
+				style={{
+					background: "var(--s1)",
+					borderRadius: 12,
+					border: "1px solid rgba(245,158,11,0.2)",
+					padding: "18px 20px",
+					marginBottom: 24,
+				}}
+			>
+				<div className="flex items-center justify-center gap-2">
+					<span className="font-kds text-ink-disabled" style={{ fontSize: 28 }}>
+						$
+					</span>
+					<input
+						type="number"
+						placeholder="0"
+						value={balance}
+						onChange={(e) => setBalance(e.target.value)}
+						className="font-kds"
+						style={{
+							fontSize: 48,
+							lineHeight: 1,
+							color: "var(--gold)",
+							background: "transparent",
+							border: "none",
+							outline: "none",
+							textAlign: "center",
+							width: "100%",
+							maxWidth: 220,
+						}}
+						autoFocus
+					/>
+				</div>
+			</div>
+
+			<button
+				onClick={handleOpen}
+				disabled={submitting}
+				style={{
+					width: "100%",
+					padding: "16px 0",
+					borderRadius: 12,
+					background: "var(--gold)",
+					color: "#000",
+					fontFamily: "var(--font-syne)",
+					fontWeight: 700,
+					fontSize: 14,
+					letterSpacing: "0.15em",
+					textTransform: "uppercase",
+					border: "none",
+					cursor: submitting ? "not-allowed" : "pointer",
+					opacity: submitting ? 0.5 : 1,
+				}}
+			>
+				{submitting ? "Abriendo..." : "Abrir Caja"}
+			</button>
+		</div>
+	);
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function CashRegisterPage() {
+	const [activeRegister, setActiveRegister] = useState<CashRegister | null>(
+		null,
+	);
+	const [history, setHistory] = useState<CashRegister[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [modal, setModal] = useState<ModalType>(null);
+	const [submitting, setSubmitting] = useState(false);
 
 	const fetchData = useCallback(async () => {
 		try {
-			const [allRes, openRes] = await Promise.all([
-				fetch("/api/cash-register"),
-				fetch("/api/cash-register?status=open"),
-			]);
-			const all: Register[] = await allRes.json();
-			const openList: Register[] = await openRes.json();
-
-			setRegisters(all.filter((r) => r.status === "closed"));
-
-			if (openList.length > 0) {
-				const detailRes = await fetch(`/api/cash-register/${openList[0].id}`);
-				const detail: Register = await detailRes.json();
-				setActiveRegister(detail);
+			const all = await apiFetch<CashRegister[]>("/api/cash-register");
+			const open = all.find((r) => r.status === "open");
+			if (open) {
+				const full = await apiFetch<CashRegister>(
+					`/api/cash-register/${open.id}`,
+				);
+				setActiveRegister(full);
 			} else {
 				setActiveRegister(null);
 			}
-		} catch {
-			/* ignore */
+			setHistory(all.filter((r) => r.status === "closed"));
+		} catch (e) {
+			console.error(e);
 		} finally {
 			setLoading(false);
 		}
@@ -118,834 +935,422 @@ export default function CashRegisterPage() {
 
 	useEffect(() => {
 		fetchData();
+		const id = setInterval(fetchData, 15000);
+		return () => clearInterval(id);
 	}, [fetchData]);
 
-	const { totalIncome, totalExpense, currentBalance } = useMemo(() => {
-		if (!activeRegister?.movements)
-			return { totalIncome: 0, totalExpense: 0, currentBalance: 0 };
-		let inc = 0;
-		let exp = 0;
-		for (const m of activeRegister.movements) {
-			if (m.type === "income") inc += m.amount;
-			else exp += m.amount;
-		}
-		return {
-			totalIncome: inc,
-			totalExpense: exp,
-			currentBalance: activeRegister.openingBalance + inc - exp,
-		};
-	}, [activeRegister]);
+	// ─── Computed values ────────────────────────────────────────────────────
 
-	const handleOpen = async () => {
-		setOpening(true);
+	const movements = activeRegister?.movements ?? [];
+	const income = movements
+		.filter((m) => m.type === "income")
+		.reduce((s, m) => s + m.amount, 0);
+	const expenses = movements
+		.filter((m) => m.type === "expense")
+		.reduce((s, m) => s + m.amount, 0);
+	const currentBalance =
+		(activeRegister?.openingBalance ?? 0) + income - expenses;
+
+	// ─── Handlers ───────────────────────────────────────────────────────────
+
+	const handleOpenRegister = async (balance: number) => {
 		try {
-			const res = await fetch("/api/cash-register", {
+			await apiFetch("/api/cash-register", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ openingBalance: openBalance }),
+				body: JSON.stringify({ openingBalance: balance }),
 			});
-			if (res.ok) {
-				await fetchData();
-				setOpenBalance(0);
-			}
-		} finally {
-			setOpening(false);
+			await fetchData();
+		} catch (e) {
+			console.error(e);
 		}
 	};
 
-	const handleMovement = async () => {
-		if (!activeRegister || !movAmount || !movConcept.trim()) return;
+	const handleNewMovement = async (data: {
+		type: string;
+		amount: number;
+		concept: string;
+		paymentMethod: string;
+	}) => {
+		if (!activeRegister) return;
 		setSubmitting(true);
 		try {
-			const res = await fetch(
-				`/api/cash-register/${activeRegister.id}/movements`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						type: movType,
-						amount: parseFloat(movAmount),
-						concept: movConcept.trim(),
-						paymentMethod: movPayment,
-					}),
-				},
-			);
-			if (res.ok) {
-				setShowMovement(false);
-				setMovAmount("");
-				setMovConcept("");
-				await fetchData();
-			}
+			await apiFetch(`/api/cash-register/${activeRegister.id}/movements`, {
+				method: "POST",
+				body: JSON.stringify(data),
+			});
+			setModal(null);
+			await fetchData();
+		} catch (e) {
+			console.error(e);
 		} finally {
 			setSubmitting(false);
 		}
 	};
 
-	const handleClose = async () => {
+	const handleCloseRegister = async (actualBalance: number) => {
 		if (!activeRegister) return;
-		setClosing(true);
+		setSubmitting(true);
 		try {
-			const res = await fetch(`/api/cash-register/${activeRegister.id}`, {
+			await apiFetch(`/api/cash-register/${activeRegister.id}`, {
 				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ status: "closed" }),
+				body: JSON.stringify({
+					status: "closed",
+					closingBalance: actualBalance,
+				}),
 			});
-			if (res.ok) {
-				setShowClose(false);
-				await fetchData();
-			}
+			setModal(null);
+			await fetchData();
+		} catch (e) {
+			console.error(e);
 		} finally {
-			setClosing(false);
+			setSubmitting(false);
 		}
 	};
 
-	const expandHistory = async (id: string) => {
-		if (expandedId === id) {
-			setExpandedId(null);
-			return;
+	const handlePrint = () => {
+		if (!activeRegister && history.length === 0) return;
+		const reg = activeRegister;
+		if (reg) {
+			const mvRows = movements
+				.map(
+					(m) => `<tr>
+						<td>${new Date(m.createdAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}</td>
+						<td>${m.concept}</td>
+						<td>${m.paymentMethod ?? "—"}</td>
+						<td class="amount" style="color:${m.type === "income" ? "#166534" : "#991b1b"}">${m.type === "income" ? "+" : "-"} ${printCurrency(m.amount)}</td>
+					</tr>`,
+				)
+				.join("");
+			printDocument({
+				title: "Caja",
+				subtitle: `${reg.status === "open" ? "Abierta" : "Cerrada"} — ${new Date(reg.date).toLocaleDateString("es-AR")}`,
+				content: `
+					<div class="stat-row"><span class="stat-label">Apertura</span><span class="stat-value">${printCurrency(reg.openingBalance)}</span></div>
+					<div class="stat-row"><span class="stat-label">Ingresos</span><span class="stat-value" style="color:#166534">+ ${printCurrency(income)}</span></div>
+					<div class="stat-row"><span class="stat-label">Egresos</span><span class="stat-value" style="color:#991b1b">- ${printCurrency(expenses)}</span></div>
+					<div class="stat-row" style="border-top:2px solid #333;padding-top:8px;margin-top:4px"><span class="stat-label" style="font-weight:700">Saldo actual</span><span class="stat-value">${printCurrency(currentBalance)}</span></div>
+					<div class="section-title" style="margin-top:24px">Movimientos (${movements.length})</div>
+					<table>
+						<thead><tr><th>Hora</th><th>Concepto</th><th>Medio</th><th style="text-align:right">Monto</th></tr></thead>
+						<tbody>${mvRows}</tbody>
+					</table>`,
+			});
+		} else if (history.length > 0) {
+			const rows = history
+				.map(
+					(r) => `<tr>
+						<td>${new Date(r.date).toLocaleDateString("es-AR")}</td>
+						<td class="amount">${printCurrency(r.openingBalance)}</td>
+						<td class="amount">${printCurrency(r.closingBalance ?? 0)}</td>
+						<td class="amount">${r._count?.movements ?? 0}</td>
+					</tr>`,
+				)
+				.join("");
+			printDocument({
+				title: "Historial de Cajas",
+				subtitle: `${history.length} cajas cerradas`,
+				content: `<table>
+					<thead><tr><th>Fecha</th><th style="text-align:right">Apertura</th><th style="text-align:right">Cierre</th><th style="text-align:right">Movimientos</th></tr></thead>
+					<tbody>${rows}</tbody></table>`,
+			});
 		}
-		setExpandedId(id);
-		const res = await fetch(`/api/cash-register/${id}`);
-		const data: Register = await res.json();
-		setExpandedMovements(data.movements ?? []);
 	};
+
+	// ─── Loading state ──────────────────────────────────────────────────────
 
 	if (loading) {
 		return (
 			<div
-				className="flex items-center justify-center"
-				style={{ minHeight: "60vh" }}
+				className="min-h-screen flex items-center justify-center"
+				style={{ background: "var(--s0)" }}
 			>
-				<div
-					className="font-display text-ink-tertiary"
-					style={{ fontSize: 13 }}
-				>
-					Cargando caja...
+				<div className="font-kds text-ink-disabled" style={{ fontSize: 20 }}>
+					CARGANDO...
 				</div>
 			</div>
 		);
 	}
 
+	// ─── Render ─────────────────────────────────────────────────────────────
+
 	return (
-		<div style={{ padding: "24px 20px 60px", maxWidth: 900, margin: "0 auto" }}>
+		<div
+			className="min-h-screen p-5 md:p-7 pb-10"
+			style={{ background: "var(--s0)" }}
+		>
 			{/* Header */}
-			<div
-				className="flex items-center gap-4 flex-wrap"
-				style={{ marginBottom: 28 }}
-			>
-				<div
-					className="flex items-center justify-center"
-					style={{
-						width: 44,
-						height: 44,
-						borderRadius: 12,
-						background: "rgba(245,158,11,0.12)",
-						border: "1px solid rgba(245,158,11,0.25)",
-					}}
-				>
-					<Wallet size={22} style={{ color: "var(--gold)" }} />
-				</div>
-				<h1
-					className="font-kds text-ink-primary"
-					style={{ fontSize: 40, lineHeight: 1 }}
-				>
-					CAJA
-				</h1>
-				{activeRegister ? (
-					<div
-						className="badge flex items-center gap-1.5"
-						style={{
-							background: "rgba(16,185,129,0.1)",
-							border: "1px solid rgba(16,185,129,0.3)",
-							color: "#10b981",
-						}}
-					>
+			<div className="flex flex-wrap items-start justify-between gap-4 mb-7">
+				<div>
+					<div className="flex items-center gap-3 mb-1">
 						<div
-							className="animate-pulse"
 							style={{
-								width: 6,
-								height: 6,
-								borderRadius: "50%",
-								background: "#10b981",
+								width: 3,
+								height: 28,
+								borderRadius: 3,
+								background: "var(--gold)",
 							}}
 						/>
-						ABIERTA
+						<h1
+							className="font-kds text-ink-primary"
+							style={{ fontSize: 40, lineHeight: 1, letterSpacing: "0.08em" }}
+						>
+							CAJA
+						</h1>
+						{/* Status badge */}
+						{activeRegister ? (
+							<span
+								style={{
+									fontSize: 9,
+									padding: "4px 12px",
+									borderRadius: 99,
+									fontFamily: "var(--font-syne)",
+									fontWeight: 700,
+									letterSpacing: "0.15em",
+									textTransform: "uppercase",
+									color: "#10b981",
+									background: "rgba(16,185,129,0.12)",
+									border: "1px solid rgba(16,185,129,0.3)",
+								}}
+							>
+								Abierta
+							</span>
+						) : (
+							<span
+								style={{
+									fontSize: 9,
+									padding: "4px 12px",
+									borderRadius: 99,
+									fontFamily: "var(--font-syne)",
+									fontWeight: 700,
+									letterSpacing: "0.15em",
+									textTransform: "uppercase",
+									color: "#ef4444",
+									background: "rgba(239,68,68,0.12)",
+									border: "1px solid rgba(239,68,68,0.3)",
+								}}
+							>
+								Cerrada
+							</span>
+						)}
 					</div>
-				) : (
+					<div className="font-body text-ink-disabled" style={{ fontSize: 12 }}>
+						Gestion de caja diaria
+					</div>
+				</div>
+
+				{activeRegister && (
 					<div
-						className="badge flex items-center gap-1.5"
-						style={{
-							background: "rgba(239,68,68,0.1)",
-							border: "1px solid rgba(239,68,68,0.3)",
-							color: "#ef4444",
-						}}
+						className="font-body text-ink-disabled"
+						style={{ fontSize: 11, paddingTop: 6 }}
 					>
-						<Lock size={10} />
-						CERRADA
+						Abierta desde{" "}
+						{new Date(activeRegister.date).toLocaleTimeString("es-AR", {
+							hour: "2-digit",
+							minute: "2-digit",
+						})}
 					</div>
 				)}
 			</div>
 
-			{/* ─── No register open ─── */}
+			<div className="divider-gold mb-7" />
+
+			{/* No register open */}
 			{!activeRegister && (
-				<div
-					className="card-gold"
-					style={{
-						padding: 32,
-						textAlign: "center",
-						marginBottom: 32,
-					}}
-				>
-					<Wallet
-						size={40}
-						style={{ color: "var(--gold)", margin: "0 auto 16px" }}
-					/>
-					<h2
-						className="font-display text-ink-primary"
-						style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}
-					>
-						Abrir Caja del Día
-					</h2>
-					<p
-						className="font-body text-ink-tertiary"
-						style={{ fontSize: 12, marginBottom: 20 }}
-					>
-						Ingresá el saldo inicial para comenzar a registrar movimientos
-					</p>
-					<div
-						className="flex items-center gap-3 justify-center"
-						style={{ marginBottom: 16 }}
-					>
-						<label
-							className="font-display text-ink-tertiary uppercase"
-							style={{ fontSize: 9, letterSpacing: "0.2em" }}
-						>
-							Saldo Inicial
-						</label>
-						<div className="flex items-center gap-1">
-							<span
-								className="font-kds text-brand-500"
-								style={{ fontSize: 24 }}
-							>
-								$
-							</span>
-							<input
-								className="input-base"
-								type="number"
-								min={0}
-								value={openBalance}
-								onChange={(e) =>
-									setOpenBalance(parseFloat(e.target.value) || 0)
-								}
-								style={{
-									width: 160,
-									fontSize: 20,
-									fontFamily: "var(--font-kds)",
-								}}
-							/>
-						</div>
-					</div>
-					<button
-						className="btn-primary"
-						onClick={handleOpen}
-						disabled={opening}
-					>
-						{opening ? "Abriendo..." : "Abrir Caja"}
-					</button>
-				</div>
-			)}
-
-			{/* ─── Active register ─── */}
-			{activeRegister && (
 				<>
-					{/* Stats */}
-					<div
-						className="grid gap-4"
-						style={{
-							gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-							marginBottom: 24,
-						}}
-					>
-						{[
-							{
-								label: "Saldo Inicial",
-								value: activeRegister.openingBalance,
-								color: "var(--ink-secondary)",
-							},
-							{ label: "Ingresos", value: totalIncome, color: "#10b981" },
-							{ label: "Egresos", value: totalExpense, color: "#ef4444" },
-							{
-								label: "Saldo Actual",
-								value: currentBalance,
-								color: "var(--gold)",
-							},
-						].map((s) => (
-							<div
-								key={s.label}
-								className="card"
-								style={{ padding: "16px 18px" }}
-							>
-								<div
-									className="font-display text-ink-disabled uppercase"
-									style={{
-										fontSize: 9,
-										letterSpacing: "0.25em",
-										marginBottom: 6,
-									}}
-								>
-									{s.label}
-								</div>
-								<div
-									className="font-kds"
-									style={{ fontSize: 28, color: s.color, lineHeight: 1 }}
-								>
-									{fmt(s.value)}
-								</div>
+					<OpenRegisterCard onOpen={handleOpenRegister} />
+
+					{/* History below */}
+					{history.length > 0 && (
+						<div style={{ maxWidth: 700, margin: "48px auto 0" }}>
+							<div className="flex items-center gap-2 mb-4">
+								<History size={14} style={{ color: "#555" }} />
+								<SectionLabel>Historial de Cajas</SectionLabel>
 							</div>
-						))}
-					</div>
-
-					{/* Quick actions */}
-					<div className="flex gap-3 flex-wrap" style={{ marginBottom: 24 }}>
-						<button
-							className="btn-primary flex items-center gap-2"
-							style={{
-								background: "rgba(16,185,129,0.15)",
-								border: "1px solid rgba(16,185,129,0.3)",
-								color: "#10b981",
-							}}
-							onClick={() => {
-								setMovType("income");
-								setShowMovement(true);
-							}}
-						>
-							<Plus size={14} />
-							<span className="font-display" style={{ fontSize: 11 }}>
-								Registrar Ingreso
-							</span>
-						</button>
-						<button
-							className="btn-primary flex items-center gap-2"
-							style={{
-								background: "rgba(239,68,68,0.15)",
-								border: "1px solid rgba(239,68,68,0.3)",
-								color: "#ef4444",
-							}}
-							onClick={() => {
-								setMovType("expense");
-								setShowMovement(true);
-							}}
-						>
-							<Minus size={14} />
-							<span className="font-display" style={{ fontSize: 11 }}>
-								Registrar Egreso
-							</span>
-						</button>
-						<button
-							className="btn-primary flex items-center gap-2 ml-auto"
-							onClick={() => setShowClose(true)}
-						>
-							<Lock size={14} />
-							<span className="font-display" style={{ fontSize: 11 }}>
-								Cerrar Caja
-							</span>
-						</button>
-					</div>
-
-					{/* Movements */}
-					<div
-						className="font-display text-ink-disabled uppercase"
-						style={{ fontSize: 9, letterSpacing: "0.25em", marginBottom: 10 }}
-					>
-						MOVIMIENTOS ({activeRegister.movements?.length ?? 0})
-					</div>
-
-					{!activeRegister.movements ||
-					activeRegister.movements.length === 0 ? (
-						<div className="card" style={{ padding: 32, textAlign: "center" }}>
-							<DollarSign
-								size={28}
-								style={{ color: "var(--ink-disabled)", margin: "0 auto 8px" }}
-							/>
-							<p
-								className="font-body text-ink-tertiary"
-								style={{ fontSize: 12 }}
-							>
-								No hay movimientos todavía
-							</p>
-						</div>
-					) : (
-						<div className="grid gap-2" style={{ marginBottom: 32 }}>
-							{activeRegister.movements.map((m) => (
-								<div
-									key={m.id}
-									className="card flex items-center gap-3"
-									style={{
-										padding: "12px 16px",
-										borderLeft: `3px solid ${m.type === "income" ? "#10b981" : "#ef4444"}`,
-									}}
-								>
-									{m.type === "income" ? (
-										<ArrowUpRight
-											size={16}
-											style={{ color: "#10b981", flexShrink: 0 }}
-										/>
-									) : (
-										<ArrowDownRight
-											size={16}
-											style={{ color: "#ef4444", flexShrink: 0 }}
-										/>
-									)}
-									<div className="flex-1 min-w-0">
-										<div
-											className="font-body text-ink-primary truncate"
-											style={{ fontSize: 13 }}
-										>
-											{m.concept}
-										</div>
-										<div className="flex items-center gap-2">
-											<span
-												className="font-body text-ink-tertiary"
-												style={{ fontSize: 10 }}
-											>
-												<Clock
-													size={9}
-													style={{ display: "inline", marginRight: 3 }}
-												/>
-												{fmtTime(m.createdAt)}
-											</span>
-											{m.paymentMethod && (
-												<span
-													className="badge"
-													style={{ fontSize: 8, padding: "1px 6px" }}
-												>
-													{m.paymentMethod}
-												</span>
-											)}
-										</div>
-									</div>
-									<div
-										className="font-kds flex-shrink-0"
-										style={{
-											fontSize: 20,
-											color: m.type === "income" ? "#10b981" : "#ef4444",
-										}}
-									>
-										{m.type === "income" ? "+" : "−"} {fmt(m.amount)}
-									</div>
-								</div>
+							{history.map((r) => (
+								<HistoryRow key={r.id} register={r} />
 							))}
 						</div>
 					)}
 				</>
 			)}
 
-			{/* ─── History ─── */}
-			<div
-				className="font-display text-ink-disabled uppercase"
-				style={{ fontSize: 9, letterSpacing: "0.25em", marginBottom: 10 }}
-			>
-				HISTORIAL DE CAJAS
-			</div>
-
-			{registers.length === 0 ? (
-				<div className="card" style={{ padding: 24, textAlign: "center" }}>
-					<p className="font-body text-ink-tertiary" style={{ fontSize: 12 }}>
-						No hay registros anteriores
-					</p>
-				</div>
-			) : (
-				<div className="grid gap-2">
-					{registers.map((r) => (
-						<div key={r.id}>
-							<button
-								className="card flex items-center gap-3 w-full text-left transition-colors"
-								style={{ padding: "12px 16px", cursor: "pointer" }}
-								onClick={() => expandHistory(r.id)}
-							>
-								{expandedId === r.id ? (
-									<ChevronDown
-										size={14}
-										style={{ color: "var(--ink-tertiary)", flexShrink: 0 }}
-									/>
-								) : (
-									<ChevronRight
-										size={14}
-										style={{ color: "var(--ink-tertiary)", flexShrink: 0 }}
-									/>
-								)}
-								<div className="flex-1 min-w-0">
-									<div
-										className="font-display text-ink-primary"
-										style={{ fontSize: 13, fontWeight: 600 }}
-									>
-										{fmtDate(r.date)}
-									</div>
-									<div
-										className="font-body text-ink-tertiary"
-										style={{ fontSize: 10 }}
-									>
-										{r._count?.movements ?? 0} movimientos
-									</div>
-								</div>
-								<div className="text-right">
-									<div
-										className="font-body text-ink-tertiary"
-										style={{ fontSize: 9 }}
-									>
-										Apertura
-									</div>
-									<div
-										className="font-kds text-ink-secondary"
-										style={{ fontSize: 16 }}
-									>
-										{fmt(r.openingBalance)}
-									</div>
-								</div>
-								<div className="text-right" style={{ marginLeft: 12 }}>
-									<div
-										className="font-body text-ink-tertiary"
-										style={{ fontSize: 9 }}
-									>
-										Cierre
-									</div>
-									<div
-										className="font-kds text-brand-500"
-										style={{ fontSize: 16 }}
-									>
-										{fmt(r.closingBalance ?? 0)}
-									</div>
-								</div>
-							</button>
-
-							{expandedId === r.id && (
-								<div style={{ padding: "8px 0 8px 32px" }}>
-									{expandedMovements.length === 0 ? (
-										<div
-											className="font-body text-ink-tertiary"
-											style={{ fontSize: 11, padding: 12 }}
-										>
-											Sin movimientos
-										</div>
-									) : (
-										<div className="grid gap-1">
-											{expandedMovements.map((m) => (
-												<div
-													key={m.id}
-													className="flex items-center gap-2"
-													style={{
-														padding: "6px 12px",
-														borderLeft: `2px solid ${m.type === "income" ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`,
-													}}
-												>
-													<span
-														className="font-body text-ink-tertiary"
-														style={{ fontSize: 10, width: 40 }}
-													>
-														{fmtTime(m.createdAt)}
-													</span>
-													<span
-														className="font-body text-ink-primary flex-1 truncate"
-														style={{ fontSize: 12 }}
-													>
-														{m.concept}
-													</span>
-													<span
-														className="font-kds"
-														style={{
-															fontSize: 14,
-															color:
-																m.type === "income" ? "#10b981" : "#ef4444",
-														}}
-													>
-														{m.type === "income" ? "+" : "−"}
-														{fmt(m.amount)}
-													</span>
-												</div>
-											))}
-										</div>
-									)}
-								</div>
-							)}
-						</div>
-					))}
-				</div>
-			)}
-
-			{/* ─── Movement Modal ─── */}
-			{showMovement && (
-				<div
-					style={{
-						position: "fixed",
-						inset: 0,
-						zIndex: 300,
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						background: "rgba(0,0,0,0.6)",
-						backdropFilter: "blur(4px)",
-					}}
-					onClick={(e) =>
-						e.target === e.currentTarget && setShowMovement(false)
-					}
-				>
-					<div
-						className="card"
-						style={{ width: "100%", maxWidth: 420, padding: 24, margin: 16 }}
-					>
-						<h3
-							className="font-display text-ink-primary"
-							style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}
-						>
-							{movType === "income" ? "Registrar Ingreso" : "Registrar Egreso"}
-						</h3>
-
-						{/* Amount */}
-						<div style={{ marginBottom: 16, textAlign: "center" }}>
-							<label
-								className="font-display text-ink-tertiary uppercase block"
-								style={{ fontSize: 9, letterSpacing: "0.2em", marginBottom: 8 }}
-							>
-								MONTO
-							</label>
-							<div className="flex items-center gap-2 justify-center">
-								<span
-									className="font-kds"
-									style={{
-										fontSize: 32,
-										color: movType === "income" ? "#10b981" : "#ef4444",
-									}}
-								>
-									$
-								</span>
-								<input
-									className="input-base"
-									type="number"
-									min={0}
-									step={0.01}
-									value={movAmount}
-									onChange={(e) => setMovAmount(e.target.value)}
-									placeholder="0"
-									style={{
-										width: 180,
-										fontSize: 28,
-										fontFamily: "var(--font-kds)",
-										textAlign: "center",
-										color: movType === "income" ? "#10b981" : "#ef4444",
-									}}
-									autoFocus
-								/>
-							</div>
-						</div>
-
-						{/* Concept */}
-						<div style={{ marginBottom: 16 }}>
-							<label
-								className="font-display text-ink-tertiary uppercase block"
-								style={{ fontSize: 9, letterSpacing: "0.2em", marginBottom: 6 }}
-							>
-								CONCEPTO
-							</label>
-							<input
-								className="input-base w-full"
-								value={movConcept}
-								onChange={(e) => setMovConcept(e.target.value)}
-								placeholder={
-									movType === "income"
-										? "Ej: Venta efectivo mesa 3"
-										: "Ej: Compra hielo"
-								}
-							/>
-						</div>
-
-						{/* Payment method */}
-						<div style={{ marginBottom: 20 }}>
-							<label
-								className="font-display text-ink-tertiary uppercase block"
-								style={{ fontSize: 9, letterSpacing: "0.2em", marginBottom: 8 }}
-							>
-								MEDIO DE PAGO
-							</label>
-							<div className="grid grid-cols-2 gap-2">
-								{PAY_METHODS.map((pm) => (
-									<button
-										key={pm.value}
-										type="button"
-										onClick={() => setMovPayment(pm.value)}
-										className="flex items-center gap-2 rounded-lg transition-colors"
-										style={{
-											padding: "10px 12px",
-											background:
-												movPayment === pm.value
-													? "rgba(245,158,11,0.1)"
-													: "var(--s2)",
-											border: `1px solid ${movPayment === pm.value ? "rgba(245,158,11,0.3)" : "var(--s3)"}`,
-											cursor: "pointer",
-										}}
-									>
-										<pm.icon
-											size={14}
-											style={{
-												color:
-													movPayment === pm.value
-														? "var(--gold)"
-														: "var(--ink-tertiary)",
-											}}
-										/>
-										<span
-											className="font-body"
-											style={{
-												fontSize: 11,
-												color:
-													movPayment === pm.value
-														? "var(--ink-primary)"
-														: "var(--ink-tertiary)",
-											}}
-										>
-											{pm.label}
-										</span>
-									</button>
-								))}
-							</div>
-						</div>
-
-						<div className="flex gap-3">
-							<button
-								className="btn-ghost flex-1"
-								onClick={() => setShowMovement(false)}
-							>
-								Cancelar
-							</button>
-							<button
-								className="btn-primary flex-1"
-								onClick={handleMovement}
-								disabled={submitting || !movAmount || !movConcept.trim()}
-								style={
-									movType === "income"
-										? {
-												background: "rgba(16,185,129,0.2)",
-												borderColor: "rgba(16,185,129,0.4)",
-												color: "#10b981",
-											}
-										: {
-												background: "rgba(239,68,68,0.2)",
-												borderColor: "rgba(239,68,68,0.4)",
-												color: "#ef4444",
-											}
-								}
-							>
-								{submitting ? "Guardando..." : "Confirmar"}
-							</button>
-						</div>
+			{/* Active register */}
+			{activeRegister && (
+				<>
+					{/* Stats row */}
+					<div className="flex flex-wrap gap-3 mb-7">
+						<StatCard
+							label="Saldo Inicial"
+							value={activeRegister.openingBalance}
+							icon={Vault}
+							color="#888"
+						/>
+						<StatCard
+							label="Ingresos"
+							value={income}
+							icon={TrendingUp}
+							color="#10b981"
+						/>
+						<StatCard
+							label="Egresos"
+							value={expenses}
+							icon={TrendingDown}
+							color="#ef4444"
+						/>
+						<StatCard
+							label="Saldo Actual"
+							value={currentBalance}
+							icon={DollarSign}
+							color="var(--gold)"
+						/>
 					</div>
-				</div>
-			)}
 
-			{/* ─── Close Modal ─── */}
-			{showClose && activeRegister && (
-				<div
-					style={{
-						position: "fixed",
-						inset: 0,
-						zIndex: 300,
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						background: "rgba(0,0,0,0.6)",
-						backdropFilter: "blur(4px)",
-					}}
-					onClick={(e) => e.target === e.currentTarget && setShowClose(false)}
-				>
-					<div
-						className="card"
-						style={{ width: "100%", maxWidth: 420, padding: 24, margin: 16 }}
-					>
-						<h3
-							className="font-display text-ink-primary"
-							style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}
+					{/* Quick actions */}
+					<div className="flex flex-wrap gap-3 mb-7">
+						<button
+							onClick={() => setModal("income")}
+							className="flex items-center gap-2"
+							style={{
+								padding: "12px 20px",
+								borderRadius: 12,
+								background: "rgba(16,185,129,0.1)",
+								border: "1px solid rgba(16,185,129,0.25)",
+								color: "#10b981",
+								fontFamily: "var(--font-syne)",
+								fontWeight: 700,
+								fontSize: 11,
+								letterSpacing: "0.12em",
+								textTransform: "uppercase",
+								cursor: "pointer",
+							}}
 						>
+							<Plus size={14} />
+							Registrar Ingreso
+						</button>
+						<button
+							onClick={() => setModal("expense")}
+							className="flex items-center gap-2"
+							style={{
+								padding: "12px 20px",
+								borderRadius: 12,
+								background: "rgba(239,68,68,0.1)",
+								border: "1px solid rgba(239,68,68,0.25)",
+								color: "#ef4444",
+								fontFamily: "var(--font-syne)",
+								fontWeight: 700,
+								fontSize: 11,
+								letterSpacing: "0.12em",
+								textTransform: "uppercase",
+								cursor: "pointer",
+							}}
+						>
+							<Minus size={14} />
+							Registrar Egreso
+						</button>
+						<div style={{ flex: 1 }} />
+						<button
+							onClick={() => setModal("close")}
+							className="flex items-center gap-2"
+							style={{
+								padding: "12px 20px",
+								borderRadius: 12,
+								background: "rgba(245,158,11,0.1)",
+								border: "1px solid rgba(245,158,11,0.25)",
+								color: "var(--gold)",
+								fontFamily: "var(--font-syne)",
+								fontWeight: 700,
+								fontSize: 11,
+								letterSpacing: "0.12em",
+								textTransform: "uppercase",
+								cursor: "pointer",
+							}}
+						>
+							<Lock size={14} />
 							Cerrar Caja
-						</h3>
+						</button>
+					</div>
 
-						<div className="grid gap-3" style={{ marginBottom: 20 }}>
-							{[
-								{
-									label: "Saldo Inicial",
-									value: activeRegister.openingBalance,
-								},
-								{
-									label: "Total Ingresos",
-									value: totalIncome,
-									color: "#10b981",
-								},
-								{
-									label: "Total Egresos",
-									value: totalExpense,
-									color: "#ef4444",
-								},
-							].map((row) => (
-								<div
-									key={row.label}
-									className="flex items-center justify-between"
-								>
-									<span
-										className="font-body text-ink-tertiary"
-										style={{ fontSize: 12 }}
-									>
-										{row.label}
-									</span>
-									<span
-										className="font-kds"
-										style={{
-											fontSize: 18,
-											color: row.color || "var(--ink-secondary)",
-										}}
-									>
-										{fmt(row.value)}
-									</span>
-								</div>
-							))}
+					{/* Movements list */}
+					<SectionLabel>Movimientos del dia</SectionLabel>
+					{movements.length === 0 ? (
+						<div className="card flex flex-col items-center justify-center gap-3 py-16">
 							<div
 								style={{
-									height: 1,
-									background: "var(--s3)",
-									margin: "4px 0",
+									width: 48,
+									height: 48,
+									borderRadius: 12,
+									background: "var(--s2)",
+									border: "1px solid var(--s3)",
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
 								}}
-							/>
-							<div className="flex items-center justify-between">
-								<span
-									className="font-display text-ink-primary"
-									style={{ fontSize: 13, fontWeight: 700 }}
+							>
+								<DollarSign size={20} style={{ color: "#555" }} />
+							</div>
+							<div className="text-center">
+								<p
+									className="font-kds text-ink-secondary"
+									style={{ fontSize: 18, letterSpacing: "0.05em" }}
 								>
-									Saldo Calculado
-								</span>
-								<span
-									className="font-kds text-brand-500"
-									style={{ fontSize: 24 }}
+									SIN MOVIMIENTOS
+								</p>
+								<p
+									className="font-body text-ink-disabled mt-1"
+									style={{ fontSize: 12 }}
 								>
-									{fmt(currentBalance)}
-								</span>
+									Registra ingresos y egresos para llevar el control
+								</p>
 							</div>
 						</div>
-
-						<div className="flex gap-3">
-							<button
-								className="btn-ghost flex-1"
-								onClick={() => setShowClose(false)}
-							>
-								Cancelar
-							</button>
-							<button
-								className="btn-primary flex-1 flex items-center gap-2 justify-center"
-								onClick={handleClose}
-								disabled={closing}
-							>
-								<Lock size={14} />
-								{closing ? "Cerrando..." : "Confirmar Cierre"}
-							</button>
+					) : (
+						<div className="flex flex-col gap-2 mb-8">
+							{[...movements]
+								.sort(
+									(a, b) =>
+										new Date(b.createdAt).getTime() -
+										new Date(a.createdAt).getTime(),
+								)
+								.map((m) => (
+									<MovementRow key={m.id} movement={m} />
+								))}
 						</div>
-					</div>
-				</div>
+					)}
+
+					{/* History */}
+					{history.length > 0 && (
+						<div style={{ marginTop: 40 }}>
+							<div className="flex items-center gap-2 mb-4">
+								<History size={14} style={{ color: "#555" }} />
+								<SectionLabel>Historial de Cajas</SectionLabel>
+							</div>
+							{history.map((r) => (
+								<HistoryRow key={r.id} register={r} />
+							))}
+						</div>
+					)}
+				</>
+			)}
+
+			{/* Modals */}
+			{(modal === "income" || modal === "expense") && (
+				<NewMovementModal
+					type={modal}
+					onClose={() => !submitting && setModal(null)}
+					onSubmit={handleNewMovement}
+					submitting={submitting}
+				/>
+			)}
+
+			{modal === "close" && activeRegister && (
+				<CloseRegisterModal
+					register={activeRegister}
+					income={income}
+					expenses={expenses}
+					onClose={() => !submitting && setModal(null)}
+					onConfirm={handleCloseRegister}
+					submitting={submitting}
+				/>
 			)}
 		</div>
 	);

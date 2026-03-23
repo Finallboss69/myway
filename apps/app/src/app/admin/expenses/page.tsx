@@ -19,9 +19,11 @@ import {
 	Tag,
 	ChevronUp,
 	ChevronDown,
+	Printer,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
+import { printDocument, printCurrency } from "@/lib/print";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -75,7 +77,10 @@ const DEFAULT_CATEGORIES: Omit<ExpenseCategory, "id">[] = [
 	{ name: "Otros", icon: "MoreHorizontal", order: 6 },
 ];
 
-const ICON_MAP: Record<string, React.ComponentType<{ size?: number; style?: React.CSSProperties }>> = {
+const ICON_MAP: Record<
+	string,
+	React.ComponentType<{ size?: number; style?: React.CSSProperties }>
+> = {
 	ShoppingCart,
 	Users,
 	Zap,
@@ -88,14 +93,26 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number; style?: Reac
 	Settings,
 };
 
-function CategoryIcon({ iconName, size = 14, style }: { iconName: string; size?: number; style?: React.CSSProperties }) {
+function CategoryIcon({
+	iconName,
+	size = 14,
+	style,
+}: {
+	iconName: string;
+	size?: number;
+	style?: React.CSSProperties;
+}) {
 	const Icon = ICON_MAP[iconName] ?? Tag;
 	return <Icon size={size} style={style} />;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getDateRange(period: Period, customFrom: string, customTo: string): { from: string; to: string } {
+function getDateRange(
+	period: Period,
+	customFrom: string,
+	customTo: string,
+): { from: string; to: string } {
 	const now = new Date();
 	const todayStr = now.toISOString().slice(0, 10);
 
@@ -116,7 +133,11 @@ function getDateRange(period: Period, customFrom: string, customTo: string): { f
 
 function formatDate(dateStr: string): string {
 	const d = new Date(dateStr + "T12:00:00");
-	return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+	return d.toLocaleDateString("es-AR", {
+		day: "2-digit",
+		month: "short",
+		year: "numeric",
+	});
 }
 
 // ─── Section Label ───────────────────────────────────────────────────────────
@@ -134,7 +155,17 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 // ─── Modal Shell ─────────────────────────────────────────────────────────────
 
-function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+function Modal({
+	open,
+	onClose,
+	title,
+	children,
+}: {
+	open: boolean;
+	onClose: () => void;
+	title: string;
+	children: React.ReactNode;
+}) {
 	if (!open) return null;
 	return (
 		<div
@@ -152,12 +183,30 @@ function Modal({ open, onClose, title, children }: { open: boolean; onClose: () 
 		>
 			<div
 				className="card"
-				style={{ width: "100%", maxWidth: 520, maxHeight: "90vh", overflow: "auto", padding: 0 }}
+				style={{
+					width: "100%",
+					maxWidth: 520,
+					maxHeight: "90vh",
+					overflow: "auto",
+					padding: 0,
+				}}
 				onClick={(e) => e.stopPropagation()}
 			>
-				<div className="flex items-center justify-between" style={{ padding: "16px 20px", borderBottom: "1px solid var(--s3)" }}>
-					<h2 className="font-display text-ink-primary" style={{ fontSize: 15, fontWeight: 700 }}>{title}</h2>
-					<button onClick={onClose} className="btn-ghost" style={{ padding: 6, borderRadius: 8 }}>
+				<div
+					className="flex items-center justify-between"
+					style={{ padding: "16px 20px", borderBottom: "1px solid var(--s3)" }}
+				>
+					<h2
+						className="font-display text-ink-primary"
+						style={{ fontSize: 15, fontWeight: 700 }}
+					>
+						{title}
+					</h2>
+					<button
+						onClick={onClose}
+						className="btn-ghost"
+						style={{ padding: 6, borderRadius: 8 }}
+					>
 						<X size={16} />
 					</button>
 				</div>
@@ -233,9 +282,15 @@ function NuevoGastoModal({
 				notes: notes.trim() || null,
 			};
 			if (editing) {
-				await apiFetch(`/api/expenses/${editing.id}`, { method: "PATCH", body: JSON.stringify(body) });
+				await apiFetch(`/api/expenses/${editing.id}`, {
+					method: "PATCH",
+					body: JSON.stringify(body),
+				});
 			} else {
-				await apiFetch("/api/expenses", { method: "POST", body: JSON.stringify(body) });
+				await apiFetch("/api/expenses", {
+					method: "POST",
+					body: JSON.stringify(body),
+				});
 			}
 			onSaved();
 			onClose();
@@ -247,41 +302,80 @@ function NuevoGastoModal({
 	};
 
 	return (
-		<Modal open={open} onClose={onClose} title={editing ? "Editar Gasto" : "Nuevo Gasto"}>
+		<Modal
+			open={open}
+			onClose={onClose}
+			title={editing ? "Editar Gasto" : "Nuevo Gasto"}
+		>
 			<div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 				{/* Category */}
 				<div>
 					<SectionLabel>Categoría</SectionLabel>
-					<select className="input-base mt-1" style={{ width: "100%" }} value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+					<select
+						className="input-base mt-1"
+						style={{ width: "100%" }}
+						value={categoryId}
+						onChange={(e) => setCategoryId(e.target.value)}
+					>
 						<option value="">Seleccionar...</option>
 						{categories.map((c) => (
-							<option key={c.id} value={c.id}>{c.name}</option>
+							<option key={c.id} value={c.id}>
+								{c.name}
+							</option>
 						))}
 					</select>
 				</div>
 				{/* Description */}
 				<div>
 					<SectionLabel>Descripción</SectionLabel>
-					<input className="input-base mt-1" style={{ width: "100%" }} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ej: Compra de insumos" />
+					<input
+						className="input-base mt-1"
+						style={{ width: "100%" }}
+						value={description}
+						onChange={(e) => setDescription(e.target.value)}
+						placeholder="Ej: Compra de insumos"
+					/>
 				</div>
 				{/* Amount + Date */}
 				<div className="grid grid-cols-2 gap-3">
 					<div>
 						<SectionLabel>Monto (ARS)</SectionLabel>
-						<input className="input-base mt-1" style={{ width: "100%" }} type="number" min={0} step={1} value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
+						<input
+							className="input-base mt-1"
+							style={{ width: "100%" }}
+							type="number"
+							min={0}
+							step={1}
+							value={amount}
+							onChange={(e) => setAmount(e.target.value)}
+							placeholder="0"
+						/>
 					</div>
 					<div>
 						<SectionLabel>Fecha</SectionLabel>
-						<input className="input-base mt-1" style={{ width: "100%" }} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+						<input
+							className="input-base mt-1"
+							style={{ width: "100%" }}
+							type="date"
+							value={date}
+							onChange={(e) => setDate(e.target.value)}
+						/>
 					</div>
 				</div>
 				{/* Supplier */}
 				<div>
 					<SectionLabel>Proveedor (opcional)</SectionLabel>
-					<select className="input-base mt-1" style={{ width: "100%" }} value={supplierId} onChange={(e) => setSupplierId(e.target.value)}>
+					<select
+						className="input-base mt-1"
+						style={{ width: "100%" }}
+						value={supplierId}
+						onChange={(e) => setSupplierId(e.target.value)}
+					>
 						<option value="">Sin proveedor</option>
 						{suppliers.map((s) => (
-							<option key={s.id} value={s.id}>{s.name}</option>
+							<option key={s.id} value={s.id}>
+								{s.name}
+							</option>
 						))}
 					</select>
 				</div>
@@ -298,8 +392,12 @@ function NuevoGastoModal({
 									borderRadius: 8,
 									fontSize: 12,
 									fontWeight: 600,
-									border: paymentMethod === m ? "1px solid var(--gold)" : "1px solid var(--s4)",
-									background: paymentMethod === m ? "rgba(245,158,11,0.15)" : "var(--s2)",
+									border:
+										paymentMethod === m
+											? "1px solid var(--gold)"
+											: "1px solid var(--s4)",
+									background:
+										paymentMethod === m ? "rgba(245,158,11,0.15)" : "var(--s2)",
 									color: paymentMethod === m ? "#f59e0b" : "#888",
 									cursor: "pointer",
 								}}
@@ -312,13 +410,28 @@ function NuevoGastoModal({
 				{/* Notes */}
 				<div>
 					<SectionLabel>Notas (opcional)</SectionLabel>
-					<textarea className="input-base mt-1" style={{ width: "100%", minHeight: 60, resize: "vertical" }} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Observaciones..." />
+					<textarea
+						className="input-base mt-1"
+						style={{ width: "100%", minHeight: 60, resize: "vertical" }}
+						value={notes}
+						onChange={(e) => setNotes(e.target.value)}
+						placeholder="Observaciones..."
+					/>
 				</div>
 				{/* Error */}
 				{error && <div style={{ color: "#ef4444", fontSize: 12 }}>{error}</div>}
 				{/* Submit */}
-				<button className="btn-primary" style={{ width: "100%", marginTop: 4 }} onClick={handleSubmit} disabled={saving}>
-					{saving ? "Guardando..." : editing ? "Guardar cambios" : "Registrar gasto"}
+				<button
+					className="btn-primary"
+					style={{ width: "100%", marginTop: 4 }}
+					onClick={handleSubmit}
+					disabled={saving}
+				>
+					{saving
+						? "Guardando..."
+						: editing
+							? "Guardar cambios"
+							: "Registrar gasto"}
 				</button>
 			</div>
 		</Modal>
@@ -363,9 +476,15 @@ function CategoriasModal({
 		try {
 			const body = { name: name.trim(), icon, order: categories.length };
 			if (editingId) {
-				await apiFetch(`/api/expense-categories/${editingId}`, { method: "PATCH", body: JSON.stringify(body) });
+				await apiFetch(`/api/expense-categories/${editingId}`, {
+					method: "PATCH",
+					body: JSON.stringify(body),
+				});
 			} else {
-				await apiFetch("/api/expense-categories", { method: "POST", body: JSON.stringify(body) });
+				await apiFetch("/api/expense-categories", {
+					method: "POST",
+					body: JSON.stringify(body),
+				});
 			}
 			resetForm();
 			onChanged();
@@ -405,8 +524,12 @@ function CategoriasModal({
 						style={{
 							padding: "10px 12px",
 							borderRadius: 10,
-							background: editingId === cat.id ? "rgba(245,158,11,0.08)" : "var(--s2)",
-							border: editingId === cat.id ? "1px solid rgba(245,158,11,0.3)" : "1px solid var(--s3)",
+							background:
+								editingId === cat.id ? "rgba(245,158,11,0.08)" : "var(--s2)",
+							border:
+								editingId === cat.id
+									? "1px solid rgba(245,158,11,0.3)"
+									: "1px solid var(--s3)",
 						}}
 					>
 						<div
@@ -420,35 +543,94 @@ function CategoriasModal({
 								justifyContent: "center",
 							}}
 						>
-							<CategoryIcon iconName={cat.icon} size={13} style={{ color: "#888" }} />
+							<CategoryIcon
+								iconName={cat.icon}
+								size={13}
+								style={{ color: "#888" }}
+							/>
 						</div>
-						<span className="font-body text-ink-primary flex-1" style={{ fontSize: 13 }}>{cat.name}</span>
-						<span className="font-body text-ink-disabled" style={{ fontSize: 10 }}>#{cat.order}</span>
-						<button onClick={() => startEdit(cat)} className="btn-ghost" style={{ padding: 4 }}><Pencil size={12} /></button>
-						<button onClick={() => handleDelete(cat.id)} className="btn-ghost" style={{ padding: 4, color: "#ef4444" }}><Trash2 size={12} /></button>
+						<span
+							className="font-body text-ink-primary flex-1"
+							style={{ fontSize: 13 }}
+						>
+							{cat.name}
+						</span>
+						<span
+							className="font-body text-ink-disabled"
+							style={{ fontSize: 10 }}
+						>
+							#{cat.order}
+						</span>
+						<button
+							onClick={() => startEdit(cat)}
+							className="btn-ghost"
+							style={{ padding: 4 }}
+						>
+							<Pencil size={12} />
+						</button>
+						<button
+							onClick={() => handleDelete(cat.id)}
+							className="btn-ghost"
+							style={{ padding: 4, color: "#ef4444" }}
+						>
+							<Trash2 size={12} />
+						</button>
 					</div>
 				))}
 
 				{/* Add/Edit form */}
-				<div style={{ borderTop: "1px solid var(--s3)", paddingTop: 12, marginTop: 4 }}>
-					<SectionLabel>{editingId ? "Editar categoría" : "Nueva categoría"}</SectionLabel>
+				<div
+					style={{
+						borderTop: "1px solid var(--s3)",
+						paddingTop: 12,
+						marginTop: 4,
+					}}
+				>
+					<SectionLabel>
+						{editingId ? "Editar categoría" : "Nueva categoría"}
+					</SectionLabel>
 					<div className="flex gap-2 mt-2">
-						<select className="input-base" style={{ width: 80 }} value={icon} onChange={(e) => setIcon(e.target.value)}>
+						<select
+							className="input-base"
+							style={{ width: 80 }}
+							value={icon}
+							onChange={(e) => setIcon(e.target.value)}
+						>
 							{iconOptions.map((ic) => (
-								<option key={ic} value={ic}>{ic}</option>
+								<option key={ic} value={ic}>
+									{ic}
+								</option>
 							))}
 						</select>
-						<input className="input-base flex-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nombre" />
-						<button className="btn-primary" style={{ padding: "6px 14px" }} onClick={handleSave} disabled={busy}>
+						<input
+							className="input-base flex-1"
+							value={name}
+							onChange={(e) => setName(e.target.value)}
+							placeholder="Nombre"
+						/>
+						<button
+							className="btn-primary"
+							style={{ padding: "6px 14px" }}
+							onClick={handleSave}
+							disabled={busy}
+						>
 							{editingId ? "Guardar" : "Agregar"}
 						</button>
 						{editingId && (
-							<button className="btn-ghost" style={{ padding: "6px 10px" }} onClick={resetForm}>
+							<button
+								className="btn-ghost"
+								style={{ padding: "6px 10px" }}
+								onClick={resetForm}
+							>
 								<X size={14} />
 							</button>
 						)}
 					</div>
-					{error && <div style={{ color: "#ef4444", fontSize: 11, marginTop: 6 }}>{error}</div>}
+					{error && (
+						<div style={{ color: "#ef4444", fontSize: 11, marginTop: 6 }}>
+							{error}
+						</div>
+					)}
 				</div>
 			</div>
 		</Modal>
@@ -508,7 +690,9 @@ export default function ExpensesPage() {
 
 	// ── Initial load ─────────────────────────────────────────────────────────
 	useEffect(() => {
-		Promise.all([fetchCategories(), fetchExpenses(), fetchSuppliers()]).finally(() => setLoading(false));
+		Promise.all([fetchCategories(), fetchExpenses(), fetchSuppliers()]).finally(
+			() => setLoading(false),
+		);
 	}, [fetchCategories, fetchExpenses, fetchSuppliers]);
 
 	// ── Refetch expenses on filter change ────────────────────────────────────
@@ -530,7 +714,9 @@ export default function ExpensesPage() {
 	// ── Computed KPIs ────────────────────────────────────────────────────────
 	const totalMes = expenses.reduce((s, e) => s + e.amount, 0);
 	const todayStr = new Date().toISOString().slice(0, 10);
-	const gastosHoy = expenses.filter((e) => e.date.slice(0, 10) === todayStr).reduce((s, e) => s + e.amount, 0);
+	const gastosHoy = expenses
+		.filter((e) => e.date.slice(0, 10) === todayStr)
+		.reduce((s, e) => s + e.amount, 0);
 	const uniqueCats = new Set(expenses.map((e) => e.categoryId)).size;
 
 	// ── Category summaries ───────────────────────────────────────────────────
@@ -549,7 +735,8 @@ export default function ExpensesPage() {
 	// ── Sorted expenses ──────────────────────────────────────────────────────
 	const sortedExpenses = [...expenses].sort((a, b) => {
 		const mul = sortDir === "asc" ? 1 : -1;
-		if (sortField === "date") return mul * (new Date(a.date).getTime() - new Date(b.date).getTime());
+		if (sortField === "date")
+			return mul * (new Date(a.date).getTime() - new Date(b.date).getTime());
 		return mul * (a.amount - b.amount);
 	});
 
@@ -563,31 +750,97 @@ export default function ExpensesPage() {
 
 	const SortIcon = ({ field }: { field: "date" | "amount" }) => {
 		if (sortField !== field) return null;
-		return sortDir === "desc" ? <ChevronDown size={10} /> : <ChevronUp size={10} />;
+		return sortDir === "desc" ? (
+			<ChevronDown size={10} />
+		) : (
+			<ChevronUp size={10} />
+		);
 	};
 
 	// ── Category name resolver ───────────────────────────────────────────────
-	const catName = (id: string) => categories.find((c) => c.id === id)?.name ?? "—";
-	const catIcon = (id: string) => categories.find((c) => c.id === id)?.icon ?? "Tag";
+	const catName = (id: string) =>
+		categories.find((c) => c.id === id)?.name ?? "—";
+	const catIcon = (id: string) =>
+		categories.find((c) => c.id === id)?.icon ?? "Tag";
+
+	const handlePrint = () => {
+		const rows = sortedExpenses
+			.map(
+				(e) => `<tr>
+					<td>${formatDate(e.date)}</td>
+					<td>${catName(e.categoryId)}</td>
+					<td>${e.description}</td>
+					<td>${e.paymentMethod}</td>
+					<td class="amount">${printCurrency(e.amount)}</td>
+				</tr>`,
+			)
+			.join("");
+		const periodLabel =
+			period === "Custom" ? `${customFrom} — ${customTo}` : period;
+		printDocument({
+			title: "Gastos",
+			subtitle: `${periodLabel} — ${sortedExpenses.length} gastos — Total: ${printCurrency(totalMes)}`,
+			content: `<table>
+				<thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Medio</th><th style="text-align:right">Monto</th></tr></thead>
+				<tbody>${rows}
+				<tr class="total-row"><td colspan="4">Total</td><td class="amount">${printCurrency(totalMes)}</td></tr>
+				</tbody></table>`,
+		});
+	};
 
 	return (
-		<div className="min-h-screen p-5 md:p-7 pb-10" style={{ background: "var(--s0)" }}>
+		<div
+			className="min-h-screen p-5 md:p-7 pb-10"
+			style={{ background: "var(--s0)" }}
+		>
 			{/* ── Header ──────────────────────────────────────────────────────── */}
 			<div className="flex flex-wrap items-center justify-between gap-3 mb-5">
 				<div>
 					<div className="flex items-center gap-2 mb-1">
-						<div style={{ width: 3, height: 20, borderRadius: 3, background: "var(--gold)" }} />
-						<h1 className="font-kds" style={{ fontSize: 40, lineHeight: 1, color: "#e5e5e5" }}>GASTOS</h1>
+						<div
+							style={{
+								width: 3,
+								height: 20,
+								borderRadius: 3,
+								background: "var(--gold)",
+							}}
+						/>
+						<h1
+							className="font-kds"
+							style={{ fontSize: 40, lineHeight: 1, color: "#e5e5e5" }}
+						>
+							GASTOS
+						</h1>
 					</div>
 					<div className="font-body text-ink-disabled" style={{ fontSize: 12 }}>
 						Control y registro de gastos operativos
 					</div>
 				</div>
 				<div className="flex gap-2">
-					<button className="btn-secondary" onClick={() => setShowCatModal(true)} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+					<button
+						className="btn-ghost flex items-center gap-1.5"
+						onClick={handlePrint}
+					>
+						<Printer size={14} />
+						<span className="font-display" style={{ fontSize: 10 }}>
+							Imprimir
+						</span>
+					</button>
+					<button
+						className="btn-secondary"
+						onClick={() => setShowCatModal(true)}
+						style={{ display: "flex", alignItems: "center", gap: 6 }}
+					>
 						<Settings size={13} /> Categorías
 					</button>
-					<button className="btn-primary" onClick={() => { setEditingExpense(null); setShowNewModal(true); }} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+					<button
+						className="btn-primary"
+						onClick={() => {
+							setEditingExpense(null);
+							setShowNewModal(true);
+						}}
+						style={{ display: "flex", alignItems: "center", gap: 6 }}
+					>
 						<Plus size={14} /> Nuevo Gasto
 					</button>
 				</div>
@@ -596,9 +849,24 @@ export default function ExpensesPage() {
 			{/* ── KPI pills ───────────────────────────────────────────────────── */}
 			<div className="grid gap-4 grid-cols-3 mb-6">
 				{[
-					{ label: "Gasto Total Período", value: formatCurrency(totalMes), accent: true, icon: DollarSign },
-					{ label: "Gastos Hoy", value: formatCurrency(gastosHoy), accent: false, icon: CalendarDays },
-					{ label: "Categorías", value: String(uniqueCats), accent: false, icon: Tag },
+					{
+						label: "Gasto Total Período",
+						value: formatCurrency(totalMes),
+						accent: true,
+						icon: DollarSign,
+					},
+					{
+						label: "Gastos Hoy",
+						value: formatCurrency(gastosHoy),
+						accent: false,
+						icon: CalendarDays,
+					},
+					{
+						label: "Categorías",
+						value: String(uniqueCats),
+						accent: false,
+						icon: Tag,
+					},
 				].map(({ label, value, accent, icon: Icon }) => (
 					<div
 						key={label}
@@ -606,19 +874,60 @@ export default function ExpensesPage() {
 						style={{
 							position: "relative",
 							overflow: "hidden",
-							...(accent ? { borderColor: "rgba(245,158,11,0.25)", boxShadow: "0 0 24px rgba(245,158,11,0.08)" } : {}),
+							...(accent
+								? {
+										borderColor: "rgba(245,158,11,0.25)",
+										boxShadow: "0 0 24px rgba(245,158,11,0.08)",
+									}
+								: {}),
 						}}
 					>
 						{accent && (
-							<div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 300px 200px at 50% 0%, rgba(245,158,11,0.06) 0%, transparent 60%)", pointerEvents: "none" }} />
+							<div
+								style={{
+									position: "absolute",
+									inset: 0,
+									background:
+										"radial-gradient(ellipse 300px 200px at 50% 0%, rgba(245,158,11,0.06) 0%, transparent 60%)",
+									pointerEvents: "none",
+								}}
+							/>
 						)}
-						<div className="flex items-center justify-between mb-3" style={{ position: "relative", zIndex: 1 }}>
+						<div
+							className="flex items-center justify-between mb-3"
+							style={{ position: "relative", zIndex: 1 }}
+						>
 							<SectionLabel>{label}</SectionLabel>
-							<div style={{ width: 28, height: 28, borderRadius: 7, background: accent ? "rgba(245,158,11,0.2)" : "var(--s3)", border: accent ? "1px solid rgba(245,158,11,0.3)" : "1px solid var(--s4)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-								<Icon size={13} style={{ color: accent ? "#f59e0b" : "#888" }} />
+							<div
+								style={{
+									width: 28,
+									height: 28,
+									borderRadius: 7,
+									background: accent ? "rgba(245,158,11,0.2)" : "var(--s3)",
+									border: accent
+										? "1px solid rgba(245,158,11,0.3)"
+										: "1px solid var(--s4)",
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+								}}
+							>
+								<Icon
+									size={13}
+									style={{ color: accent ? "#f59e0b" : "#888" }}
+								/>
 							</div>
 						</div>
-						<div className="font-kds" style={{ fontSize: accent ? 32 : 26, lineHeight: 1, color: accent ? "#f59e0b" : "#e5e5e5", position: "relative", zIndex: 1 }}>
+						<div
+							className="font-kds"
+							style={{
+								fontSize: accent ? 32 : 26,
+								lineHeight: 1,
+								color: accent ? "#f59e0b" : "#e5e5e5",
+								position: "relative",
+								zIndex: 1,
+							}}
+						>
 							{value}
 						</div>
 					</div>
@@ -627,7 +936,10 @@ export default function ExpensesPage() {
 
 			{/* ── Period Selector ──────────────────────────────────────────────── */}
 			<div className="flex flex-wrap items-center gap-3 mb-6">
-				<div className="flex items-center gap-0.5 p-1 rounded-xl" style={{ background: "var(--s2)", border: "1px solid var(--s3)" }}>
+				<div
+					className="flex items-center gap-0.5 p-1 rounded-xl"
+					style={{ background: "var(--s2)", border: "1px solid var(--s3)" }}
+				>
 					{PERIODS.map((p) => (
 						<button
 							key={p}
@@ -644,7 +956,8 @@ export default function ExpensesPage() {
 								border: "none",
 								cursor: "pointer",
 								transition: "all 0.15s",
-								boxShadow: period === p ? "0 0 8px rgba(245,158,11,0.3)" : "none",
+								boxShadow:
+									period === p ? "0 0 8px rgba(245,158,11,0.3)" : "none",
 							}}
 						>
 							{p}
@@ -653,9 +966,23 @@ export default function ExpensesPage() {
 				</div>
 				{period === "Custom" && (
 					<div className="flex items-center gap-2">
-						<input className="input-base" type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} style={{ fontSize: 12 }} />
-						<span className="text-ink-disabled" style={{ fontSize: 12 }}>a</span>
-						<input className="input-base" type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} style={{ fontSize: 12 }} />
+						<input
+							className="input-base"
+							type="date"
+							value={customFrom}
+							onChange={(e) => setCustomFrom(e.target.value)}
+							style={{ fontSize: 12 }}
+						/>
+						<span className="text-ink-disabled" style={{ fontSize: 12 }}>
+							a
+						</span>
+						<input
+							className="input-base"
+							type="date"
+							value={customTo}
+							onChange={(e) => setCustomTo(e.target.value)}
+							style={{ fontSize: 12 }}
+						/>
 					</div>
 				)}
 			</div>
@@ -663,39 +990,82 @@ export default function ExpensesPage() {
 			<div className="divider-gold mb-6" />
 
 			{loading ? (
-				<div className="flex items-center justify-center" style={{ minHeight: 200 }}>
-					<span className="font-body text-ink-disabled" style={{ fontSize: 14 }}>Cargando...</span>
+				<div
+					className="flex items-center justify-center"
+					style={{ minHeight: 200 }}
+				>
+					<span
+						className="font-body text-ink-disabled"
+						style={{ fontSize: 14 }}
+					>
+						Cargando...
+					</span>
 				</div>
 			) : (
 				<>
 					{/* ── Category Summary Cards ──────────────────────────────────── */}
 					{catSummaries.length > 0 && (
 						<div className="mb-6">
-							<div className="mb-3"><SectionLabel>Resumen por Categoría</SectionLabel></div>
+							<div className="mb-3">
+								<SectionLabel>Resumen por Categoría</SectionLabel>
+							</div>
 							<div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 								{catSummaries.map((cat) => (
 									<button
 										key={cat.id}
-										onClick={() => setFilterCat(filterCat === cat.id ? "" : cat.id)}
+										onClick={() =>
+											setFilterCat(filterCat === cat.id ? "" : cat.id)
+										}
 										className="card"
 										style={{
 											padding: "14px 16px",
 											cursor: "pointer",
 											textAlign: "left",
-											border: filterCat === cat.id ? "1px solid rgba(245,158,11,0.4)" : undefined,
-											background: filterCat === cat.id ? "rgba(245,158,11,0.05)" : undefined,
+											border:
+												filterCat === cat.id
+													? "1px solid rgba(245,158,11,0.4)"
+													: undefined,
+											background:
+												filterCat === cat.id
+													? "rgba(245,158,11,0.05)"
+													: undefined,
 										}}
 									>
 										<div className="flex items-center gap-2.5 mb-2">
-											<div style={{ width: 28, height: 28, borderRadius: 7, background: "var(--s3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-												<CategoryIcon iconName={cat.icon} size={13} style={{ color: "#888" }} />
+											<div
+												style={{
+													width: 28,
+													height: 28,
+													borderRadius: 7,
+													background: "var(--s3)",
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+												}}
+											>
+												<CategoryIcon
+													iconName={cat.icon}
+													size={13}
+													style={{ color: "#888" }}
+												/>
 											</div>
-											<span className="font-body text-ink-primary" style={{ fontSize: 13, fontWeight: 500 }}>{cat.name}</span>
+											<span
+												className="font-body text-ink-primary"
+												style={{ fontSize: 13, fontWeight: 500 }}
+											>
+												{cat.name}
+											</span>
 										</div>
-										<div className="font-kds" style={{ fontSize: 22, lineHeight: 1, color: "#e5e5e5" }}>
+										<div
+											className="font-kds"
+											style={{ fontSize: 22, lineHeight: 1, color: "#e5e5e5" }}
+										>
 											{formatCurrency(cat.total)}
 										</div>
-										<div className="font-body text-ink-disabled mt-1" style={{ fontSize: 11 }}>
+										<div
+											className="font-body text-ink-disabled mt-1"
+											style={{ fontSize: 11 }}
+										>
 											{cat.count} gasto{cat.count !== 1 ? "s" : ""}
 										</div>
 									</button>
@@ -715,69 +1085,207 @@ export default function ExpensesPage() {
 
 					{/* ── Expense List ────────────────────────────────────────────── */}
 					<div className="card" style={{ padding: 0, overflow: "hidden" }}>
-						<div style={{ padding: "14px 20px", borderBottom: "1px solid var(--s3)" }} className="flex items-center justify-between">
+						<div
+							style={{
+								padding: "14px 20px",
+								borderBottom: "1px solid var(--s3)",
+							}}
+							className="flex items-center justify-between"
+						>
 							<div>
-								<h3 className="font-display text-ink-primary" style={{ fontSize: 13, fontWeight: 700 }}>
+								<h3
+									className="font-display text-ink-primary"
+									style={{ fontSize: 13, fontWeight: 700 }}
+								>
 									Listado de Gastos
 								</h3>
-								<div className="font-body text-ink-disabled" style={{ fontSize: 11 }}>
-									{expenses.length} registro{expenses.length !== 1 ? "s" : ""}{filterCat ? ` — ${catName(filterCat)}` : ""}
+								<div
+									className="font-body text-ink-disabled"
+									style={{ fontSize: 11 }}
+								>
+									{expenses.length} registro{expenses.length !== 1 ? "s" : ""}
+									{filterCat ? ` — ${catName(filterCat)}` : ""}
 								</div>
 							</div>
 						</div>
 
 						{sortedExpenses.length === 0 ? (
-							<div className="flex items-center justify-center" style={{ padding: "40px 20px" }}>
-								<span className="font-body text-ink-disabled" style={{ fontSize: 13 }}>No hay gastos registrados en este período.</span>
+							<div
+								className="flex items-center justify-center"
+								style={{ padding: "40px 20px" }}
+							>
+								<span
+									className="font-body text-ink-disabled"
+									style={{ fontSize: 13 }}
+								>
+									No hay gastos registrados en este período.
+								</span>
 							</div>
 						) : (
 							<div style={{ overflowX: "auto" }}>
 								<table style={{ width: "100%", borderCollapse: "collapse" }}>
 									<thead>
 										<tr style={{ borderBottom: "1px solid var(--s3)" }}>
-											<th className="font-display text-ink-disabled uppercase" style={{ fontSize: 9, letterSpacing: "0.25em", padding: "12px 16px", textAlign: "left", fontWeight: 600 }}>Categoría</th>
-											<th className="font-display text-ink-disabled uppercase" style={{ fontSize: 9, letterSpacing: "0.25em", padding: "12px 16px", textAlign: "left", fontWeight: 600 }}>Descripción</th>
-											<th className="font-display text-ink-disabled uppercase" style={{ fontSize: 9, letterSpacing: "0.25em", padding: "12px 16px", textAlign: "left", fontWeight: 600 }}>Proveedor</th>
-											<th className="font-display text-ink-disabled uppercase" style={{ fontSize: 9, letterSpacing: "0.25em", padding: "12px 16px", textAlign: "left", fontWeight: 600, cursor: "pointer" }} onClick={() => toggleSort("date")}>
-												<span className="flex items-center gap-1">Fecha <SortIcon field="date" /></span>
+											<th
+												className="font-display text-ink-disabled uppercase"
+												style={{
+													fontSize: 9,
+													letterSpacing: "0.25em",
+													padding: "12px 16px",
+													textAlign: "left",
+													fontWeight: 600,
+												}}
+											>
+												Categoría
 											</th>
-											<th className="font-display text-ink-disabled uppercase" style={{ fontSize: 9, letterSpacing: "0.25em", padding: "12px 16px", textAlign: "right", fontWeight: 600, cursor: "pointer" }} onClick={() => toggleSort("amount")}>
-												<span className="flex items-center justify-end gap-1">Monto <SortIcon field="amount" /></span>
+											<th
+												className="font-display text-ink-disabled uppercase"
+												style={{
+													fontSize: 9,
+													letterSpacing: "0.25em",
+													padding: "12px 16px",
+													textAlign: "left",
+													fontWeight: 600,
+												}}
+											>
+												Descripción
 											</th>
-											<th className="font-display text-ink-disabled uppercase" style={{ fontSize: 9, letterSpacing: "0.25em", padding: "12px 16px", textAlign: "center", fontWeight: 600 }}>Pago</th>
+											<th
+												className="font-display text-ink-disabled uppercase"
+												style={{
+													fontSize: 9,
+													letterSpacing: "0.25em",
+													padding: "12px 16px",
+													textAlign: "left",
+													fontWeight: 600,
+												}}
+											>
+												Proveedor
+											</th>
+											<th
+												className="font-display text-ink-disabled uppercase"
+												style={{
+													fontSize: 9,
+													letterSpacing: "0.25em",
+													padding: "12px 16px",
+													textAlign: "left",
+													fontWeight: 600,
+													cursor: "pointer",
+												}}
+												onClick={() => toggleSort("date")}
+											>
+												<span className="flex items-center gap-1">
+													Fecha <SortIcon field="date" />
+												</span>
+											</th>
+											<th
+												className="font-display text-ink-disabled uppercase"
+												style={{
+													fontSize: 9,
+													letterSpacing: "0.25em",
+													padding: "12px 16px",
+													textAlign: "right",
+													fontWeight: 600,
+													cursor: "pointer",
+												}}
+												onClick={() => toggleSort("amount")}
+											>
+												<span className="flex items-center justify-end gap-1">
+													Monto <SortIcon field="amount" />
+												</span>
+											</th>
+											<th
+												className="font-display text-ink-disabled uppercase"
+												style={{
+													fontSize: 9,
+													letterSpacing: "0.25em",
+													padding: "12px 16px",
+													textAlign: "center",
+													fontWeight: 600,
+												}}
+											>
+												Pago
+											</th>
 											<th style={{ width: 72 }} />
 										</tr>
 									</thead>
 									<tbody>
 										{sortedExpenses.map((exp) => (
-											<tr key={exp.id} style={{ borderBottom: "1px solid var(--s3)" }}>
+											<tr
+												key={exp.id}
+												style={{ borderBottom: "1px solid var(--s3)" }}
+											>
 												{/* Category */}
 												<td style={{ padding: "12px 16px" }}>
 													<div className="flex items-center gap-2">
-														<div style={{ width: 24, height: 24, borderRadius: 6, background: "var(--s3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-															<CategoryIcon iconName={catIcon(exp.categoryId)} size={11} style={{ color: "#888" }} />
+														<div
+															style={{
+																width: 24,
+																height: 24,
+																borderRadius: 6,
+																background: "var(--s3)",
+																display: "flex",
+																alignItems: "center",
+																justifyContent: "center",
+																flexShrink: 0,
+															}}
+														>
+															<CategoryIcon
+																iconName={catIcon(exp.categoryId)}
+																size={11}
+																style={{ color: "#888" }}
+															/>
 														</div>
-														<span className="font-body text-ink-secondary" style={{ fontSize: 12 }}>{catName(exp.categoryId)}</span>
+														<span
+															className="font-body text-ink-secondary"
+															style={{ fontSize: 12 }}
+														>
+															{catName(exp.categoryId)}
+														</span>
 													</div>
 												</td>
 												{/* Description */}
 												<td style={{ padding: "12px 16px" }}>
-													<span className="font-body text-ink-primary" style={{ fontSize: 13 }}>{exp.description}</span>
+													<span
+														className="font-body text-ink-primary"
+														style={{ fontSize: 13 }}
+													>
+														{exp.description}
+													</span>
 												</td>
 												{/* Supplier */}
 												<td style={{ padding: "12px 16px" }}>
-													<span className="font-body text-ink-disabled" style={{ fontSize: 12 }}>{exp.supplier?.name ?? "—"}</span>
+													<span
+														className="font-body text-ink-disabled"
+														style={{ fontSize: 12 }}
+													>
+														{exp.supplier?.name ?? "—"}
+													</span>
 												</td>
 												{/* Date */}
 												<td style={{ padding: "12px 16px" }}>
-													<span className="font-body text-ink-secondary" style={{ fontSize: 12, fontFamily: "monospace" }}>{formatDate(exp.date)}</span>
+													<span
+														className="font-body text-ink-secondary"
+														style={{ fontSize: 12, fontFamily: "monospace" }}
+													>
+														{formatDate(exp.date)}
+													</span>
 												</td>
 												{/* Amount */}
-												<td style={{ padding: "12px 16px", textAlign: "right" }}>
-													<span className="font-kds" style={{ fontSize: 20, color: "#e5e5e5" }}>{formatCurrency(exp.amount)}</span>
+												<td
+													style={{ padding: "12px 16px", textAlign: "right" }}
+												>
+													<span
+														className="font-kds"
+														style={{ fontSize: 20, color: "#e5e5e5" }}
+													>
+														{formatCurrency(exp.amount)}
+													</span>
 												</td>
 												{/* Payment method badge */}
-												<td style={{ padding: "12px 16px", textAlign: "center" }}>
+												<td
+													style={{ padding: "12px 16px", textAlign: "center" }}
+												>
 													<span
 														className="badge"
 														style={{
@@ -785,7 +1293,8 @@ export default function ExpensesPage() {
 															padding: "3px 10px",
 															borderRadius: 6,
 															background: `${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}22`,
-															color: PAYMENT_COLORS[exp.paymentMethod] ?? "#888",
+															color:
+																PAYMENT_COLORS[exp.paymentMethod] ?? "#888",
 															border: `1px solid ${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}44`,
 														}}
 													>
@@ -820,9 +1329,24 @@ export default function ExpensesPage() {
 									{/* Footer total */}
 									<tfoot>
 										<tr style={{ borderTop: "2px solid var(--s4)" }}>
-											<td colSpan={4} className="font-display text-ink-primary" style={{ padding: "14px 16px", fontSize: 12, fontWeight: 700 }}>Total</td>
+											<td
+												colSpan={4}
+												className="font-display text-ink-primary"
+												style={{
+													padding: "14px 16px",
+													fontSize: 12,
+													fontWeight: 700,
+												}}
+											>
+												Total
+											</td>
 											<td style={{ padding: "14px 16px", textAlign: "right" }}>
-												<span className="font-kds" style={{ fontSize: 22, color: "#f59e0b" }}>{formatCurrency(totalMes)}</span>
+												<span
+													className="font-kds"
+													style={{ fontSize: 22, color: "#f59e0b" }}
+												>
+													{formatCurrency(totalMes)}
+												</span>
 											</td>
 											<td colSpan={2} />
 										</tr>
@@ -837,17 +1361,26 @@ export default function ExpensesPage() {
 			{/* ── Modals ──────────────────────────────────────────────────────── */}
 			<NuevoGastoModal
 				open={showNewModal}
-				onClose={() => { setShowNewModal(false); setEditingExpense(null); }}
+				onClose={() => {
+					setShowNewModal(false);
+					setEditingExpense(null);
+				}}
 				categories={categories}
 				suppliers={suppliers}
-				onSaved={() => { fetchExpenses(); fetchCategories(); }}
+				onSaved={() => {
+					fetchExpenses();
+					fetchCategories();
+				}}
 				editing={editingExpense}
 			/>
 			<CategoriasModal
 				open={showCatModal}
 				onClose={() => setShowCatModal(false)}
 				categories={categories}
-				onChanged={() => { fetchCategories(); fetchExpenses(); }}
+				onChanged={() => {
+					fetchCategories();
+					fetchExpenses();
+				}}
 			/>
 		</div>
 	);
