@@ -30,19 +30,6 @@ function formatCurrency(n: number) {
 	return "$" + Math.round(n).toLocaleString("es-AR");
 }
 
-function getProductPhoto(categoryId: string): string {
-	const map: Record<string, string> = {
-		c1: "/media/drinks-hero.jpg",
-		c2: "/media/beer-sticks.jpg",
-		c3: "/media/cheers.jpg",
-		c4: "/media/combo-wrap-mojito.jpg",
-		c5: "/media/burger-egg.jpg",
-		c6: "/media/pool-hero.jpg",
-		c7: "/media/sub-drink.jpg",
-	};
-	return map[categoryId] ?? "";
-}
-
 // ─── Checkout Modal ───────────────────────────────────────────────────────────
 
 interface CheckoutModalProps {
@@ -596,13 +583,6 @@ export default function PublicDeliveryPage() {
 	);
 	const cartCount = useMemo(() => cart.reduce((s, i) => s + i.qty, 0), [cart]);
 
-	const filtered = useMemo(() => {
-		const avail = products.filter((p) => p.isAvailable);
-		return activeCategory === "all"
-			? avail
-			: avail.filter((p) => p.categoryId === activeCategory);
-	}, [products, activeCategory]);
-
 	const canSubmit =
 		name.trim().length >= 2 &&
 		address.trim().length > 0 &&
@@ -641,9 +621,51 @@ export default function PublicDeliveryPage() {
 	};
 
 	const allCategories = useMemo(
-		() => [{ id: "all", name: "Todos", icon: "" }, ...categories],
+		() => [{ id: "all", name: "Todos", icon: "", order: -1 }, ...categories],
 		[categories],
 	);
+
+	// Group categories under parent sections for sidebar display
+	const categoryGroups = useMemo(() => {
+		const tragos = categories.filter((c) =>
+			["c1", "c1b", "c1c", "c1d"].includes(c.id),
+		);
+		const bebidas = categories.filter((c) =>
+			["c2", "c4", "c4b", "c3", "c6"].includes(c.id),
+		);
+		const comida = categories.filter((c) =>
+			["c5a", "c5b", "c5c", "c5d", "c5e", "c5f"].includes(c.id),
+		);
+		const otros = categories.filter((c) => ["c7"].includes(c.id));
+		return [
+			{ label: "Tragos", cats: tragos },
+			{ label: "Bebidas", cats: bebidas },
+			{ label: "Comida", cats: comida },
+			{ label: "Otros", cats: otros },
+		].filter((g) => g.cats.length > 0);
+	}, [categories]);
+
+	// Group filtered products by category for "all" view
+	const groupedProducts = useMemo(() => {
+		const avail = products.filter((p) => p.isAvailable);
+		if (activeCategory !== "all") {
+			const cat = categories.find((c) => c.id === activeCategory);
+			return cat
+				? [
+						{
+							category: cat,
+							items: avail.filter((p) => p.categoryId === cat.id),
+						},
+					]
+				: [];
+		}
+		return categories
+			.map((cat) => ({
+				category: cat,
+				items: avail.filter((p) => p.categoryId === cat.id),
+			}))
+			.filter((g) => g.items.length > 0);
+	}, [products, categories, activeCategory]);
 
 	return (
 		<>
@@ -745,7 +767,12 @@ export default function PublicDeliveryPage() {
 							<img
 								src="/logo.svg"
 								alt="My Way"
-								style={{ height: 24, width: 'auto', filter: 'invert(1)', display: 'block' }}
+								style={{
+									height: 24,
+									width: "auto",
+									filter: "invert(1)",
+									display: "block",
+								}}
 							/>
 						</a>
 						<div
@@ -778,56 +805,97 @@ export default function PublicDeliveryPage() {
 							Categorías
 						</p>
 						<div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-							{allCategories.map((cat) => {
-								const active = activeCategory === cat.id;
-								return (
-									<button
-										key={cat.id}
-										className="cat-item"
-										onClick={() => setActiveCategory(cat.id)}
+							{/* Todos button */}
+							<button
+								className="cat-item"
+								onClick={() => setActiveCategory("all")}
+								style={{
+									display: "flex",
+									alignItems: "center",
+									gap: 10,
+									padding: "9px 12px",
+									borderRadius: 10,
+									border: "none",
+									background:
+										activeCategory === "all"
+											? "rgba(245,158,11,0.12)"
+											: "transparent",
+									color: activeCategory === "all" ? "#f59e0b" : "#888",
+									fontSize: 13,
+									fontWeight: activeCategory === "all" ? 700 : 400,
+									cursor: "pointer",
+									textAlign: "left",
+									width: "100%",
+									transition: "background 0.15s, color 0.15s",
+									marginBottom: 8,
+								}}
+							>
+								<svg
+									width="14"
+									height="14"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									strokeWidth="2"
+								>
+									<rect x="3" y="3" width="7" height="7" />
+									<rect x="14" y="3" width="7" height="7" />
+									<rect x="3" y="14" width="7" height="7" />
+									<rect x="14" y="14" width="7" height="7" />
+								</svg>
+								Todos
+							</button>
+
+							{/* Grouped categories */}
+							{categoryGroups.map((group) => (
+								<div key={group.label} style={{ marginBottom: 12 }}>
+									<p
 										style={{
-											display: "flex",
-											alignItems: "center",
-											gap: 10,
-											padding: "9px 12px",
-											borderRadius: 10,
-											border: "none",
-											background: active
-												? "rgba(245,158,11,0.12)"
-												: "transparent",
-											color: active ? "#f59e0b" : "#888",
-											fontSize: 13,
-											fontWeight: active ? 700 : 400,
-											cursor: "pointer",
-											textAlign: "left",
-											width: "100%",
-											transition: "background 0.15s, color 0.15s",
+											fontSize: 9,
+											letterSpacing: "0.2em",
+											textTransform: "uppercase",
+											color: "#444",
+											margin: "0 0 4px 12px",
+											fontWeight: 700,
 										}}
 									>
-										{cat.icon && (
-											<span style={{ fontSize: 15, lineHeight: 1 }}>
-												{cat.icon}
-											</span>
-										)}
-										{!cat.icon && cat.id === "all" && (
-											<svg
-												width="14"
-												height="14"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												strokeWidth="2"
+										{group.label}
+									</p>
+									{group.cats.map((cat) => {
+										const active = activeCategory === cat.id;
+										return (
+											<button
+												key={cat.id}
+												className="cat-item"
+												onClick={() => setActiveCategory(cat.id)}
+												style={{
+													display: "flex",
+													alignItems: "center",
+													gap: 10,
+													padding: "8px 12px",
+													borderRadius: 10,
+													border: "none",
+													background: active
+														? "rgba(245,158,11,0.12)"
+														: "transparent",
+													color: active ? "#f59e0b" : "#888",
+													fontSize: 13,
+													fontWeight: active ? 700 : 400,
+													cursor: "pointer",
+													textAlign: "left",
+													width: "100%",
+													transition: "background 0.15s, color 0.15s",
+												}}
 											>
-												<rect x="3" y="3" width="7" height="7" />
-												<rect x="14" y="3" width="7" height="7" />
-												<rect x="3" y="14" width="7" height="7" />
-												<rect x="14" y="14" width="7" height="7" />
-											</svg>
-										)}
-										{cat.name}
-									</button>
-								);
-							})}
+												<span style={{ fontSize: 15, lineHeight: 1 }}>
+													{cat.icon}
+												</span>
+												{cat.name}
+											</button>
+										);
+									})}
+								</div>
+							))}
 						</div>
 					</div>
 
@@ -869,31 +937,10 @@ export default function PublicDeliveryPage() {
 							})}
 						</div>
 
-						{/* Section heading (desktop) */}
-						<div className="desktop-only" style={{ marginBottom: 20 }}>
-							<p
-								style={{
-									fontSize: 20,
-									fontWeight: 700,
-									letterSpacing: "-0.02em",
-									color: "#f5f5f5",
-									margin: 0,
-								}}
-							>
-								{activeCategory === "all"
-									? "Todo el menú"
-									: (allCategories.find((c) => c.id === activeCategory)?.name ??
-										"Menú")}
-							</p>
-							<p style={{ fontSize: 12, color: "#555", margin: "4px 0 0" }}>
-								{filtered.length} producto{filtered.length !== 1 ? "s" : ""}
-							</p>
-						</div>
-
-						{/* Products */}
+						{/* Products grouped by category */}
 						{loading ? (
 							<SkeletonCards />
-						) : filtered.length === 0 ? (
+						) : groupedProducts.length === 0 ? (
 							<div
 								style={{
 									padding: "48px 16px",
@@ -905,101 +952,120 @@ export default function PublicDeliveryPage() {
 								No hay productos disponibles
 							</div>
 						) : (
-							<div style={{ display: "flex", flexDirection: "column" }}>
-								{filtered.map((product, i) => {
-									const qty = getQty(product.id);
-									const photo = getProductPhoto(product.categoryId);
-									return (
+							<div
+								style={{ display: "flex", flexDirection: "column", gap: 28 }}
+							>
+								{groupedProducts.map(({ category, items }) => (
+									<div key={category.id}>
+										{/* Category header */}
 										<div
-											key={product.id}
-											className="product-card"
 											style={{
 												display: "flex",
 												alignItems: "center",
-												gap: 14,
-												padding: "14px 0",
-												borderBottom:
-													i < filtered.length - 1
-														? "1px solid #1e1e1e"
-														: "none",
-												background: "transparent",
-												transition: "background 0.15s",
+												gap: 10,
+												marginBottom: 14,
+												paddingBottom: 10,
+												borderBottom: "1px solid #1a1a1a",
 											}}
 										>
-											{/* Photo */}
-											{photo && (
-												<div
-													style={{
-														width: 90,
-														height: 70,
-														borderRadius: 10,
-														overflow: "hidden",
-														flexShrink: 0,
-													}}
-												>
-													<img
-														src={photo}
-														alt={product.name}
-														style={{
-															width: "100%",
-															height: "100%",
-															objectFit: "cover",
-															display: "block",
-														}}
-													/>
-												</div>
-											)}
-
-											{/* Info */}
-											<div style={{ flex: 1, minWidth: 0 }}>
+											<span style={{ fontSize: 22 }}>{category.icon}</span>
+											<div>
 												<p
 													style={{
-														fontSize: 14,
+														fontSize: 18,
 														fontWeight: 700,
-														margin: 0,
 														color: "#f5f5f5",
-														letterSpacing: "-0.01em",
+														margin: 0,
+														letterSpacing: "-0.02em",
 													}}
 												>
-													{product.name}
+													{category.name}
 												</p>
-												{product.description && (
-													<p
-														style={{
-															fontSize: 12,
-															color: "#888",
-															margin: "3px 0 6px",
-															overflow: "hidden",
-															textOverflow: "ellipsis",
-															display: "-webkit-box",
-															WebkitLineClamp: 2,
-															WebkitBoxOrient: "vertical",
-														}}
-													>
-														{product.description}
-													</p>
-												)}
 												<p
 													style={{
-														fontSize: 15,
-														fontWeight: 700,
-														color: "#f59e0b",
-														margin: 0,
+														fontSize: 11,
+														color: "#555",
+														margin: "2px 0 0",
 													}}
 												>
-													{formatCurrency(product.price)}
+													{items.length} producto{items.length !== 1 ? "s" : ""}
 												</p>
 											</div>
-
-											{/* Qty control */}
-											<QtyControl
-												qty={qty}
-												onAdd={() => addToCart(product)}
-												onRemove={() => removeFromCart(product.id)}
-											/>
 										</div>
-									);
-								})}
+										{/* Products in this category */}
+										<div style={{ display: "flex", flexDirection: "column" }}>
+											{items.map((product, i) => {
+												const qty = getQty(product.id);
+												return (
+													<div
+														key={product.id}
+														className="product-card"
+														style={{
+															display: "flex",
+															alignItems: "center",
+															gap: 14,
+															padding: "12px 0",
+															borderBottom:
+																i < items.length - 1
+																	? "1px solid #1e1e1e"
+																	: "none",
+															background: "transparent",
+															transition: "background 0.15s",
+														}}
+													>
+														{/* Info */}
+														<div style={{ flex: 1, minWidth: 0 }}>
+															<p
+																style={{
+																	fontSize: 14,
+																	fontWeight: 700,
+																	margin: 0,
+																	color: "#f5f5f5",
+																	letterSpacing: "-0.01em",
+																}}
+															>
+																{product.name}
+															</p>
+															{product.description && (
+																<p
+																	style={{
+																		fontSize: 12,
+																		color: "#888",
+																		margin: "3px 0 6px",
+																		overflow: "hidden",
+																		textOverflow: "ellipsis",
+																		display: "-webkit-box",
+																		WebkitLineClamp: 2,
+																		WebkitBoxOrient: "vertical",
+																	}}
+																>
+																	{product.description}
+																</p>
+															)}
+															<p
+																style={{
+																	fontSize: 15,
+																	fontWeight: 700,
+																	color: "#f59e0b",
+																	margin: 0,
+																}}
+															>
+																{formatCurrency(product.price)}
+															</p>
+														</div>
+
+														{/* Qty control */}
+														<QtyControl
+															qty={qty}
+															onAdd={() => addToCart(product)}
+															onRemove={() => removeFromCart(product.id)}
+														/>
+													</div>
+												);
+											})}
+										</div>
+									</div>
+								))}
 							</div>
 						)}
 					</div>
