@@ -6,6 +6,59 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─── Auth (NextAuth.js v5) ───────────────────────────────────
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String?
+  image          String?
+  emailVerified  DateTime?
+  phone          String?
+  address        String?
+  role           String          @default("customer")
+  createdAt      DateTime        @default(now())
+  accounts       Account[]
+  sessions       Session[]
+  deliveryOrders DeliveryOrder[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Restaurant Core ─────────────────────────────────────────
+
 model Zone {
   id     String  @id @default(cuid())
   name   String
@@ -33,19 +86,25 @@ model Category {
   name     String
   icon     String    @default("🍺")
   order    Int       @default(0)
+  parentId String?
+  parent   Category? @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
   products Product[]
 }
 
 model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  price       Float
-  categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
-  target      String   @default("bar")
-  isAvailable Boolean  @default(true)
-  isPoolChip  Boolean  @default(false)
+  id               String             @id @default(cuid())
+  name             String
+  description      String?
+  price            Float
+  costPrice        Float              @default(0)
+  categoryId       String
+  category         Category           @relation(fields: [categoryId], references: [id])
+  target           String             @default("bar")
+  isAvailable      Boolean            @default(true)
+  isPoolChip       Boolean            @default(false)
+  image            String?
+  recipeIngredients RecipeIngredient[]
 }
 
 model Staff {
@@ -55,6 +114,8 @@ model Staff {
   avatar String @default("")
   pin    String @default("0000")
 }
+
+// ─── Orders ──────────────────────────────────────────────────
 
 model Order {
   id            String      @id @default(cuid())
@@ -83,8 +144,12 @@ model OrderItem {
   notes     String?
 }
 
+// ─── Delivery ────────────────────────────────────────────────
+
 model DeliveryOrder {
   id                  String              @id @default(cuid())
+  userId              String?
+  user                User?               @relation(fields: [userId], references: [id])
   customerName        String
   address             String
   phone               String?
@@ -108,28 +173,75 @@ model DeliveryOrderItem {
   price           Float
 }
 
-model Ingredient {
-  id             String @id @default(cuid())
-  name           String
-  unit           String
-  stockCurrent   Float
-  alertThreshold Float
-  costPerUnit    Float
+// ─── Inventory & Recipes ─────────────────────────────────────
+
+model IngredientCategory {
+  id          String       @id @default(cuid())
+  name        String
+  icon        String       @default("📦")
+  order       Int          @default(0)
+  ingredients Ingredient[]
 }
 
-// ─── Accounting Module ───────────────────────────────────────
+model Ingredient {
+  id               String              @id @default(cuid())
+  name             String
+  unit             String
+  stockCurrent     Float
+  alertThreshold   Float
+  costPerUnit      Float
+  categoryId       String?
+  category         IngredientCategory? @relation(fields: [categoryId], references: [id])
+  supplierId       String?
+  supplier         Supplier?           @relation(fields: [supplierId], references: [id])
+  recipeIngredients RecipeIngredient[]
+  priceHistory     PriceHistory[]
+}
+
+model RecipeIngredient {
+  id           String     @id @default(cuid())
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  quantity     Float
+  unit         String
+}
+
+model PriceHistory {
+  id           String     @id @default(cuid())
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+  costPerUnit  Float
+  supplierId   String?
+  date         DateTime   @default(now())
+  notes        String?
+}
+
+// ─── Suppliers & Procurement ─────────────────────────────────
+
+model SupplierCategory {
+  id        String     @id @default(cuid())
+  name      String
+  icon      String     @default("📦")
+  order     Int        @default(0)
+  suppliers Supplier[]
+}
 
 model Supplier {
-  id        String            @id @default(cuid())
-  name      String
-  cuit      String?
-  address   String?
-  phone     String?
-  email     String?
-  notes     String?
-  createdAt DateTime          @default(now())
-  invoices  SupplierInvoice[]
-  expenses  Expense[]
+  id          String            @id @default(cuid())
+  name        String
+  cuit        String?
+  address     String?
+  phone       String?
+  email       String?
+  notes       String?
+  categoryId  String?
+  category    SupplierCategory? @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime          @default(now())
+  invoices    SupplierInvoice[]
+  expenses    Expense[]
+  ingredients Ingredient[]
 }
 
 model SupplierInvoice {
@@ -155,15 +267,17 @@ model SupplierInvoice {
 }
 
 model SupplierInvoiceItem {
-  id        String          @id @default(cuid())
-  invoiceId String
-  invoice   SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  id          String          @id @default(cuid())
+  invoiceId   String
+  invoice     SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   description String
   quantity    Float
   unitPrice   Float
   ivaRate     Float           @default(21)
   subtotal    Float
 }
+
+// ─── AFIP & Invoicing ────────────────────────────────────────
 
 model AfipConfig {
   id              String   @id @default("singleton")
@@ -213,12 +327,18 @@ model InvoiceItem {
   subtotal    Float
 }
 
+// ─── Expenses & Budgets ──────────────────────────────────────
+
 model ExpenseCategory {
-  id       String    @id @default(cuid())
-  name     String
-  icon     String    @default("📦")
-  order    Int       @default(0)
-  expenses Expense[]
+  id             String             @id @default(cuid())
+  name           String
+  icon           String             @default("📦")
+  order          Int                @default(0)
+  parentId       String?
+  parent         ExpenseCategory?   @relation("ExpenseCategoryTree", fields: [parentId], references: [id])
+  children       ExpenseCategory[]  @relation("ExpenseCategoryTree")
+  expenses       Expense[]
+  budgetMonthly  Float?
 }
 
 model Expense {
@@ -234,8 +354,12 @@ model Expense {
   date              DateTime
   paymentMethod     String?
   notes             String?
+  isRecurring       Boolean          @default(false)
+  recurringDay      Int?
   createdAt         DateTime         @default(now())
 }
+
+// ─── Cash Register ───────────────────────────────────────────
 
 model CashRegister {
   id             String         @id @default(cuid())
@@ -259,4 +383,23 @@ model CashMovement {
   orderId       String?
   expenseId     String?
   createdAt     DateTime     @default(now())
+}
+
+// ─── Daily Reports ───────────────────────────────────────────
+
+model DailyReport {
+  id              String   @id @default(cuid())
+  date            DateTime @unique
+  totalRevenue    Float    @default(0)
+  totalCost       Float    @default(0)
+  totalExpenses   Float    @default(0)
+  grossProfit     Float    @default(0)
+  netProfit       Float    @default(0)
+  ordersCount     Int      @default(0)
+  deliveryCount   Int      @default(0)
+  avgTicket       Float    @default(0)
+  topProducts     String?
+  paymentBreakdown String?
+  notes           String?
+  createdAt       DateTime @default(now())
 }

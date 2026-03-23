@@ -72,8 +72,10 @@ const NEXT_STATUS: Record<
 
 const PAYMENT_LABELS: Record<string, string> = {
 	cash: "Efectivo",
+	efectivo: "Efectivo",
 	mercadopago: "MercadoPago",
 	card: "Tarjeta",
+	transferencia: "Transferencia",
 };
 
 // --- Elapsed badge ----------------------------------------------------------

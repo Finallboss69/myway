@@ -1,576 +1,516 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
+import useSWR, { mutate } from "swr";
 import {
+	UtensilsCrossed,
+	Package,
+	Search,
 	Plus,
 	Pencil,
 	Trash2,
 	Check,
-	X,
-	UtensilsCrossed,
-	LayoutGrid,
-	List,
-	Wine,
 	ChefHat,
+	BarChart3,
+	Eye,
+	EyeOff,
+	ArrowUpDown,
+	FlaskConical,
+	TrendingUp,
+	AlertTriangle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import type { Product, Category } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
 
-// --- Field helper -----------------------------------------------------------
+/* ─── Types ───────────────────────────────────────────────────────────────── */
+interface Category {
+	id: string;
+	name: string;
+	icon: string;
+	order: number;
+}
+interface Product {
+	id: string;
+	name: string;
+	description: string | null;
+	price: number;
+	costPrice: number;
+	categoryId: string;
+	category?: Category;
+	target: "bar" | "kitchen";
+	isAvailable: boolean;
+	isPoolChip: boolean;
+	image: string | null;
+}
+interface IngData {
+	id: string;
+	name: string;
+	unit: string;
+	costPerUnit: number;
+	stockCurrent: number;
+	alertThreshold: number;
+}
+interface RecipeIng {
+	id: string;
+	productId: string;
+	ingredientId: string;
+	quantity: number;
+	unit: string;
+	ingredient: IngData;
+}
+interface CostProduct {
+	id: string;
+	name: string;
+	category: string;
+	salePrice: number;
+	costPrice: number;
+	profit: number;
+	marginPercent: number;
+	ingredientCount: number;
+	hasRecipe: boolean;
+}
+interface CostAnalysis {
+	products: CostProduct[];
+	summary: {
+		totalProducts: number;
+		withRecipe: number;
+		withoutRecipe: number;
+		avgMargin: number;
+	};
+}
 
-function Field({
+const fetcher = (u: string) => fetch(u).then((r) => r.json());
+const mc = (m: number) => (m < 30 ? "#ef4444" : m < 50 ? "#f59e0b" : "#10b981");
+type TabKey = "productos" | "recetas" | "costos";
+
+/* ─── Shared styles ───────────────────────────────────────────────────────── */
+const iS: React.CSSProperties = {
+	width: "100%",
+	padding: "9px 12px",
+	borderRadius: 8,
+	border: "1px solid var(--s4)",
+	background: "var(--s2)",
+	color: "#f5f5f5",
+	fontFamily: "var(--font-dm)",
+	fontSize: 13,
+	outline: "none",
+};
+const sS: React.CSSProperties = { ...iS, cursor: "pointer" };
+const lS: React.CSSProperties = {
+	fontFamily: "var(--font-syne)",
+	fontSize: 9,
+	letterSpacing: "0.2em",
+	color: "#888",
+	textTransform: "uppercase",
+	display: "block",
+	marginBottom: 6,
+};
+const syne = (
+	sz: number,
+	c: string,
+	extra?: React.CSSProperties,
+): React.CSSProperties => ({
+	fontFamily: "var(--font-syne)",
+	fontSize: sz,
+	letterSpacing: "0.15em",
+	color: c,
+	fontWeight: 600,
+	textTransform: "uppercase",
+	...extra,
+});
+const bebas = (sz: number, c: string): React.CSSProperties => ({
+	fontFamily: "var(--font-bebas)",
+	fontSize: sz,
+	lineHeight: 1,
+	color: c,
+});
+const dm = (sz: number, c: string, w = 400): React.CSSProperties => ({
+	fontFamily: "var(--font-dm)",
+	fontSize: sz,
+	color: c,
+	fontWeight: w,
+});
+const ghostBtn: React.CSSProperties = {
+	padding: "6px 10px",
+	borderRadius: 8,
+	border: "1px solid var(--s4)",
+	background: "transparent",
+	cursor: "pointer",
+	display: "flex",
+	alignItems: "center",
+};
+const goldBtn = (disabled?: boolean): React.CSSProperties => ({
+	padding: "9px 18px",
+	borderRadius: 8,
+	border: "1px solid rgba(245,158,11,0.4)",
+	background: "rgba(245,158,11,0.15)",
+	color: "#f59e0b",
+	...syne(11, "#f59e0b"),
+	cursor: disabled ? "not-allowed" : "pointer",
+	opacity: disabled ? 0.4 : 1,
+	display: "flex",
+	alignItems: "center",
+	gap: 6,
+});
+
+/* ─── KpiCard ─────────────────────────────────────────────────────────────── */
+function KpiCard({
 	label,
-	children,
+	value,
+	sub,
+	color,
+	icon: Icon,
+	idx,
 }: {
 	label: string;
+	value: string | number;
+	sub?: string;
+	color: string;
+	icon: React.ElementType;
+	idx: number;
+}) {
+	return (
+		<div
+			style={{
+				background: "var(--s1)",
+				border: `1px solid ${color}25`,
+				borderRadius: 16,
+				padding: "24px 22px 20px",
+				position: "relative",
+				overflow: "hidden",
+				animation: `slideUp 0.5s cubic-bezier(0.16,1,0.3,1) ${idx * 80}ms both`,
+			}}
+		>
+			<div
+				style={{
+					position: "absolute",
+					top: 0,
+					left: "20%",
+					right: "20%",
+					height: 1,
+					background: `linear-gradient(90deg, transparent, ${color}50, transparent)`,
+				}}
+			/>
+			<div
+				style={{
+					position: "absolute",
+					top: 0,
+					right: 0,
+					width: 120,
+					height: 120,
+					background: `radial-gradient(circle at 100% 0%, ${color}12 0%, transparent 70%)`,
+					pointerEvents: "none",
+				}}
+			/>
+			<div style={{ position: "relative", zIndex: 1 }}>
+				<div
+					style={{
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "space-between",
+						marginBottom: 16,
+					}}
+				>
+					<div style={syne(10, "#888", { letterSpacing: "0.2em" })}>
+						{label}
+					</div>
+					<div
+						style={{
+							width: 34,
+							height: 34,
+							borderRadius: 10,
+							background: `${color}15`,
+							border: `1px solid ${color}30`,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+					>
+						<Icon size={16} style={{ color }} />
+					</div>
+				</div>
+				<div style={bebas(36, color)}>{value}</div>
+				{sub && <div style={{ ...dm(11, "#666"), marginTop: 6 }}>{sub}</div>}
+			</div>
+		</div>
+	);
+}
+
+/* ─── SectionCard ─────────────────────────────────────────────────────────── */
+function SC({
+	title,
+	icon: Icon,
+	right,
+	children,
+}: {
+	title: string;
+	icon: React.ElementType;
+	right?: React.ReactNode;
 	children: React.ReactNode;
 }) {
 	return (
-		<div>
-			<label
-				className="font-display uppercase block mb-1.5"
-				style={{ fontSize: 9, letterSpacing: "0.2em", color: "#888" }}
+		<div
+			style={{
+				background: "var(--s1)",
+				border: "1px solid var(--s4)",
+				borderRadius: 16,
+				overflow: "hidden",
+				boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+			}}
+		>
+			<div
+				style={{
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "space-between",
+					padding: "14px 20px",
+					borderBottom: "1px solid var(--s3)",
+					background: "var(--s2)",
+				}}
 			>
-				{label}
-			</label>
+				<div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+					<Icon size={14} style={{ color: "#f59e0b" }} />
+					<span style={syne(11, "#ccc")}>{title}</span>
+				</div>
+				{right}
+			</div>
 			{children}
 		</div>
 	);
 }
 
-// --- Product form -----------------------------------------------------------
-
-interface ProductDraft {
-	name: string;
-	price: string;
-	categoryId: string;
-	target: "bar" | "kitchen";
-	description: string;
-	isAvailable: boolean;
-	isPoolChip: boolean;
-}
-
-const emptyProductDraft = (): ProductDraft => ({
-	name: "",
-	price: "",
-	categoryId: "",
-	target: "bar",
-	description: "",
-	isAvailable: true,
-	isPoolChip: false,
+/* ─── Row hover helper ────────────────────────────────────────────────────── */
+const hoverRow = (bg = "transparent") => ({
+	onMouseEnter: (e: React.MouseEvent<HTMLDivElement>) => {
+		e.currentTarget.style.background = "var(--s2)";
+	},
+	onMouseLeave: (e: React.MouseEvent<HTMLDivElement>) => {
+		e.currentTarget.style.background = bg;
+	},
 });
 
-function ProductForm({
-	draft,
-	categories,
-	onChange,
-	onSave,
-	onCancel,
-	saving,
-	editId,
-}: {
-	draft: ProductDraft;
-	categories: Category[];
-	onChange: (d: ProductDraft) => void;
-	onSave: () => void;
-	onCancel: () => void;
-	saving: boolean;
-	editId: string | null;
-}) {
-	return (
-		<div
-			style={{
-				position: "fixed",
-				inset: 0,
-				zIndex: 50,
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				padding: 16,
-				background: "rgba(0,0,0,0.7)",
-				backdropFilter: "blur(8px)",
-			}}
-			onClick={onCancel}
-		>
-			<div
-				className="animate-slide-up"
-				style={{
-					background: "var(--s1)",
-					border: "1px solid var(--s4)",
-					borderRadius: 16,
-					width: "100%",
-					maxWidth: 560,
-					maxHeight: "90vh",
-					overflowY: "auto",
-					boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
-				}}
-				onClick={(e) => e.stopPropagation()}
-			>
-				<div
-					style={{
-						padding: "16px 20px",
-						borderBottom: "1px solid var(--s3)",
-						background: "var(--s2)",
-					}}
-				>
-					<h2
-						className="font-display"
-						style={{ fontSize: 16, fontWeight: 700, color: "#f5f5f5" }}
-					>
-						{editId ? "Editar producto" : "Nuevo producto"}
-					</h2>
-				</div>
-				<div
-					style={{
-						padding: 20,
-						display: "flex",
-						flexDirection: "column",
-						gap: 16,
-					}}
-				>
-					<div
-						className="grid gap-3"
-						style={{ gridTemplateColumns: "1fr 1fr" }}
-					>
-						<Field label="Nombre">
-							<input
-								className="input-base w-full"
-								value={draft.name}
-								onChange={(e) => onChange({ ...draft, name: e.target.value })}
-								placeholder="Ej: Cerveza Quilmes"
-							/>
-						</Field>
-						<Field label="Precio">
-							<input
-								className="input-base w-full"
-								type="number"
-								value={draft.price}
-								onChange={(e) => onChange({ ...draft, price: e.target.value })}
-								placeholder="0"
-							/>
-						</Field>
-						<Field label="Categoria">
-							<select
-								className="input-base w-full"
-								value={draft.categoryId}
-								onChange={(e) =>
-									onChange({ ...draft, categoryId: e.target.value })
-								}
-								style={{ cursor: "pointer" }}
-							>
-								<option value="">Seleccionar...</option>
-								{categories.map((c) => (
-									<option key={c.id} value={c.id}>
-										{c.icon} {c.name}
-									</option>
-								))}
-							</select>
-						</Field>
-						<Field label="Destino">
-							<select
-								className="input-base w-full"
-								value={draft.target}
-								onChange={(e) =>
-									onChange({
-										...draft,
-										target: e.target.value as "bar" | "kitchen",
-									})
-								}
-								style={{ cursor: "pointer" }}
-							>
-								<option value="bar">Bar</option>
-								<option value="kitchen">Cocina</option>
-							</select>
-						</Field>
-					</div>
-					<Field label="Descripcion">
-						<input
-							className="input-base w-full"
-							value={draft.description}
-							onChange={(e) =>
-								onChange({ ...draft, description: e.target.value })
-							}
-							placeholder="Opcional"
-						/>
-					</Field>
-					<div className="flex items-center gap-6">
-						<label
-							className="flex items-center gap-2.5 cursor-pointer font-body"
-							style={{ fontSize: 13, color: "#e5e5e5" }}
-						>
-							<input
-								type="checkbox"
-								checked={draft.isAvailable}
-								onChange={(e) =>
-									onChange({ ...draft, isAvailable: e.target.checked })
-								}
-								style={{ accentColor: "#f59e0b" }}
-							/>
-							Disponible
-						</label>
-						<label
-							className="flex items-center gap-2.5 cursor-pointer font-body"
-							style={{ fontSize: 13, color: "#e5e5e5" }}
-						>
-							<input
-								type="checkbox"
-								checked={draft.isPoolChip}
-								onChange={(e) =>
-									onChange({ ...draft, isPoolChip: e.target.checked })
-								}
-								style={{ accentColor: "#f59e0b" }}
-							/>
-							Es ficha de pool
-						</label>
-					</div>
-				</div>
-				<div className="flex gap-2" style={{ padding: "0 20px 20px" }}>
-					<button
-						className="btn-ghost flex-1"
-						style={{ padding: "10px" }}
-						onClick={onCancel}
-					>
-						Cancelar
-					</button>
-					<button
-						className="btn-primary flex-1"
-						onClick={onSave}
-						disabled={saving || !draft.name || !draft.price}
-						style={{
-							padding: "10px",
-							opacity: saving || !draft.name || !draft.price ? 0.4 : 1,
-						}}
-					>
-						{saving
-							? "Guardando..."
-							: editId
-								? "Guardar cambios"
-								: "Crear producto"}
-					</button>
-				</div>
-			</div>
-		</div>
-	);
-}
-
-// --- Category form ----------------------------------------------------------
-
-interface CategoryDraft {
-	name: string;
-	icon: string;
-	order: string;
-}
-
-const emptyCategoryDraft = (): CategoryDraft => ({
-	name: "",
-	icon: "",
-	order: "0",
-});
-
-function CategoryForm({
-	draft,
-	onChange,
-	onSave,
-	onCancel,
-	saving,
-	editId,
-}: {
-	draft: CategoryDraft;
-	onChange: (d: CategoryDraft) => void;
-	onSave: () => void;
-	onCancel: () => void;
-	saving: boolean;
-	editId: string | null;
-}) {
-	return (
-		<div
-			style={{
-				position: "fixed",
-				inset: 0,
-				zIndex: 50,
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				padding: 16,
-				background: "rgba(0,0,0,0.7)",
-				backdropFilter: "blur(8px)",
-			}}
-			onClick={onCancel}
-		>
-			<div
-				className="animate-slide-up"
-				style={{
-					background: "var(--s1)",
-					border: "1px solid var(--s4)",
-					borderRadius: 16,
-					width: "100%",
-					maxWidth: 480,
-					maxHeight: "90vh",
-					overflowY: "auto",
-					boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
-				}}
-				onClick={(e) => e.stopPropagation()}
-			>
-				<div
-					style={{
-						padding: "16px 20px",
-						borderBottom: "1px solid var(--s3)",
-						background: "var(--s2)",
-					}}
-				>
-					<h2
-						className="font-display"
-						style={{ fontSize: 16, fontWeight: 700, color: "#f5f5f5" }}
-					>
-						{editId ? "Editar categoria" : "Nueva categoria"}
-					</h2>
-				</div>
-				<div
-					style={{
-						padding: 20,
-						display: "flex",
-						flexDirection: "column",
-						gap: 16,
-					}}
-				>
-					<div
-						className="grid gap-3"
-						style={{ gridTemplateColumns: "1fr 1fr 80px" }}
-					>
-						<Field label="Nombre">
-							<input
-								className="input-base w-full"
-								value={draft.name}
-								onChange={(e) => onChange({ ...draft, name: e.target.value })}
-								placeholder="Ej: Bebidas"
-							/>
-						</Field>
-						<Field label="Icono (emoji)">
-							<input
-								className="input-base w-full"
-								value={draft.icon}
-								onChange={(e) => onChange({ ...draft, icon: e.target.value })}
-								style={{ fontSize: 20 }}
-							/>
-						</Field>
-						<Field label="Orden">
-							<input
-								className="input-base w-full"
-								type="number"
-								value={draft.order}
-								onChange={(e) => onChange({ ...draft, order: e.target.value })}
-							/>
-						</Field>
-					</div>
-				</div>
-				<div className="flex gap-2" style={{ padding: "0 20px 20px" }}>
-					<button
-						className="btn-ghost flex-1"
-						style={{ padding: "10px" }}
-						onClick={onCancel}
-					>
-						Cancelar
-					</button>
-					<button
-						className="btn-primary flex-1"
-						onClick={onSave}
-						disabled={saving || !draft.name}
-						style={{
-							padding: "10px",
-							opacity: saving || !draft.name ? 0.4 : 1,
-						}}
-					>
-						{saving ? "Guardando..." : editId ? "Guardar" : "Crear categoria"}
-					</button>
-				</div>
-			</div>
-		</div>
-	);
-}
-
-// --- Page -------------------------------------------------------------------
-
+/* ═══════════════════════════════════════════════════════════════════════════ */
 export default function MenuPage() {
-	const [products, setProducts] = useState<Product[]>([]);
-	const [categories, setCategories] = useState<Category[]>([]);
-	const [activeTab, setActiveTab] = useState<"products" | "categories">(
-		"products",
+	const [tab, setTab] = useState<TabKey>("productos");
+	const { data: products = [] } = useSWR<Product[]>("/api/products", fetcher);
+	const { data: categories = [] } = useSWR<Category[]>(
+		"/api/categories",
+		fetcher,
+	);
+	const { data: ingredients = [] } = useSWR<IngData[]>(
+		"/api/ingredients",
+		fetcher,
+	);
+	const { data: costData } = useSWR<CostAnalysis>(
+		"/api/cost-calculator",
+		fetcher,
 	);
 
-	// product form state
-	const [showProductForm, setShowProductForm] = useState(false);
-	const [editProductId, setEditProductId] = useState<string | null>(null);
-	const [productDraft, setProductDraft] = useState<ProductDraft>(
-		emptyProductDraft(),
+	// Product state
+	const [catFilter, setCatFilter] = useState("all");
+	const [search, setSearch] = useState("");
+	const [showForm, setShowForm] = useState(false);
+	const [editId, setEditId] = useState<string | null>(null);
+	const [saving, setSaving] = useState(false);
+	const [form, setForm] = useState({
+		name: "",
+		description: "",
+		price: "",
+		categoryId: "",
+		target: "bar" as "bar" | "kitchen",
+		isAvailable: true,
+		isPoolChip: false,
+		image: "",
+	});
+
+	// Recipe state
+	const [recProdId, setRecProdId] = useState("");
+	const { data: recItems = [] } = useSWR<RecipeIng[]>(
+		recProdId ? `/api/recipe-ingredients?productId=${recProdId}` : null,
+		fetcher,
 	);
-	const [savingProduct, setSavingProduct] = useState(false);
+	const [addingRI, setAddingRI] = useState(false);
+	const [riForm, setRiForm] = useState({
+		ingredientId: "",
+		quantity: "",
+		unit: "ml",
+	});
 
-	// category form state
-	const [showCatForm, setShowCatForm] = useState(false);
-	const [editCatId, setEditCatId] = useState<string | null>(null);
-	const [catDraft, setCatDraft] = useState<CategoryDraft>(emptyCategoryDraft());
-	const [savingCat, setSavingCat] = useState(false);
+	// Cost sort
+	const [cSort, setCSort] = useState<{ key: string; asc: boolean }>({
+		key: "name",
+		asc: true,
+	});
 
-	// filter
-	const [catFilter, setCatFilter] = useState<string>("all");
-
-	const fetchData = useCallback(async () => {
-		try {
-			const [p, c] = await Promise.all([
-				apiFetch<Product[]>("/api/products"),
-				apiFetch<Category[]>("/api/categories"),
-			]);
-			setProducts(p);
-			setCategories(c);
-		} catch (e) {
-			console.error(e);
+	// Derived
+	const avail = products.filter((p) => p.isAvailable).length;
+	const uniqueCats = new Set(products.map((p) => p.categoryId)).size;
+	const filtered = useMemo(() => {
+		let l = products;
+		if (catFilter !== "all") l = l.filter((p) => p.categoryId === catFilter);
+		if (search.trim()) {
+			const q = search.toLowerCase();
+			l = l.filter((p) => p.name.toLowerCase().includes(q));
 		}
-	}, []);
+		return l;
+	}, [products, catFilter, search]);
 
-	useEffect(() => {
-		fetchData();
-	}, [fetchData]);
+	const recProd = products.find((p) => p.id === recProdId);
+	const recCost = recItems.reduce(
+		(s, ri) => s + ri.quantity * ri.ingredient.costPerUnit,
+		0,
+	);
+	const recMargin =
+		recProd && recProd.price > 0
+			? ((recProd.price - recCost) / recProd.price) * 100
+			: 0;
 
-	// -- Product CRUD --------------------------------------------------------
+	const sortedCost = useMemo(() => {
+		if (!costData) return [];
+		const l = [...costData.products];
+		l.sort((a, b) => {
+			const av = a[cSort.key as keyof CostProduct] ?? "";
+			const bv = b[cSort.key as keyof CostProduct] ?? "";
+			if (typeof av === "number" && typeof bv === "number")
+				return cSort.asc ? av - bv : bv - av;
+			return cSort.asc
+				? String(av).localeCompare(String(bv))
+				: String(bv).localeCompare(String(av));
+		});
+		return l;
+	}, [costData, cSort]);
 
-	const openNewProduct = () => {
-		setEditProductId(null);
-		setProductDraft(emptyProductDraft());
-		setShowProductForm(true);
+	const getCat = (id: string) =>
+		categories.find((c) => c.id === id)?.name ?? "Sin cat.";
+	const mut = (...keys: string[]) => Promise.all(keys.map((k) => mutate(k)));
+	const resetForm = () => {
+		setForm({
+			name: "",
+			description: "",
+			price: "",
+			categoryId: "",
+			target: "bar",
+			isAvailable: true,
+			isPoolChip: false,
+			image: "",
+		});
+		setEditId(null);
+		setShowForm(false);
 	};
 
-	const openEditProduct = (p: Product) => {
-		setEditProductId(p.id);
-		setProductDraft({
+	const openEdit = (p: Product) => {
+		setEditId(p.id);
+		setForm({
 			name: p.name,
+			description: p.description ?? "",
 			price: String(p.price),
 			categoryId: p.categoryId,
 			target: p.target,
-			description: p.description ?? "",
 			isAvailable: p.isAvailable,
 			isPoolChip: p.isPoolChip,
+			image: p.image ?? "",
 		});
-		setShowProductForm(true);
+		setShowForm(true);
 	};
 
 	const saveProduct = async () => {
-		setSavingProduct(true);
+		setSaving(true);
 		try {
 			const body = {
-				name: productDraft.name,
-				price: Number(productDraft.price),
-				categoryId: productDraft.categoryId,
-				target: productDraft.target,
-				description: productDraft.description || null,
-				isAvailable: productDraft.isAvailable,
-				isPoolChip: productDraft.isPoolChip,
+				name: form.name,
+				description: form.description || null,
+				price: Number(form.price),
+				categoryId: form.categoryId,
+				target: form.target,
+				isAvailable: form.isAvailable,
+				isPoolChip: form.isPoolChip,
+				image: form.image || null,
 			};
-			if (editProductId) {
-				await apiFetch(`/api/products/${editProductId}`, {
+			if (editId)
+				await apiFetch(`/api/products/${editId}`, {
 					method: "PATCH",
 					body: JSON.stringify(body),
 				});
-			} else {
+			else
 				await apiFetch("/api/products", {
 					method: "POST",
 					body: JSON.stringify(body),
 				});
-			}
-			setShowProductForm(false);
-			setEditProductId(null);
-			await fetchData();
+			resetForm();
+			await mut("/api/products", "/api/cost-calculator");
 		} catch (e) {
 			console.error(e);
 		} finally {
-			setSavingProduct(false);
+			setSaving(false);
 		}
 	};
 
-	const deleteProduct = async (id: string) => {
+	const delProduct = async (id: string) => {
 		if (!confirm("Eliminar este producto?")) return;
-		try {
-			await apiFetch(`/api/products/${id}`, { method: "DELETE" });
-			setProducts((prev) => prev.filter((p) => p.id !== id));
-		} catch (e) {
-			console.error(e);
-		}
+		await apiFetch(`/api/products/${id}`, { method: "DELETE" });
+		await mut("/api/products", "/api/cost-calculator");
 	};
-
-	const toggleAvailable = async (p: Product) => {
-		const updated = { ...p, isAvailable: !p.isAvailable };
-		setProducts((prev) => prev.map((x) => (x.id === p.id ? updated : x)));
-		try {
-			await apiFetch(`/api/products/${p.id}`, {
-				method: "PATCH",
-				body: JSON.stringify({ isAvailable: !p.isAvailable }),
-			});
-		} catch (e) {
-			console.error(e);
-			setProducts((prev) => prev.map((x) => (x.id === p.id ? p : x)));
-		}
+	const toggleAvail = async (p: Product) => {
+		await apiFetch(`/api/products/${p.id}`, {
+			method: "PATCH",
+			body: JSON.stringify({ isAvailable: !p.isAvailable }),
+		});
+		await mutate("/api/products");
 	};
-
-	// -- Category CRUD -------------------------------------------------------
-
-	const openNewCat = () => {
-		setEditCatId(null);
-		setCatDraft(emptyCategoryDraft());
-		setShowCatForm(true);
-	};
-
-	const openEditCat = (c: Category) => {
-		setEditCatId(c.id);
-		setCatDraft({ name: c.name, icon: c.icon, order: String(c.order) });
-		setShowCatForm(true);
-	};
-
-	const saveCat = async () => {
-		setSavingCat(true);
-		try {
-			const body = {
-				name: catDraft.name,
-				icon: catDraft.icon,
-				order: Number(catDraft.order),
-			};
-			if (editCatId) {
-				await apiFetch(`/api/categories/${editCatId}`, {
+	const bulkAvail = async (v: boolean) => {
+		await Promise.all(
+			products.map((p) =>
+				apiFetch(`/api/products/${p.id}`, {
 					method: "PATCH",
-					body: JSON.stringify(body),
-				});
-			} else {
-				await apiFetch("/api/categories", {
-					method: "POST",
-					body: JSON.stringify(body),
-				});
-			}
-			setShowCatForm(false);
-			setEditCatId(null);
-			await fetchData();
+					body: JSON.stringify({ isAvailable: v }),
+				}),
+			),
+		);
+		await mutate("/api/products");
+	};
+
+	const addRI = async () => {
+		if (!recProdId || !riForm.ingredientId || !riForm.quantity) return;
+		setAddingRI(true);
+		try {
+			await apiFetch("/api/recipe-ingredients", {
+				method: "POST",
+				body: JSON.stringify({
+					productId: recProdId,
+					ingredientId: riForm.ingredientId,
+					quantity: Number(riForm.quantity),
+					unit: riForm.unit,
+				}),
+			});
+			setRiForm({ ingredientId: "", quantity: "", unit: "ml" });
+			await mut(
+				`/api/recipe-ingredients?productId=${recProdId}`,
+				"/api/products",
+				"/api/cost-calculator",
+			);
 		} catch (e) {
 			console.error(e);
 		} finally {
-			setSavingCat(false);
+			setAddingRI(false);
 		}
 	};
 
-	const deleteCat = async (id: string) => {
-		if (!confirm("Eliminar esta categoria?")) return;
-		try {
-			await apiFetch(`/api/categories/${id}`, { method: "DELETE" });
-			setCategories((prev) => prev.filter((c) => c.id !== id));
-		} catch (e) {
-			console.error(e);
-		}
+	const removeRI = async (riId: string) => {
+		await apiFetch(`/api/recipe-ingredients/${riId}`, { method: "DELETE" });
+		await mut(
+			`/api/recipe-ingredients?productId=${recProdId}`,
+			"/api/products",
+			"/api/cost-calculator",
+		);
 	};
 
-	const filteredProducts =
-		catFilter === "all"
-			? products
-			: products.filter((p) => p.categoryId === catFilter);
-
-	const getCategoryName = (catId: string) =>
-		categories.find((c) => c.id === catId)?.name ?? "Sin cat.";
+	const tabs: { key: TabKey; label: string }[] = [
+		{ key: "productos", label: "Productos" },
+		{ key: "recetas", label: "Recetas" },
+		{ key: "costos", label: "Analisis Costos" },
+	];
+	const pMargin = (p: Product) =>
+		p.price > 0 ? ((p.price - p.costPrice) / p.price) * 100 : 0;
 
 	return (
 		<div style={{ minHeight: "100vh", background: "var(--s0)" }}>
@@ -579,221 +519,235 @@ export default function MenuPage() {
 			>
 				{/* Header */}
 				<div
-					className="flex items-center justify-between animate-fade-in"
-					style={{ marginBottom: 8 }}
+					style={{
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "space-between",
+						marginBottom: 8,
+					}}
 				>
-					<div className="flex items-center gap-3">
+					<div style={{ display: "flex", alignItems: "center", gap: 12 }}>
 						<div
 							style={{
 								width: 3,
 								height: 24,
 								borderRadius: 2,
-								background: "var(--gold)",
+								background: "#f59e0b",
 							}}
 						/>
 						<div>
 							<h1
-								className="font-display"
 								style={{
-									fontSize: 22,
-									fontWeight: 700,
-									color: "#f5f5f5",
+									...syne(22, "#f5f5f5"),
 									lineHeight: 1.1,
+									margin: 0,
+									letterSpacing: 0,
 								}}
 							>
 								Gestion de Menu
 							</h1>
-							<p
-								className="font-body"
-								style={{ fontSize: 12, color: "#666", marginTop: 2 }}
-							>
-								Productos y categorias
+							<p style={{ ...dm(12, "#666"), margin: 0, marginTop: 2 }}>
+								Productos, recetas e ingredientes
 							</p>
 						</div>
 					</div>
-
-					{/* Tabs */}
 					<div
-						className="flex items-center gap-1 p-1 rounded-xl"
-						style={{ background: "var(--s2)", border: "1px solid var(--s3)" }}
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: 4,
+							padding: 4,
+							borderRadius: 12,
+							background: "var(--s2)",
+							border: "1px solid var(--s3)",
+						}}
 					>
-						{(["products", "categories"] as const).map((tab) => (
+						{tabs.map((t) => (
 							<button
-								key={tab}
-								onClick={() => setActiveTab(tab)}
+								key={t.key}
+								onClick={() => setTab(t.key)}
 								style={{
 									padding: "7px 20px",
 									borderRadius: 10,
 									border:
-										activeTab === tab
+										tab === t.key
 											? "1px solid rgba(245,158,11,0.3)"
 											: "1px solid transparent",
 									background:
-										activeTab === tab ? "rgba(245,158,11,0.1)" : "transparent",
-									color: activeTab === tab ? "#f59e0b" : "#666",
-									fontFamily: "var(--font-syne)",
-									fontWeight: 600,
-									fontSize: 11,
-									letterSpacing: "0.15em",
-									textTransform: "uppercase",
+										tab === t.key ? "rgba(245,158,11,0.1)" : "transparent",
+									...syne(11, tab === t.key ? "#f59e0b" : "#666"),
 									cursor: "pointer",
 									transition: "all 0.15s",
 								}}
 							>
-								{tab === "products"
-									? `Productos (${products.length})`
-									: `Categorias (${categories.length})`}
+								{t.label}
 							</button>
 						))}
 					</div>
 				</div>
-				<div className="divider-gold" style={{ marginBottom: 28 }} />
+				<div
+					style={{
+						height: 1,
+						background:
+							"linear-gradient(90deg, transparent, rgba(245,158,11,0.3), transparent)",
+						marginBottom: 28,
+					}}
+				/>
 
-				{/* Products tab */}
-				{activeTab === "products" && (
+				{/* ── TAB 1: PRODUCTOS ──────────────────────────────────────────── */}
+				{tab === "productos" && (
 					<div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-						{/* Section header */}
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-2.5">
-								<UtensilsCrossed size={14} style={{ color: "var(--gold)" }} />
-								<span
-									className="font-display uppercase"
-									style={{
-										fontSize: 11,
-										letterSpacing: "0.15em",
-										color: "#ccc",
-										fontWeight: 600,
-									}}
-								>
-									Productos
-								</span>
-								<span
-									className="font-kds"
-									style={{ fontSize: 14, color: "var(--gold)" }}
-								>
-									{filteredProducts.length}
-								</span>
-							</div>
-							<button
-								className="btn-primary"
-								style={{ padding: "8px 16px" }}
-								onClick={openNewProduct}
-							>
-								<Plus size={14} />
-								Agregar
-							</button>
-						</div>
-
-						{/* Category filter pills */}
-						<div className="flex items-center gap-2 flex-wrap">
-							{(["all", ...categories.map((c) => c.id)] as const).map((id) => {
-								const isAll = id === "all";
-								const cat = categories.find((c) => c.id === id);
-								const isActive = catFilter === id;
-								return (
-									<button
-										key={id}
-										onClick={() => setCatFilter(id)}
-										style={{
-											padding: "5px 14px",
-											borderRadius: 8,
-											border: isActive
-												? "1px solid rgba(245,158,11,0.3)"
-												: "1px solid var(--s3)",
-											background: isActive
-												? "rgba(245,158,11,0.1)"
-												: "transparent",
-											color: isActive ? "#f59e0b" : "#555",
-											fontFamily: "var(--font-syne)",
-											fontWeight: 600,
-											fontSize: 10,
-											letterSpacing: "0.1em",
-											textTransform: "uppercase",
-											cursor: "pointer",
-											transition: "all 0.15s",
-										}}
-									>
-										{isAll ? "Todos" : `${cat?.icon ?? ""} ${cat?.name ?? ""}`}
-									</button>
-								);
-							})}
-						</div>
-
-						{/* Products list */}
 						<div
 							style={{
-								background: "var(--s1)",
-								border: "1px solid var(--s4)",
-								borderRadius: 16,
-								overflow: "hidden",
-								boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+								display: "grid",
+								gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+								gap: 16,
+							}}
+						>
+							<KpiCard
+								label="Total Productos"
+								value={products.length}
+								sub={`${uniqueCats} categorias`}
+								color="#3b82f6"
+								icon={Package}
+								idx={0}
+							/>
+							<KpiCard
+								label="Disponibles"
+								value={avail}
+								sub="activos en menu"
+								color="#10b981"
+								icon={Eye}
+								idx={1}
+							/>
+							<KpiCard
+								label="No Disponibles"
+								value={products.length - avail}
+								sub="ocultos del menu"
+								color="#ef4444"
+								icon={EyeOff}
+								idx={2}
+							/>
+							<KpiCard
+								label="Categorias"
+								value={categories.length}
+								sub="agrupaciones activas"
+								color="#f59e0b"
+								icon={UtensilsCrossed}
+								idx={3}
+							/>
+						</div>
+						<div
+							style={{
+								display: "flex",
+								alignItems: "center",
+								gap: 12,
+								flexWrap: "wrap",
 							}}
 						>
 							<div
-								className="flex items-center justify-between"
 								style={{
-									padding: "14px 20px",
-									borderBottom: "1px solid var(--s3)",
-									background: "var(--s2)",
+									position: "relative",
+									flex: "1 1 200px",
+									maxWidth: 320,
 								}}
 							>
-								<div className="flex items-center gap-2.5">
-									<List size={14} style={{ color: "var(--gold)" }} />
-									<span
-										className="font-display uppercase"
-										style={{
-											fontSize: 11,
-											letterSpacing: "0.15em",
-											color: "#ccc",
-											fontWeight: 600,
-										}}
-									>
-										Listado
-									</span>
-								</div>
+								<Search
+									size={14}
+									style={{
+										position: "absolute",
+										left: 12,
+										top: "50%",
+										transform: "translateY(-50%)",
+										color: "#555",
+									}}
+								/>
+								<input
+									placeholder="Buscar producto..."
+									value={search}
+									onChange={(e) => setSearch(e.target.value)}
+									style={{ ...iS, paddingLeft: 34 }}
+								/>
 							</div>
-							{filteredProducts.length === 0 ? (
-								<div
-									className="flex flex-col items-center justify-center"
-									style={{ padding: "48px 20px" }}
-								>
+							<select
+								value={catFilter}
+								onChange={(e) => setCatFilter(e.target.value)}
+								style={{ ...sS, width: "auto", maxWidth: 200 }}
+							>
+								<option value="all">Todas las categorias</option>
+								{categories.map((c) => (
+									<option key={c.id} value={c.id}>
+										{c.icon} {c.name}
+									</option>
+								))}
+							</select>
+							<button
+								onClick={() => bulkAvail(true)}
+								style={{
+									padding: "8px 14px",
+									borderRadius: 8,
+									border: "1px solid rgba(16,185,129,0.3)",
+									background: "rgba(16,185,129,0.08)",
+									...syne(10, "#10b981"),
+									cursor: "pointer",
+								}}
+							>
+								Todos disp.
+							</button>
+							<button
+								onClick={() => bulkAvail(false)}
+								style={{
+									padding: "8px 14px",
+									borderRadius: 8,
+									border: "1px solid rgba(239,68,68,0.3)",
+									background: "rgba(239,68,68,0.08)",
+									...syne(10, "#ef4444"),
+									cursor: "pointer",
+								}}
+							>
+								Todos no disp.
+							</button>
+							<button
+								onClick={() => {
+									resetForm();
+									setShowForm(true);
+								}}
+								style={{ ...goldBtn(), marginLeft: "auto" }}
+							>
+								<Plus size={14} /> Agregar
+							</button>
+						</div>
+						<SC title={`Productos (${filtered.length})`} icon={UtensilsCrossed}>
+							{filtered.length === 0 ? (
+								<div style={{ padding: "48px 20px", textAlign: "center" }}>
 									<UtensilsCrossed
 										size={32}
 										style={{ color: "#333", marginBottom: 8 }}
 									/>
-									<span
-										className="font-body"
-										style={{ fontSize: 13, color: "#555" }}
-									>
-										No hay productos
-									</span>
+									<div style={dm(13, "#555")}>No hay productos</div>
 								</div>
 							) : (
-								filteredProducts.map((p, idx) => (
+								filtered.map((p, idx) => (
 									<div
 										key={p.id}
-										className="flex items-center gap-4"
 										style={{
+											display: "flex",
+											alignItems: "center",
+											gap: 14,
 											padding: "12px 20px",
 											borderBottom:
-												idx < filteredProducts.length - 1
+												idx < filtered.length - 1
 													? "1px solid var(--s3)"
 													: "none",
 											transition: "background 0.15s",
 										}}
-										onMouseEnter={(e) =>
-											(e.currentTarget.style.background = "var(--s2)")
-										}
-										onMouseLeave={(e) =>
-											(e.currentTarget.style.background = "transparent")
-										}
+										{...hoverRow()}
 									>
-										{/* Available toggle */}
 										<button
-											onClick={() => toggleAvailable(p)}
+											onClick={() => toggleAvail(p)}
 											style={{
-												width: 20,
-												height: 20,
+												width: 22,
+												height: 22,
 												borderRadius: 6,
 												border: `2px solid ${p.isAvailable ? "#10b981" : "var(--s4)"}`,
 												background: p.isAvailable
@@ -804,39 +758,29 @@ export default function MenuPage() {
 												alignItems: "center",
 												justifyContent: "center",
 												flexShrink: 0,
-												transition: "all 0.15s",
 											}}
-											title={p.isAvailable ? "Marcar no disponible" : "Activar"}
 										>
 											{p.isAvailable && (
-												<Check size={11} style={{ color: "#10b981" }} />
+												<Check size={12} style={{ color: "#10b981" }} />
 											)}
 										</button>
-
-										{/* Name + desc */}
 										<div style={{ flex: 1, minWidth: 0 }}>
 											<div
-												className="font-body"
 												style={{
-													fontSize: 14,
-													fontWeight: 500,
-													color: "#f5f5f5",
+													...dm(14, "#f5f5f5", 500),
 													opacity: p.isAvailable ? 1 : 0.4,
 												}}
 											>
 												{p.name}
 												{p.isPoolChip && (
 													<span
-														className="font-display uppercase"
 														style={{
 															marginLeft: 8,
-															fontSize: 9,
 															padding: "2px 6px",
 															borderRadius: 4,
 															background: "rgba(139,92,246,0.15)",
 															border: "1px solid rgba(139,92,246,0.3)",
-															color: "#8b5cf6",
-															letterSpacing: "0.1em",
+															...syne(9, "#8b5cf6"),
 														}}
 													>
 														FICHA
@@ -844,42 +788,17 @@ export default function MenuPage() {
 												)}
 											</div>
 											{p.description && (
-												<div
-													className="font-body"
-													style={{
-														fontSize: 11,
-														color: "#555",
-														marginTop: 1,
-													}}
-												>
+												<div style={{ ...dm(11, "#555"), marginTop: 1 }}>
 													{p.description}
 												</div>
 											)}
 										</div>
-
-										{/* Category badge */}
-										<span
-											className="font-display uppercase hidden md:block"
-											style={{
-												fontSize: 10,
-												letterSpacing: "0.1em",
-												color: "#666",
-											}}
-										>
-											{getCategoryName(p.categoryId)}
-										</span>
-
-										{/* Target badge */}
+										<span style={syne(10, "#666")}>{getCat(p.categoryId)}</span>
 										<span
 											style={{
-												fontSize: 9,
 												padding: "3px 9px",
 												borderRadius: 99,
-												fontFamily: "var(--font-syne)",
-												fontWeight: 600,
-												letterSpacing: "0.12em",
-												textTransform: "uppercase",
-												color: p.target === "bar" ? "#3b82f6" : "#f59e0b",
+												...syne(9, p.target === "bar" ? "#3b82f6" : "#f59e0b"),
 												background:
 													p.target === "bar"
 														? "rgba(59,130,246,0.12)"
@@ -889,33 +808,40 @@ export default function MenuPage() {
 										>
 											{p.target === "bar" ? "Bar" : "Cocina"}
 										</span>
-
-										{/* Price */}
+										{p.costPrice > 0 && (
+											<span
+												style={{
+													padding: "3px 8px",
+													borderRadius: 99,
+													...syne(9, mc(pMargin(p))),
+													background: `${mc(pMargin(p))}15`,
+													border: `1px solid ${mc(pMargin(p))}30`,
+												}}
+											>
+												{Math.round(pMargin(p))}%
+											</span>
+										)}
 										<span
-											className="font-kds"
 											style={{
-												fontSize: 16,
-												color: "var(--gold)",
+												...bebas(16, "#f59e0b"),
 												minWidth: 80,
 												textAlign: "right",
 											}}
 										>
 											{formatCurrency(p.price)}
 										</span>
-
-										{/* Actions */}
-										<div className="flex items-center gap-1">
+										<div
+											style={{ display: "flex", alignItems: "center", gap: 4 }}
+										>
 											<button
-												className="btn-ghost"
-												style={{ padding: "6px 10px" }}
-												onClick={() => openEditProduct(p)}
+												onClick={() => openEdit(p)}
+												style={{ ...ghostBtn, color: "#888" }}
 											>
 												<Pencil size={13} />
 											</button>
 											<button
-												className="btn-ghost"
-												style={{ padding: "6px 10px", color: "#ef4444" }}
-												onClick={() => deleteProduct(p.id)}
+												onClick={() => delProduct(p.id)}
+												style={{ ...ghostBtn, color: "#ef4444" }}
 											>
 												<Trash2 size={13} />
 											</button>
@@ -923,208 +849,714 @@ export default function MenuPage() {
 									</div>
 								))
 							)}
-						</div>
+						</SC>
 					</div>
 				)}
 
-				{/* Categories tab */}
-				{activeTab === "categories" && (
+				{/* ── TAB 2: RECETAS ───────────────────────────────────────────── */}
+				{tab === "recetas" && (
 					<div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-						{/* Section header */}
-						<div className="flex items-center justify-between">
-							<div className="flex items-center gap-2.5">
-								<LayoutGrid size={14} style={{ color: "var(--gold)" }} />
-								<span
-									className="font-display uppercase"
+						<SC title="Seleccionar Producto" icon={ChefHat}>
+							<div style={{ padding: 20 }}>
+								<select
+									value={recProdId}
+									onChange={(e) => setRecProdId(e.target.value)}
+									style={{ ...sS, maxWidth: 400 }}
+								>
+									<option value="">-- Elegir producto --</option>
+									{products.map((p) => (
+										<option key={p.id} value={p.id}>
+											{p.name} — {formatCurrency(p.price)}
+										</option>
+									))}
+								</select>
+							</div>
+						</SC>
+						{recProd && (
+							<>
+								<div
 									style={{
-										fontSize: 11,
-										letterSpacing: "0.15em",
-										color: "#ccc",
-										fontWeight: 600,
+										display: "grid",
+										gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+										gap: 16,
 									}}
 								>
-									Categorias
-								</span>
-								<span
-									className="font-kds"
-									style={{ fontSize: 14, color: "var(--gold)" }}
-								>
-									{categories.length}
-								</span>
-							</div>
-							<button
-								className="btn-primary"
-								style={{ padding: "8px 16px" }}
-								onClick={openNewCat}
-							>
-								<Plus size={14} />
-								Agregar
-							</button>
-						</div>
-
-						{categories.length === 0 ? (
-							<div
-								style={{
-									background: "var(--s1)",
-									border: "1px solid var(--s4)",
-									borderRadius: 16,
-									overflow: "hidden",
-									boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-								}}
-							>
-								<div
-									className="flex flex-col items-center justify-center"
-									style={{ padding: "48px 20px" }}
-								>
-									<LayoutGrid
-										size={32}
-										style={{ color: "#333", marginBottom: 8 }}
+									<KpiCard
+										label="Precio Venta"
+										value={formatCurrency(recProd.price)}
+										color="#3b82f6"
+										icon={UtensilsCrossed}
+										idx={0}
 									/>
-									<span
-										className="font-body"
-										style={{ fontSize: 13, color: "#555" }}
-									>
-										No hay categorias
-									</span>
+									<KpiCard
+										label="Costo"
+										value={formatCurrency(recCost)}
+										sub={`${recItems.length} ingredientes`}
+										color="#ef4444"
+										icon={FlaskConical}
+										idx={1}
+									/>
+									<KpiCard
+										label="Ganancia"
+										value={formatCurrency(recProd.price - recCost)}
+										color="#10b981"
+										icon={TrendingUp}
+										idx={2}
+									/>
+									<KpiCard
+										label="Margen"
+										value={`${Math.round(recMargin)}%`}
+										sub={
+											recMargin < 30
+												? "Margen bajo"
+												: recMargin < 50
+													? "Moderado"
+													: "Saludable"
+										}
+										color={mc(recMargin)}
+										icon={BarChart3}
+										idx={3}
+									/>
 								</div>
-							</div>
-						) : (
-							<div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-								{categories
-									.slice()
-									.sort((a, b) => a.order - b.order)
-									.map((c) => {
-										const productCount = products.filter(
-											(p) => p.categoryId === c.id,
-										).length;
-										return (
+								{recItems.length > 0 && (
+									<div
+										style={{
+											background: "var(--s1)",
+											border: "1px solid var(--s4)",
+											borderRadius: 16,
+											padding: 20,
+										}}
+									>
+										<div
+											style={{
+												...syne(10, "#888", { letterSpacing: "0.15em" }),
+												marginBottom: 12,
+											}}
+										>
+											Desglose Costo vs Ganancia
+										</div>
+										<div
+											style={{
+												height: 28,
+												borderRadius: 8,
+												overflow: "hidden",
+												display: "flex",
+												background: "var(--s3)",
+											}}
+										>
 											<div
-												key={c.id}
 												style={{
-													background: "var(--s1)",
-													border: "1px solid var(--s4)",
-													borderRadius: 16,
-													padding: 16,
+													width: `${recProd.price > 0 ? (recCost / recProd.price) * 100 : 0}%`,
+													background:
+														"linear-gradient(90deg, #ef4444, #f87171)",
 													display: "flex",
 													alignItems: "center",
-													gap: 16,
-													transition: "border-color 0.15s",
-													boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+													justifyContent: "center",
+													transition: "width 0.3s",
+													minWidth: recCost > 0 ? 60 : 0,
 												}}
-												onMouseEnter={(e) =>
-													(e.currentTarget.style.borderColor =
-														"rgba(245,158,11,0.3)")
-												}
-												onMouseLeave={(e) =>
-													(e.currentTarget.style.borderColor = "var(--s4)")
-												}
 											>
-												{/* Icon circle */}
-												<div
+												<span
 													style={{
-														width: 48,
-														height: 48,
-														borderRadius: 14,
-														background: "var(--s3)",
-														border: "1px solid var(--s4)",
-														display: "flex",
-														alignItems: "center",
-														justifyContent: "center",
-														flexShrink: 0,
-														fontSize: 22,
+														...syne(9, "#fff"),
+														letterSpacing: "0.05em",
 													}}
 												>
-													{c.icon}
-												</div>
-
-												<div style={{ flex: 1, minWidth: 0 }}>
-													<div
-														className="font-body"
-														style={{
-															fontSize: 14,
-															fontWeight: 600,
-															color: "#f5f5f5",
-														}}
-													>
-														{c.name}
-													</div>
-													<div className="flex items-center gap-2 mt-1">
-														<span
-															className="font-display uppercase"
-															style={{
-																fontSize: 9,
-																letterSpacing: "0.1em",
-																color: "var(--gold)",
-															}}
-														>
-															{productCount} productos
-														</span>
-														<span
-															className="font-display uppercase"
-															style={{
-																fontSize: 9,
-																letterSpacing: "0.1em",
-																color: "#555",
-															}}
-														>
-															orden {c.order}
-														</span>
-													</div>
-												</div>
-
-												<div className="flex items-center gap-1">
-													<button
-														className="btn-ghost"
-														style={{ padding: "6px 10px" }}
-														onClick={() => openEditCat(c)}
-													>
-														<Pencil size={13} />
-													</button>
-													<button
-														className="btn-ghost"
-														style={{ padding: "6px 10px", color: "#ef4444" }}
-														onClick={() => deleteCat(c.id)}
-													>
-														<Trash2 size={13} />
-													</button>
-												</div>
+													COSTO{" "}
+													{recProd.price > 0
+														? Math.round((recCost / recProd.price) * 100)
+														: 0}
+													%
+												</span>
 											</div>
-										);
-									})}
-							</div>
+											<div
+												style={{
+													flex: 1,
+													background:
+														"linear-gradient(90deg, #10b981, #34d399)",
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+												}}
+											>
+												<span
+													style={{
+														...syne(9, "#fff"),
+														letterSpacing: "0.05em",
+													}}
+												>
+													GANANCIA {Math.round(recMargin)}%
+												</span>
+											</div>
+										</div>
+									</div>
+								)}
+								<SC
+									title="Ingredientes de la Receta"
+									icon={FlaskConical}
+									right={
+										<span style={bebas(20, "#f59e0b")}>{recItems.length}</span>
+									}
+								>
+									{recItems.length === 0 ? (
+										<div style={{ padding: "40px 20px", textAlign: "center" }}>
+											<FlaskConical
+												size={32}
+												style={{ color: "#333", marginBottom: 8 }}
+											/>
+											<div style={dm(13, "#555")}>
+												Sin ingredientes — agrega para calcular costos
+											</div>
+										</div>
+									) : (
+										recItems.map((ri, idx) => (
+											<div
+												key={ri.id}
+												style={{
+													display: "flex",
+													alignItems: "center",
+													gap: 14,
+													padding: "12px 20px",
+													borderBottom:
+														idx < recItems.length - 1
+															? "1px solid var(--s3)"
+															: "none",
+													transition: "background 0.15s",
+												}}
+												{...hoverRow()}
+											>
+												<div
+													style={{
+														width: 8,
+														height: 8,
+														borderRadius: "50%",
+														background: "#f59e0b",
+														flexShrink: 0,
+													}}
+												/>
+												<div style={{ flex: 1 }}>
+													<div style={dm(14, "#f5f5f5", 500)}>
+														{ri.ingredient.name}
+													</div>
+													<div style={{ ...dm(11, "#666"), marginTop: 1 }}>
+														{ri.quantity} {ri.unit} x{" "}
+														{formatCurrency(ri.ingredient.costPerUnit)}/
+														{ri.ingredient.unit}
+													</div>
+												</div>
+												<span
+													style={{
+														...bebas(16, "#f59e0b"),
+														minWidth: 80,
+														textAlign: "right",
+													}}
+												>
+													{formatCurrency(
+														ri.quantity * ri.ingredient.costPerUnit,
+													)}
+												</span>
+												<button
+													onClick={() => removeRI(ri.id)}
+													style={{ ...ghostBtn, color: "#ef4444" }}
+												>
+													<Trash2 size={13} />
+												</button>
+											</div>
+										))
+									)}
+									<div
+										style={{
+											padding: "14px 20px",
+											borderTop: "1px solid var(--s3)",
+											background: "var(--s2)",
+											display: "flex",
+											alignItems: "flex-end",
+											gap: 10,
+											flexWrap: "wrap",
+										}}
+									>
+										<div style={{ flex: "1 1 180px" }}>
+											<div style={lS}>Ingrediente</div>
+											<select
+												value={riForm.ingredientId}
+												onChange={(e) =>
+													setRiForm({ ...riForm, ingredientId: e.target.value })
+												}
+												style={sS}
+											>
+												<option value="">Seleccionar...</option>
+												{ingredients.map((i) => (
+													<option key={i.id} value={i.id}>
+														{i.name} ({formatCurrency(i.costPerUnit)}/{i.unit})
+													</option>
+												))}
+											</select>
+										</div>
+										<div style={{ flex: "0 0 100px" }}>
+											<div style={lS}>Cantidad</div>
+											<input
+												type="number"
+												value={riForm.quantity}
+												onChange={(e) =>
+													setRiForm({ ...riForm, quantity: e.target.value })
+												}
+												placeholder="0"
+												style={iS}
+											/>
+										</div>
+										<div style={{ flex: "0 0 100px" }}>
+											<div style={lS}>Unidad</div>
+											<select
+												value={riForm.unit}
+												onChange={(e) =>
+													setRiForm({ ...riForm, unit: e.target.value })
+												}
+												style={sS}
+											>
+												{["ml", "gr", "kg", "lt", "unidad"].map((u) => (
+													<option key={u} value={u}>
+														{u}
+													</option>
+												))}
+											</select>
+										</div>
+										<button
+											onClick={addRI}
+											disabled={
+												addingRI || !riForm.ingredientId || !riForm.quantity
+											}
+											style={goldBtn(
+												addingRI || !riForm.ingredientId || !riForm.quantity,
+											)}
+										>
+											<Plus size={14} /> {addingRI ? "Agregando..." : "Agregar"}
+										</button>
+									</div>
+								</SC>
+							</>
 						)}
 					</div>
 				)}
 
-				{/* Product form modal */}
-				{showProductForm && (
-					<ProductForm
-						draft={productDraft}
-						categories={categories}
-						onChange={setProductDraft}
-						onSave={saveProduct}
-						onCancel={() => {
-							setShowProductForm(false);
-							setEditProductId(null);
-						}}
-						saving={savingProduct}
-						editId={editProductId}
-					/>
+				{/* ── TAB 3: ANALISIS COSTOS ───────────────────────────────────── */}
+				{tab === "costos" && costData && (
+					<div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+						<div
+							style={{
+								display: "grid",
+								gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+								gap: 16,
+							}}
+						>
+							<KpiCard
+								label="Margen Promedio"
+								value={`${costData.summary.avgMargin}%`}
+								sub="productos con receta"
+								color={mc(costData.summary.avgMargin)}
+								icon={TrendingUp}
+								idx={0}
+							/>
+							<KpiCard
+								label="Con Receta"
+								value={costData.summary.withRecipe}
+								sub={`de ${costData.summary.totalProducts} productos`}
+								color="#10b981"
+								icon={FlaskConical}
+								idx={1}
+							/>
+							<KpiCard
+								label="Sin Receta"
+								value={costData.summary.withoutRecipe}
+								sub="necesitan composicion"
+								color="#ef4444"
+								icon={AlertTriangle}
+								idx={2}
+							/>
+							<KpiCard
+								label="Total Productos"
+								value={costData.summary.totalProducts}
+								color="#3b82f6"
+								icon={Package}
+								idx={3}
+							/>
+						</div>
+						<SC title="Analisis por Producto" icon={BarChart3}>
+							<div
+								style={{
+									display: "grid",
+									gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr",
+									padding: "10px 20px",
+									borderBottom: "1px solid var(--s3)",
+									background: "var(--s2)",
+								}}
+							>
+								{(
+									[
+										["Producto", "name"],
+										["Categoria", "category"],
+										["Venta", "salePrice"],
+										["Costo", "costPrice"],
+										["Ganancia", "profit"],
+										["Margen", "marginPercent"],
+									] as const
+								).map(([l, k]) => (
+									<button
+										key={k}
+										onClick={() =>
+											setCSort((prev) =>
+												prev.key === k
+													? { key: k, asc: !prev.asc }
+													: { key: k, asc: true },
+											)
+										}
+										style={{
+											display: "flex",
+											alignItems: "center",
+											gap: 4,
+											background: "none",
+											border: "none",
+											cursor: "pointer",
+											...syne(9, cSort.key === k ? "#f59e0b" : "#888"),
+											padding: 0,
+										}}
+									>
+										{l} <ArrowUpDown size={10} />
+									</button>
+								))}
+							</div>
+							{sortedCost.length === 0 ? (
+								<div style={{ padding: "48px 20px", textAlign: "center" }}>
+									<div style={dm(13, "#555")}>No hay datos de costos</div>
+								</div>
+							) : (
+								sortedCost.map((cp, idx) => {
+									const bg = !cp.hasRecipe
+										? "rgba(239,68,68,0.04)"
+										: "transparent";
+									return (
+										<div
+											key={cp.id}
+											style={{
+												display: "grid",
+												gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr",
+												padding: "11px 20px",
+												borderBottom:
+													idx < sortedCost.length - 1
+														? "1px solid var(--s3)"
+														: "none",
+												transition: "background 0.15s",
+												background: bg,
+											}}
+											{...hoverRow(bg)}
+										>
+											<div
+												style={{
+													display: "flex",
+													alignItems: "center",
+													gap: 8,
+												}}
+											>
+												<span style={dm(13, "#f5f5f5", 500)}>{cp.name}</span>
+												{!cp.hasRecipe && (
+													<span
+														style={{
+															padding: "2px 6px",
+															borderRadius: 4,
+															background: "rgba(239,68,68,0.15)",
+															border: "1px solid rgba(239,68,68,0.3)",
+															...syne(8, "#ef4444"),
+														}}
+													>
+														SIN RECETA
+													</span>
+												)}
+											</div>
+											<span
+												style={{
+													...dm(12, "#888"),
+													display: "flex",
+													alignItems: "center",
+												}}
+											>
+												{cp.category}
+											</span>
+											<span
+												style={{
+													...bebas(15, "#f5f5f5"),
+													display: "flex",
+													alignItems: "center",
+												}}
+											>
+												{formatCurrency(cp.salePrice)}
+											</span>
+											<span
+												style={{
+													...bebas(15, cp.hasRecipe ? "#ef4444" : "#555"),
+													display: "flex",
+													alignItems: "center",
+												}}
+											>
+												{cp.hasRecipe ? formatCurrency(cp.costPrice) : "-"}
+											</span>
+											<span
+												style={{
+													...bebas(15, cp.hasRecipe ? "#10b981" : "#555"),
+													display: "flex",
+													alignItems: "center",
+												}}
+											>
+												{cp.hasRecipe ? formatCurrency(cp.profit) : "-"}
+											</span>
+											<div style={{ display: "flex", alignItems: "center" }}>
+												{cp.hasRecipe ? (
+													<span
+														style={{
+															...bebas(16, mc(cp.marginPercent)),
+															padding: "2px 10px",
+															borderRadius: 6,
+															background: `${mc(cp.marginPercent)}15`,
+															border: `1px solid ${mc(cp.marginPercent)}30`,
+														}}
+													>
+														{cp.marginPercent}%
+													</span>
+												) : (
+													<span style={dm(11, "#555")}>-</span>
+												)}
+											</div>
+										</div>
+									);
+								})
+							)}
+						</SC>
+					</div>
 				)}
 
-				{/* Category form modal */}
-				{showCatForm && (
-					<CategoryForm
-						draft={catDraft}
-						onChange={setCatDraft}
-						onSave={saveCat}
-						onCancel={() => {
-							setShowCatForm(false);
-							setEditCatId(null);
+				{/* ── PRODUCT MODAL ────────────────────────────────────────────── */}
+				{showForm && (
+					<div
+						style={{
+							position: "fixed",
+							inset: 0,
+							zIndex: 50,
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+							padding: 16,
+							background: "rgba(0,0,0,0.7)",
+							backdropFilter: "blur(8px)",
 						}}
-						saving={savingCat}
-						editId={editCatId}
-					/>
+						onClick={resetForm}
+					>
+						<div
+							style={{
+								background: "var(--s1)",
+								border: "1px solid var(--s4)",
+								borderRadius: 16,
+								width: "100%",
+								maxWidth: 560,
+								maxHeight: "90vh",
+								overflowY: "auto",
+								boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+							}}
+							onClick={(e) => e.stopPropagation()}
+						>
+							<div
+								style={{
+									padding: "16px 20px",
+									borderBottom: "1px solid var(--s3)",
+									background: "var(--s2)",
+									borderRadius: "16px 16px 0 0",
+								}}
+							>
+								<h2
+									style={{
+										...syne(16, "#f5f5f5"),
+										margin: 0,
+										letterSpacing: 0,
+									}}
+								>
+									{editId ? "Editar producto" : "Nuevo producto"}
+								</h2>
+							</div>
+							<div
+								style={{
+									padding: 20,
+									display: "flex",
+									flexDirection: "column",
+									gap: 16,
+								}}
+							>
+								<div
+									style={{
+										display: "grid",
+										gridTemplateColumns: "1fr 1fr",
+										gap: 12,
+									}}
+								>
+									<div>
+										<div style={lS}>Nombre</div>
+										<input
+											value={form.name}
+											onChange={(e) =>
+												setForm({ ...form, name: e.target.value })
+											}
+											placeholder="Ej: Cerveza Quilmes"
+											style={iS}
+										/>
+									</div>
+									<div>
+										<div style={lS}>Precio</div>
+										<input
+											type="number"
+											value={form.price}
+											onChange={(e) =>
+												setForm({ ...form, price: e.target.value })
+											}
+											placeholder="0"
+											style={iS}
+										/>
+									</div>
+									<div>
+										<div style={lS}>Categoria</div>
+										<select
+											value={form.categoryId}
+											onChange={(e) =>
+												setForm({ ...form, categoryId: e.target.value })
+											}
+											style={sS}
+										>
+											<option value="">Seleccionar...</option>
+											{categories.map((c) => (
+												<option key={c.id} value={c.id}>
+													{c.icon} {c.name}
+												</option>
+											))}
+										</select>
+									</div>
+									<div>
+										<div style={lS}>Destino</div>
+										<select
+											value={form.target}
+											onChange={(e) =>
+												setForm({
+													...form,
+													target: e.target.value as "bar" | "kitchen",
+												})
+											}
+											style={sS}
+										>
+											<option value="bar">Bar</option>
+											<option value="kitchen">Cocina</option>
+										</select>
+									</div>
+								</div>
+								<div>
+									<div style={lS}>Descripcion</div>
+									<input
+										value={form.description}
+										onChange={(e) =>
+											setForm({ ...form, description: e.target.value })
+										}
+										placeholder="Opcional"
+										style={iS}
+									/>
+								</div>
+								<div>
+									<div style={lS}>Imagen URL</div>
+									<input
+										value={form.image}
+										onChange={(e) =>
+											setForm({ ...form, image: e.target.value })
+										}
+										placeholder="https://..."
+										style={iS}
+									/>
+								</div>
+								<div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+									<label
+										style={{
+											display: "flex",
+											alignItems: "center",
+											gap: 8,
+											cursor: "pointer",
+											...dm(13, "#e5e5e5"),
+										}}
+									>
+										<input
+											type="checkbox"
+											checked={form.isAvailable}
+											onChange={(e) =>
+												setForm({ ...form, isAvailable: e.target.checked })
+											}
+											style={{ accentColor: "#f59e0b" }}
+										/>
+										Disponible
+									</label>
+									<label
+										style={{
+											display: "flex",
+											alignItems: "center",
+											gap: 8,
+											cursor: "pointer",
+											...dm(13, "#e5e5e5"),
+										}}
+									>
+										<input
+											type="checkbox"
+											checked={form.isPoolChip}
+											onChange={(e) =>
+												setForm({ ...form, isPoolChip: e.target.checked })
+											}
+											style={{ accentColor: "#f59e0b" }}
+										/>
+										Ficha de pool
+									</label>
+								</div>
+							</div>
+							<div style={{ display: "flex", gap: 8, padding: "0 20px 20px" }}>
+								<button
+									onClick={resetForm}
+									style={{
+										flex: 1,
+										padding: 10,
+										borderRadius: 10,
+										border: "1px solid var(--s4)",
+										background: "transparent",
+										...syne(12, "#888"),
+										cursor: "pointer",
+										letterSpacing: 0,
+									}}
+								>
+									Cancelar
+								</button>
+								<button
+									onClick={saveProduct}
+									disabled={saving || !form.name || !form.price}
+									style={{
+										flex: 1,
+										padding: 10,
+										borderRadius: 10,
+										border: "1px solid rgba(245,158,11,0.4)",
+										background: "rgba(245,158,11,0.15)",
+										...syne(12, "#f59e0b"),
+										cursor:
+											saving || !form.name || !form.price
+												? "not-allowed"
+												: "pointer",
+										opacity: saving || !form.name || !form.price ? 0.4 : 1,
+										letterSpacing: 0,
+									}}
+								>
+									{saving
+										? "Guardando..."
+										: editId
+											? "Guardar cambios"
+											: "Crear producto"}
+								</button>
+							</div>
+						</div>
+					</div>
 				)}
 			</div>
 		</div>

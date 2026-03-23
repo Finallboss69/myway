@@ -3,7 +3,16 @@ import { db } from "@/lib/db";
 
 export async function GET() {
 	try {
-		const ingredients = await db.ingredient.findMany();
+		const ingredients = await db.ingredient.findMany({
+			include: {
+				category: true,
+				supplier: { select: { id: true, name: true } },
+				recipeIngredients: {
+					select: { id: true, productId: true, quantity: true, unit: true },
+				},
+			},
+			orderBy: { name: "asc" },
+		});
 		return NextResponse.json(ingredients);
 	} catch (error) {
 		console.error("[ingredients GET]", error);
@@ -22,8 +31,20 @@ export async function POST(request: NextRequest) {
 			stockCurrent: number;
 			alertThreshold: number;
 			costPerUnit: number;
+			categoryId?: string | null;
+			supplierId?: string | null;
 		};
-		const ingredient = await db.ingredient.create({ data: body });
+		const ingredient = await db.ingredient.create({
+			data: {
+				name: body.name,
+				unit: body.unit,
+				stockCurrent: body.stockCurrent,
+				alertThreshold: body.alertThreshold,
+				costPerUnit: body.costPerUnit,
+				categoryId: body.categoryId || null,
+				supplierId: body.supplierId || null,
+			},
+		});
 		return NextResponse.json(ingredient, { status: 201 });
 	} catch (error) {
 		console.error("[ingredients POST]", error);

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Syne, DM_Sans, Bebas_Neue, DM_Mono } from "next/font/google";
+import SessionProvider from "@/components/SessionProvider";
 import "./globals.css";
 
 const syne = Syne({
@@ -60,7 +61,7 @@ export default function RootLayout({
 			className={`${syne.variable} ${dmSans.variable} ${bebasNeue.variable} ${dmMono.variable}`}
 		>
 			<body className="bg-surface-0 text-ink-primary antialiased">
-				{children}
+				<SessionProvider>{children}</SessionProvider>
 			</body>
 		</html>
 	);

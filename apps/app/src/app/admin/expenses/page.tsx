@@ -1,92 +1,69 @@
 "use client";
-
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
+import useSWR from "swr";
 import {
 	Plus,
 	Pencil,
 	Trash2,
 	X,
-	Settings,
-	ShoppingCart,
-	Users,
-	Zap,
-	Home,
-	Receipt,
-	Wrench,
-	MoreHorizontal,
 	DollarSign,
 	CalendarDays,
-	Tag,
-	ChevronUp,
+	TrendingUp,
+	TrendingDown,
+	BarChart3,
+	PieChart,
+	Layers,
+	Repeat,
+	Filter,
 	ChevronDown,
-	Printer,
-	Loader2,
-	Wallet,
+	ChevronRight,
+	Truck,
+	FileText,
+	Check,
 	AlertCircle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { apiFetch } from "@/lib/api";
-import { printDocument, printCurrency } from "@/lib/print";
-
-// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface ExpenseCategory {
 	id: string;
 	name: string;
 	icon: string;
 	order: number;
+	parentId: string | null;
+	budgetMonthly: number | null;
+	children?: ExpenseCategory[];
+	_count?: { expenses: number };
 }
-
 interface Expense {
 	id: string;
 	categoryId: string;
 	category?: ExpenseCategory;
+	supplierId: string | null;
+	supplier?: { id: string; name: string } | null;
 	description: string;
 	amount: number;
 	date: string;
-	supplierId?: string | null;
-	supplier?: { id: string; name: string } | null;
-	paymentMethod: string;
-	notes?: string | null;
+	paymentMethod: string | null;
+	notes: string | null;
+	isRecurring: boolean;
+	recurringDay: number | null;
 	createdAt: string;
 }
-
 interface Supplier {
 	id: string;
 	name: string;
 }
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const PERIODS = ["Hoy", "Esta Semana", "Este Mes", "Custom"] as const;
-type Period = (typeof PERIODS)[number];
-
-const PAYMENT_METHODS = ["Efectivo", "MercadoPago", "Tarjeta", "Transferencia"];
-
-const PAYMENT_COLORS: Record<string, string> = {
+type Tab = "GASTOS" | "CATEGORÍAS" | "POR PROVEEDOR" | "RESUMEN";
+const TABS: Tab[] = ["GASTOS", "CATEGORÍAS", "POR PROVEEDOR", "RESUMEN"];
+const PAY = ["Efectivo", "Transferencia", "Tarjeta", "MercadoPago"];
+const PCOL: Record<string, string> = {
 	Efectivo: "#22c55e",
-	MercadoPago: "#3b82f6",
-	Tarjeta: "#8b5cf6",
 	Transferencia: "#f97316",
+	Tarjeta: "#8b5cf6",
+	MercadoPago: "#3b82f6",
 };
-
-const ICON_MAP: Record<
-	string,
-	React.ComponentType<{ size?: number; style?: React.CSSProperties }>
-> = {
-	ShoppingCart,
-	Users,
-	Zap,
-	Home,
-	Receipt,
-	Wrench,
-	MoreHorizontal,
-	DollarSign,
-	Tag,
-	Settings,
-};
-
-const CAT_COLORS: string[] = [
+const CC = [
 	"#f59e0b",
 	"#3b82f6",
 	"#8b5cf6",
@@ -98,78 +75,99 @@ const CAT_COLORS: string[] = [
 	"#14b8a6",
 	"#64748b",
 ];
+const fetcher = (u: string) => fetch(u).then((r) => r.json());
+const td = () => new Date().toISOString().slice(0, 10);
+const som = () => {
+	const d = new Date();
+	d.setDate(1);
+	d.setHours(0, 0, 0, 0);
+	return d;
+};
+const sow = () => {
+	const d = new Date();
+	d.setDate(d.getDate() - d.getDay());
+	d.setHours(0, 0, 0, 0);
+	return d;
+};
+const fd = (d: string) =>
+	new Date(d).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
+const pc = (c: number, p: number) => {
+	if (!p) return c > 0 ? "+100%" : "0%";
+	const v = ((c - p) / p) * 100;
+	return `${v >= 0 ? "+" : ""}${v.toFixed(0)}%`;
+};
+const IS: React.CSSProperties = {
+	width: "100%",
+	padding: "10px 14px",
+	borderRadius: 10,
+	border: "1px solid var(--s4)",
+	background: "var(--s2)",
+	color: "#eee",
+	fontSize: 13,
+	fontFamily: "'DM Sans',sans-serif",
+	outline: "none",
+};
+const LS: React.CSSProperties = {
+	fontSize: 10,
+	letterSpacing: "0.15em",
+	color: "#888",
+	fontWeight: 600,
+	marginBottom: 6,
+	display: "block",
+	fontFamily: "'Syne',sans-serif",
+	textTransform: "uppercase",
+};
+const BP: React.CSSProperties = {
+	padding: "10px 24px",
+	borderRadius: 10,
+	border: "none",
+	cursor: "pointer",
+	background: "#f59e0b",
+	color: "#080808",
+	fontWeight: 700,
+	fontSize: 13,
+	fontFamily: "'DM Sans',sans-serif",
+};
+const BS: React.CSSProperties = {
+	padding: "10px 24px",
+	borderRadius: 10,
+	border: "1px solid var(--s4)",
+	cursor: "pointer",
+	background: "transparent",
+	color: "#aaa",
+	fontWeight: 600,
+	fontSize: 13,
+	fontFamily: "'DM Sans',sans-serif",
+};
+const hv = (e: React.MouseEvent<HTMLElement>, bg: string) => {
+	e.currentTarget.style.background = bg;
+};
 
-function CategoryIcon({
-	iconName,
-	size = 14,
-	style,
-}: {
-	iconName: string;
-	size?: number;
-	style?: React.CSSProperties;
-}) {
-	const Icon = ICON_MAP[iconName] ?? Tag;
-	return <Icon size={size} style={style} />;
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function getDateRange(
-	period: Period,
-	customFrom: string,
-	customTo: string,
-): { from: string; to: string } {
-	const now = new Date();
-	const todayStr = now.toISOString().slice(0, 10);
-
-	if (period === "Hoy") return { from: todayStr, to: todayStr };
-	if (period === "Esta Semana") {
-		const day = now.getDay();
-		const diff = day === 0 ? 6 : day - 1;
-		const monday = new Date(now);
-		monday.setDate(now.getDate() - diff);
-		return { from: monday.toISOString().slice(0, 10), to: todayStr };
-	}
-	if (period === "Este Mes") {
-		const first = new Date(now.getFullYear(), now.getMonth(), 1);
-		return { from: first.toISOString().slice(0, 10), to: todayStr };
-	}
-	return { from: customFrom || todayStr, to: customTo || todayStr };
-}
-
-function formatDate(dateStr: string): string {
-	const d = new Date(dateStr + "T12:00:00");
-	return d.toLocaleDateString("es-AR", {
-		day: "2-digit",
-		month: "short",
-		year: "numeric",
-	});
-}
-
-// ─── KPI Card ────────────────────────────────────────────────────────────────
-
-function KpiCard({
+function Kpi({
 	label,
 	value,
-	Icon,
-	color,
 	sub,
+	color: c,
+	icon: I,
+	idx,
 }: {
 	label: string;
-	value: string;
-	Icon: React.ElementType;
-	color: string;
+	value: string | number;
 	sub?: string;
+	color: string;
+	icon: React.ElementType;
+	idx: number;
 }) {
 	return (
 		<div
 			style={{
 				background: "var(--s1)",
-				border: `1px solid ${color}25`,
+				border: `1px solid ${c}25`,
 				borderRadius: 16,
 				padding: "24px 22px 20px",
 				position: "relative",
 				overflow: "hidden",
+				animation: `slideUp .5s cubic-bezier(.16,1,.3,1) ${idx * 80}ms both`,
 			}}
 		>
 			<div
@@ -179,7 +177,7 @@ function KpiCard({
 					left: "20%",
 					right: "20%",
 					height: 1,
-					background: `linear-gradient(90deg, transparent, ${color}50, transparent)`,
+					background: `linear-gradient(90deg,transparent,${c}50,transparent)`,
 				}}
 			/>
 			<div
@@ -189,7 +187,7 @@ function KpiCard({
 					right: 0,
 					width: 120,
 					height: 120,
-					background: `radial-gradient(circle at 100% 0%, ${color}12 0%, transparent 70%)`,
+					background: `radial-gradient(circle at 100% 0%,${c}12 0%,transparent 70%)`,
 					pointerEvents: "none",
 				}}
 			/>
@@ -214,27 +212,29 @@ function KpiCard({
 							width: 34,
 							height: 34,
 							borderRadius: 10,
-							background: `${color}15`,
-							border: `1px solid ${color}30`,
+							background: `${c}15`,
+							border: `1px solid ${c}30`,
 							display: "flex",
 							alignItems: "center",
 							justifyContent: "center",
 						}}
 					>
-						<Icon size={16} style={{ color }} />
+						<I size={16} style={{ color: c }} />
 					</div>
 				</div>
 				<div
 					className="font-kds"
-					style={{ fontSize: 36, lineHeight: 1, color }}
+					style={{
+						fontSize: 36,
+						lineHeight: 1,
+						color: c,
+						marginBottom: sub ? 6 : 0,
+					}}
 				>
 					{value}
 				</div>
 				{sub && (
-					<div
-						className="font-body"
-						style={{ fontSize: 11, color: "#666", marginTop: 4 }}
-					>
+					<div className="font-body" style={{ fontSize: 11, color: "#666" }}>
 						{sub}
 					</div>
 				)}
@@ -243,902 +243,371 @@ function KpiCard({
 	);
 }
 
-// ─── Modal Shell ─────────────────────────────────────────────────────────────
-
-function Modal({
-	open,
-	onClose,
+function Sec({
 	title,
+	icon: I,
+	right,
 	children,
-	width = 560,
+	delay,
 }: {
-	open: boolean;
-	onClose: () => void;
 	title: string;
+	icon: React.ElementType;
+	right?: React.ReactNode;
+	children: React.ReactNode;
+	delay: number;
+}) {
+	return (
+		<div
+			style={{
+				background: "var(--s1)",
+				border: "1px solid var(--s4)",
+				borderRadius: 16,
+				overflow: "hidden",
+				boxShadow: "0 8px 32px rgba(0,0,0,.4)",
+				animation: `slideUp .5s cubic-bezier(.16,1,.3,1) ${delay}ms both`,
+			}}
+		>
+			<div
+				className="flex items-center justify-between"
+				style={{
+					padding: "14px 20px",
+					borderBottom: "1px solid var(--s3)",
+					background: "var(--s2)",
+				}}
+			>
+				<div className="flex items-center gap-2.5">
+					<I size={14} style={{ color: "var(--gold)" }} />
+					<span
+						className="font-display uppercase"
+						style={{
+							fontSize: 11,
+							letterSpacing: "0.15em",
+							color: "#ccc",
+							fontWeight: 600,
+						}}
+					>
+						{title}
+					</span>
+				</div>
+				{right}
+			</div>
+			{children}
+		</div>
+	);
+}
+
+function Mdl({
+	title,
+	onClose,
+	children,
+	width,
+}: {
+	title: string;
+	onClose: () => void;
 	children: React.ReactNode;
 	width?: number;
 }) {
-	if (!open) return null;
 	return (
 		<div
-			className="animate-fade-in"
 			style={{
 				position: "fixed",
 				inset: 0,
-				zIndex: 50,
+				zIndex: 999,
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				background: "rgba(0,0,0,0.7)",
-				backdropFilter: "blur(8px)",
+				background: "rgba(0,0,0,.7)",
+				backdropFilter: "blur(4px)",
 			}}
-			onClick={onClose}
+			onClick={(e) => {
+				if (e.target === e.currentTarget) onClose();
+			}}
 		>
 			<div
 				style={{
-					width: "100%",
-					maxWidth: width,
-					maxHeight: "90vh",
-					overflow: "auto",
 					background: "var(--s1)",
 					border: "1px solid var(--s4)",
 					borderRadius: 16,
-					boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+					width: width ?? 480,
+					maxWidth: "90vw",
+					maxHeight: "85vh",
+					overflow: "auto",
+					boxShadow: "0 24px 64px rgba(0,0,0,.6)",
+					animation: "slideUp .3s cubic-bezier(.16,1,.3,1)",
 				}}
-				onClick={(e) => e.stopPropagation()}
 			>
 				<div
 					className="flex items-center justify-between"
 					style={{
-						padding: "14px 20px",
+						padding: "16px 20px",
 						borderBottom: "1px solid var(--s3)",
 						background: "var(--s2)",
 					}}
 				>
-					<div className="flex items-center gap-2.5">
-						<div
-							style={{
-								width: 3,
-								height: 16,
-								borderRadius: 2,
-								background: "var(--gold)",
-							}}
-						/>
-						<span
-							className="font-display uppercase"
-							style={{
-								fontSize: 11,
-								letterSpacing: "0.15em",
-								color: "#ccc",
-								fontWeight: 600,
-							}}
-						>
-							{title}
-						</span>
-					</div>
+					<span
+						className="font-display uppercase"
+						style={{
+							fontSize: 12,
+							letterSpacing: "0.15em",
+							color: "#ccc",
+							fontWeight: 600,
+						}}
+					>
+						{title}
+					</span>
 					<button
 						onClick={onClose}
-						className="btn-ghost"
-						style={{ padding: 6, borderRadius: 8 }}
+						style={{
+							background: "none",
+							border: "none",
+							cursor: "pointer",
+							padding: 4,
+						}}
 					>
-						<X size={16} />
+						<X size={16} style={{ color: "#666" }} />
 					</button>
 				</div>
-				<div style={{ padding: 24 }}>{children}</div>
+				<div style={{ padding: 20 }}>{children}</div>
 			</div>
 		</div>
 	);
 }
 
-// ─── Nuevo Gasto Modal ───────────────────────────────────────────────────────
-
-function NuevoGastoModal({
-	open,
-	onClose,
-	categories,
-	suppliers,
-	onSaved,
-	editing,
-}: {
-	open: boolean;
-	onClose: () => void;
-	categories: ExpenseCategory[];
-	suppliers: Supplier[];
-	onSaved: () => void;
-	editing: Expense | null;
-}) {
-	const [categoryId, setCategoryId] = useState("");
-	const [description, setDescription] = useState("");
-	const [amount, setAmount] = useState("");
-	const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-	const [supplierId, setSupplierId] = useState("");
-	const [paymentMethod, setPaymentMethod] = useState("Efectivo");
-	const [notes, setNotes] = useState("");
-	const [saving, setSaving] = useState(false);
-	const [error, setError] = useState("");
-
-	useEffect(() => {
-		if (editing) {
-			setCategoryId(editing.categoryId);
-			setDescription(editing.description);
-			setAmount(String(editing.amount));
-			setDate(editing.date.slice(0, 10));
-			setSupplierId(editing.supplierId ?? "");
-			setPaymentMethod(editing.paymentMethod);
-			setNotes(editing.notes ?? "");
-		} else {
-			setCategoryId(categories[0]?.id ?? "");
-			setDescription("");
-			setAmount("");
-			setDate(new Date().toISOString().slice(0, 10));
-			setSupplierId("");
-			setPaymentMethod("Efectivo");
-			setNotes("");
-		}
-		setError("");
-	}, [editing, open, categories]);
-
-	const handleSubmit = async () => {
-		if (!categoryId || !description.trim() || !amount || Number(amount) <= 0) {
-			setError("Completar categoria, descripcion y monto valido.");
-			return;
-		}
-		setSaving(true);
-		setError("");
-		try {
-			const body = {
-				categoryId,
-				description: description.trim(),
-				amount: Number(amount),
-				date,
-				supplierId: supplierId || null,
-				paymentMethod,
-				notes: notes.trim() || null,
-			};
-			if (editing) {
-				await apiFetch(`/api/expenses/${editing.id}`, {
-					method: "PATCH",
-					body: JSON.stringify(body),
-				});
-			} else {
-				await apiFetch("/api/expenses", {
-					method: "POST",
-					body: JSON.stringify(body),
-				});
-			}
-			onSaved();
-			onClose();
-		} catch (e: unknown) {
-			setError(e instanceof Error ? e.message : "Error al guardar");
-		} finally {
-			setSaving(false);
-		}
-	};
-
-	return (
-		<Modal
-			open={open}
-			onClose={onClose}
-			title={editing ? "EDITAR GASTO" : "NUEVO GASTO"}
-		>
-			<div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-				{/* Category selector */}
-				<div>
-					<div
-						className="font-display uppercase"
-						style={{
-							fontSize: 10,
-							letterSpacing: "0.2em",
-							color: "#888",
-							fontWeight: 600,
-							marginBottom: 8,
-						}}
-					>
-						Categoria
-					</div>
-					<div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-						{categories
-							.sort((a, b) => a.order - b.order)
-							.map((c, idx) => {
-								const isSelected = categoryId === c.id;
-								const color = CAT_COLORS[idx % CAT_COLORS.length];
-								return (
-									<button
-										key={c.id}
-										onClick={() => setCategoryId(c.id)}
-										style={{
-											padding: "10px 8px",
-											borderRadius: 10,
-											border: isSelected
-												? `1px solid ${color}66`
-												: "1px solid var(--s3)",
-											background: isSelected ? `${color}15` : "var(--s2)",
-											cursor: "pointer",
-											display: "flex",
-											flexDirection: "column",
-											alignItems: "center",
-											gap: 6,
-											transition: "all 0.15s",
-										}}
-									>
-										<div
-											style={{
-												width: 28,
-												height: 28,
-												borderRadius: 8,
-												background: isSelected ? `${color}25` : "var(--s3)",
-												display: "flex",
-												alignItems: "center",
-												justifyContent: "center",
-											}}
-										>
-											<CategoryIcon
-												iconName={c.icon}
-												size={13}
-												style={{ color: isSelected ? color : "#888" }}
-											/>
-										</div>
-										<span
-											className="font-body"
-											style={{
-												fontSize: 10,
-												color: isSelected ? color : "#888",
-												fontWeight: isSelected ? 600 : 400,
-											}}
-										>
-											{c.name}
-										</span>
-									</button>
-								);
-							})}
-					</div>
-				</div>
-
-				{/* Description */}
-				<div>
-					<div
-						className="font-display uppercase"
-						style={{
-							fontSize: 10,
-							letterSpacing: "0.2em",
-							color: "#888",
-							fontWeight: 600,
-							marginBottom: 6,
-						}}
-					>
-						Descripcion
-					</div>
-					<input
-						className="input-base"
-						style={{ width: "100%" }}
-						value={description}
-						onChange={(e) => setDescription(e.target.value)}
-						placeholder="Ej: Compra de insumos"
-					/>
-				</div>
-
-				{/* Amount + Date */}
-				<div className="grid grid-cols-2 gap-3">
-					<div>
-						<div
-							className="font-display uppercase"
-							style={{
-								fontSize: 10,
-								letterSpacing: "0.2em",
-								color: "#888",
-								fontWeight: 600,
-								marginBottom: 6,
-							}}
-						>
-							Monto (ARS)
-						</div>
-						<input
-							className="input-base"
-							style={{ width: "100%" }}
-							type="number"
-							min={0}
-							step={1}
-							value={amount}
-							onChange={(e) => setAmount(e.target.value)}
-							placeholder="0"
-						/>
-					</div>
-					<div>
-						<div
-							className="font-display uppercase"
-							style={{
-								fontSize: 10,
-								letterSpacing: "0.2em",
-								color: "#888",
-								fontWeight: 600,
-								marginBottom: 6,
-							}}
-						>
-							Fecha
-						</div>
-						<input
-							className="input-base"
-							style={{ width: "100%" }}
-							type="date"
-							value={date}
-							onChange={(e) => setDate(e.target.value)}
-						/>
-					</div>
-				</div>
-
-				{/* Supplier */}
-				<div>
-					<div
-						className="font-display uppercase"
-						style={{
-							fontSize: 10,
-							letterSpacing: "0.2em",
-							color: "#888",
-							fontWeight: 600,
-							marginBottom: 6,
-						}}
-					>
-						Proveedor (opcional)
-					</div>
-					<select
-						className="input-base"
-						style={{ width: "100%" }}
-						value={supplierId}
-						onChange={(e) => setSupplierId(e.target.value)}
-					>
-						<option value="">Sin proveedor</option>
-						{suppliers.map((s) => (
-							<option key={s.id} value={s.id}>
-								{s.name}
-							</option>
-						))}
-					</select>
-				</div>
-
-				{/* Payment method pills */}
-				<div>
-					<div
-						className="font-display uppercase"
-						style={{
-							fontSize: 10,
-							letterSpacing: "0.2em",
-							color: "#888",
-							fontWeight: 600,
-							marginBottom: 8,
-						}}
-					>
-						Metodo de Pago
-					</div>
-					<div className="flex gap-2 flex-wrap">
-						{PAYMENT_METHODS.map((m) => {
-							const isActive = paymentMethod === m;
-							const color = PAYMENT_COLORS[m] ?? "#888";
-							return (
-								<button
-									key={m}
-									onClick={() => setPaymentMethod(m)}
-									style={{
-										padding: "7px 16px",
-										borderRadius: 10,
-										fontSize: 11,
-										fontWeight: 600,
-										fontFamily: "var(--font-syne)",
-										letterSpacing: "0.05em",
-										border: isActive
-											? `1px solid ${color}66`
-											: "1px solid var(--s4)",
-										background: isActive ? `${color}18` : "var(--s2)",
-										color: isActive ? color : "#666",
-										cursor: "pointer",
-										transition: "all 0.15s",
-										boxShadow: isActive ? `0 0 8px ${color}20` : "none",
-									}}
-								>
-									{m}
-								</button>
-							);
-						})}
-					</div>
-				</div>
-
-				{/* Notes */}
-				<div>
-					<div
-						className="font-display uppercase"
-						style={{
-							fontSize: 10,
-							letterSpacing: "0.2em",
-							color: "#888",
-							fontWeight: 600,
-							marginBottom: 6,
-						}}
-					>
-						Notas (opcional)
-					</div>
-					<textarea
-						className="input-base"
-						style={{ width: "100%", minHeight: 60, resize: "vertical" }}
-						value={notes}
-						onChange={(e) => setNotes(e.target.value)}
-						placeholder="Observaciones..."
-					/>
-				</div>
-
-				{/* Error */}
-				{error && (
-					<div
-						className="flex items-center gap-2"
-						style={{
-							padding: "10px 14px",
-							borderRadius: 10,
-							background: "rgba(239,68,68,0.08)",
-							border: "1px solid rgba(239,68,68,0.2)",
-						}}
-					>
-						<AlertCircle
-							size={14}
-							style={{ color: "#ef4444", flexShrink: 0 }}
-						/>
-						<span
-							className="font-body"
-							style={{ color: "#ef4444", fontSize: 12 }}
-						>
-							{error}
-						</span>
-					</div>
-				)}
-
-				{/* Submit */}
-				<button
-					className="btn-primary"
-					style={{
-						width: "100%",
-						marginTop: 4,
-						padding: "12px 0",
-						fontSize: 13,
-						fontWeight: 700,
-						letterSpacing: "0.05em",
-					}}
-					onClick={handleSubmit}
-					disabled={saving}
-				>
-					{saving
-						? "Guardando..."
-						: editing
-							? "Guardar cambios"
-							: "Registrar gasto"}
-				</button>
-			</div>
-		</Modal>
-	);
-}
-
-// ─── Gestionar Categorias Modal ──────────────────────────────────────────────
-
-function CategoriasModal({
-	open,
-	onClose,
-	categories,
-	onChanged,
-}: {
-	open: boolean;
-	onClose: () => void;
-	categories: ExpenseCategory[];
-	onChanged: () => void;
-}) {
-	const [name, setName] = useState("");
-	const [icon, setIcon] = useState("Tag");
-	const [editingId, setEditingId] = useState<string | null>(null);
-	const [error, setError] = useState("");
-	const [busy, setBusy] = useState(false);
-
-	const iconOptions = Object.keys(ICON_MAP);
-
-	const resetForm = () => {
-		setName("");
-		setIcon("Tag");
-		setEditingId(null);
-		setError("");
-	};
-
-	const handleSave = async () => {
-		if (!name.trim()) {
-			setError("Nombre requerido.");
-			return;
-		}
-		setBusy(true);
-		setError("");
-		try {
-			const body = { name: name.trim(), icon, order: categories.length };
-			if (editingId) {
-				await apiFetch(`/api/expense-categories/${editingId}`, {
-					method: "PATCH",
-					body: JSON.stringify(body),
-				});
-			} else {
-				await apiFetch("/api/expense-categories", {
-					method: "POST",
-					body: JSON.stringify(body),
-				});
-			}
-			resetForm();
-			onChanged();
-		} catch (e: unknown) {
-			setError(e instanceof Error ? e.message : "Error");
-		} finally {
-			setBusy(false);
-		}
-	};
-
-	const handleDelete = async (id: string) => {
-		if (!confirm("Eliminar esta categoria?")) return;
-		try {
-			await apiFetch(`/api/expense-categories/${id}`, { method: "DELETE" });
-			onChanged();
-		} catch (e: unknown) {
-			setError(e instanceof Error ? e.message : "Error al eliminar");
-		}
-	};
-
-	const startEdit = (cat: ExpenseCategory) => {
-		setEditingId(cat.id);
-		setName(cat.name);
-		setIcon(cat.icon);
-	};
-
-	const sorted = [...categories].sort((a, b) => a.order - b.order);
-
-	return (
-		<Modal
-			open={open}
-			onClose={onClose}
-			title="GESTIONAR CATEGORIAS"
-			width={480}
-		>
-			<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-				{sorted.map((cat, idx) => {
-					const color = CAT_COLORS[idx % CAT_COLORS.length];
-					const isEditing = editingId === cat.id;
-					return (
-						<div
-							key={cat.id}
-							className="flex items-center gap-3"
-							style={{
-								padding: "12px 14px",
-								borderRadius: 12,
-								background: isEditing ? "rgba(245,158,11,0.06)" : "var(--s2)",
-								border: isEditing
-									? "1px solid rgba(245,158,11,0.3)"
-									: "1px solid var(--s3)",
-								transition: "all 0.15s",
-							}}
-						>
-							<div
-								style={{
-									width: 32,
-									height: 32,
-									borderRadius: 9,
-									background: `${color}18`,
-									border: `1px solid ${color}30`,
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-									flexShrink: 0,
-								}}
-							>
-								<CategoryIcon iconName={cat.icon} size={14} style={{ color }} />
-							</div>
-							<span
-								className="font-body flex-1"
-								style={{ fontSize: 13, fontWeight: 500, color: "#f5f5f5" }}
-							>
-								{cat.name}
-							</span>
-							<span
-								className="font-body"
-								style={{ fontSize: 10, color: "#666", fontFamily: "monospace" }}
-							>
-								#{cat.order}
-							</span>
-							<button
-								onClick={() => startEdit(cat)}
-								className="btn-ghost"
-								style={{ padding: 6, borderRadius: 8 }}
-							>
-								<Pencil size={12} style={{ color: "#888" }} />
-							</button>
-							<button
-								onClick={() => handleDelete(cat.id)}
-								className="btn-ghost"
-								style={{ padding: 6, borderRadius: 8 }}
-							>
-								<Trash2 size={12} style={{ color: "#ef4444" }} />
-							</button>
-						</div>
-					);
-				})}
-
-				{sorted.length === 0 && (
-					<div
-						className="flex flex-col items-center justify-center"
-						style={{ padding: "32px 16px" }}
-					>
-						<Tag size={24} style={{ color: "#333", marginBottom: 8 }} />
-						<span className="font-body" style={{ fontSize: 12, color: "#666" }}>
-							No hay categorias definidas
-						</span>
-					</div>
-				)}
-
-				{/* Add/Edit form */}
-				<div
-					style={{
-						borderTop: "1px solid var(--s3)",
-						paddingTop: 16,
-						marginTop: 8,
-					}}
-				>
-					<div
-						className="font-display uppercase"
-						style={{
-							fontSize: 10,
-							letterSpacing: "0.2em",
-							color: "#888",
-							fontWeight: 600,
-							marginBottom: 10,
-						}}
-					>
-						{editingId ? "Editar categoria" : "Nueva categoria"}
-					</div>
-					<div className="flex gap-2">
-						<div
-							style={{
-								position: "relative",
-								width: 44,
-								height: 40,
-								borderRadius: 10,
-								background: "var(--s2)",
-								border: "1px solid var(--s4)",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								flexShrink: 0,
-							}}
-						>
-							<CategoryIcon
-								iconName={icon}
-								size={16}
-								style={{ color: "#888" }}
-							/>
-							<select
-								className="input-base"
-								style={{
-									position: "absolute",
-									inset: 0,
-									opacity: 0,
-									cursor: "pointer",
-								}}
-								value={icon}
-								onChange={(e) => setIcon(e.target.value)}
-							>
-								{iconOptions.map((ic) => (
-									<option key={ic} value={ic}>
-										{ic}
-									</option>
-								))}
-							</select>
-						</div>
-						<input
-							className="input-base flex-1"
-							value={name}
-							onChange={(e) => setName(e.target.value)}
-							placeholder="Nombre de la categoria"
-							style={{ fontSize: 13 }}
-						/>
-						<button
-							className="btn-primary"
-							style={{
-								padding: "8px 18px",
-								fontSize: 12,
-								fontWeight: 700,
-							}}
-							onClick={handleSave}
-							disabled={busy}
-						>
-							{editingId ? "Guardar" : "Agregar"}
-						</button>
-						{editingId && (
-							<button
-								className="btn-ghost"
-								style={{ padding: "8px 12px" }}
-								onClick={resetForm}
-							>
-								<X size={14} />
-							</button>
-						)}
-					</div>
-					{error && (
-						<div
-							className="flex items-center gap-2 mt-2"
-							style={{
-								padding: "8px 12px",
-								borderRadius: 8,
-								background: "rgba(239,68,68,0.08)",
-								border: "1px solid rgba(239,68,68,0.2)",
-							}}
-						>
-							<AlertCircle size={12} style={{ color: "#ef4444" }} />
-							<span style={{ color: "#ef4444", fontSize: 11 }}>{error}</span>
-						</div>
-					)}
-				</div>
-			</div>
-		</Modal>
-	);
-}
-
-// ─── Page ────────────────────────────────────────────────────────────────────
-
 export default function ExpensesPage() {
-	const [period, setPeriod] = useState<Period>("Este Mes");
-	const [customFrom, setCustomFrom] = useState("");
-	const [customTo, setCustomTo] = useState("");
-	const [categories, setCategories] = useState<ExpenseCategory[]>([]);
-	const [expenses, setExpenses] = useState<Expense[]>([]);
-	const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-	const [filterCat, setFilterCat] = useState<string>("");
-	const [showNewModal, setShowNewModal] = useState(false);
-	const [showCatModal, setShowCatModal] = useState(false);
-	const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [sortField, setSortField] = useState<"date" | "amount">("date");
-	const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-
-	const fetchCategories = useCallback(async () => {
-		try {
-			const data = await apiFetch<ExpenseCategory[]>("/api/expense-categories");
-			setCategories(data);
-		} catch {
-			setCategories([]);
-		}
-	}, []);
-
-	const fetchExpenses = useCallback(async () => {
-		try {
-			const { from, to } = getDateRange(period, customFrom, customTo);
-			const params = new URLSearchParams({ from, to });
-			if (filterCat) params.set("categoryId", filterCat);
-			const data = await apiFetch<Expense[]>(`/api/expenses?${params}`);
-			setExpenses(data);
-		} catch {
-			setExpenses([]);
-		}
-	}, [period, customFrom, customTo, filterCat]);
-
-	const fetchSuppliers = useCallback(async () => {
-		try {
-			const data = await apiFetch<Supplier[]>("/api/suppliers");
-			setSuppliers(data);
-		} catch {
-			setSuppliers([]);
-		}
-	}, []);
-
-	useEffect(() => {
-		Promise.all([fetchCategories(), fetchExpenses(), fetchSuppliers()]).finally(
-			() => setLoading(false),
-		);
-	}, [fetchCategories, fetchExpenses, fetchSuppliers]);
-
-	useEffect(() => {
-		fetchExpenses();
-	}, [fetchExpenses]);
-
-	const handleDelete = async (id: string) => {
-		if (!confirm("Eliminar este gasto?")) return;
-		try {
-			await apiFetch(`/api/expenses/${id}`, { method: "DELETE" });
-			fetchExpenses();
-		} catch {
-			// ignore
-		}
-	};
-
-	// Computed KPIs
-	const totalMes = expenses.reduce((s, e) => s + e.amount, 0);
-	const todayStr = new Date().toISOString().slice(0, 10);
-	const gastosHoy = expenses
-		.filter((e) => e.date.slice(0, 10) === todayStr)
-		.reduce((s, e) => s + e.amount, 0);
-	const uniqueCats = new Set(expenses.map((e) => e.categoryId)).size;
-
-	// Category summaries
-	const catSummaries = categories
-		.map((cat, idx) => {
-			const catExpenses = expenses.filter((e) => e.categoryId === cat.id);
-			return {
-				...cat,
-				total: catExpenses.reduce((s, e) => s + e.amount, 0),
-				count: catExpenses.length,
-				color: CAT_COLORS[idx % CAT_COLORS.length],
-			};
-		})
-		.filter((c) => c.count > 0)
-		.sort((a, b) => b.total - a.total);
-
-	// Sorted expenses
-	const sortedExpenses = [...expenses].sort((a, b) => {
-		const mul = sortDir === "asc" ? 1 : -1;
-		if (sortField === "date")
-			return mul * (new Date(a.date).getTime() - new Date(b.date).getTime());
-		return mul * (a.amount - b.amount);
+	const [tab, setTab] = useState<Tab>("GASTOS");
+	const { data: exps = [], mutate: mE } = useSWR<Expense[]>(
+		"/api/expenses",
+		fetcher,
+	);
+	const { data: cats = [], mutate: mC } = useSWR<ExpenseCategory[]>(
+		"/api/expense-categories",
+		fetcher,
+	);
+	const { data: sups = [] } = useSWR<Supplier[]>("/api/suppliers", fetcher);
+	const [expMdl, setExpMdl] = useState(false);
+	const [edE, setEdE] = useState<Expense | null>(null);
+	const [ef, setEf] = useState({
+		description: "",
+		amount: "",
+		date: td(),
+		categoryId: "",
+		supplierId: "",
+		paymentMethod: "Efectivo",
+		notes: "",
+		isRecurring: false,
+		recurringDay: "",
 	});
+	const [delId, setDelId] = useState<string | null>(null);
+	const [catMdl, setCatMdl] = useState(false);
+	const [edC, setEdC] = useState<ExpenseCategory | null>(null);
+	const [cf, setCf] = useState({
+		name: "",
+		icon: "",
+		order: "0",
+		budgetMonthly: "",
+		parentId: "",
+	});
+	const [dF, setDF] = useState(() => {
+		const d = new Date();
+		d.setDate(1);
+		return d.toISOString().slice(0, 10);
+	});
+	const [dT, setDT] = useState(td());
+	const [fC, setFC] = useState("");
+	const [fS, setFS] = useState("");
+	const [fP, setFP] = useState("");
+	const [xS, setXS] = useState<string | null>(null);
 
-	const toggleSort = (field: "date" | "amount") => {
-		if (sortField === field) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-		else {
-			setSortField(field);
-			setSortDir("desc");
+	const filt = useMemo(
+		() =>
+			exps.filter((e) => {
+				const d = e.date.slice(0, 10);
+				return (
+					d >= dF &&
+					d <= dT &&
+					(!fC || e.categoryId === fC) &&
+					(!fS || e.supplierId === fS) &&
+					(!fP || e.paymentMethod === fP)
+				);
+			}),
+		[exps, dF, dT, fC, fS, fP],
+	);
+	const now = new Date();
+	const mEx = useMemo(
+		() => exps.filter((e) => new Date(e.date) >= som()),
+		[exps],
+	);
+	const wEx = useMemo(
+		() => exps.filter((e) => new Date(e.date) >= sow()),
+		[exps],
+	);
+	const tM = mEx.reduce((s, e) => s + e.amount, 0);
+	const tW = wEx.reduce((s, e) => s + e.amount, 0);
+	const dim = now.getDate();
+	const avg = dim > 0 ? tM / dim : 0;
+	const rN = exps.filter((e) => e.isRecurring).length;
+	const pC = useMemo(() => cats.filter((c) => !c.parentId), [cats]);
+	const kOf = useCallback(
+		(pid: string) => cats.filter((c) => c.parentId === pid),
+		[cats],
+	);
+	const sG = useMemo(() => {
+		const m = new Map<
+			string,
+			{ s: Supplier; e: Expense[]; t: number; l: string }
+		>();
+		for (const e of mEx) {
+			const id = e.supplierId ?? "_";
+			const n = e.supplier?.name ?? "Sin proveedor";
+			if (!m.has(id)) m.set(id, { s: { id, name: n }, e: [], t: 0, l: e.date });
+			const g = m.get(id)!;
+			g.e.push(e);
+			g.t += e.amount;
+			if (e.date > g.l) g.l = e.date;
 		}
-	};
-
-	const SortIcon = ({ field }: { field: "date" | "amount" }) => {
-		if (sortField !== field) return null;
-		return sortDir === "desc" ? (
-			<ChevronDown size={10} />
-		) : (
-			<ChevronUp size={10} />
-		);
-	};
-
-	const catName = (id: string) =>
-		categories.find((c) => c.id === id)?.name ?? "--";
-	const catIcon = (id: string) =>
-		categories.find((c) => c.id === id)?.icon ?? "Tag";
-	const catColor = (id: string) => {
-		const idx = categories.findIndex((c) => c.id === id);
-		return idx >= 0 ? CAT_COLORS[idx % CAT_COLORS.length] : "#888";
-	};
-
-	const handlePrint = () => {
-		const rows = sortedExpenses
-			.map(
-				(e) => `<tr>
-					<td>${formatDate(e.date)}</td>
-					<td>${catName(e.categoryId)}</td>
-					<td>${e.description}</td>
-					<td>${e.paymentMethod}</td>
-					<td class="amount">${printCurrency(e.amount)}</td>
-				</tr>`,
-			)
-			.join("");
-		const periodLabel =
-			period === "Custom" ? `${customFrom} -- ${customTo}` : period;
-		printDocument({
-			title: "Gastos",
-			subtitle: `${periodLabel} -- ${sortedExpenses.length} gastos -- Total: ${printCurrency(totalMes)}`,
-			content: `<table>
-				<thead><tr><th>Fecha</th><th>Categoria</th><th>Descripcion</th><th>Medio</th><th style="text-align:right">Monto</th></tr></thead>
-				<tbody>${rows}
-				<tr class="total-row"><td colspan="4">Total</td><td class="amount">${printCurrency(totalMes)}</td></tr>
-				</tbody></table>`,
+		return [...m.values()].sort((a, b) => b.t - a.t);
+	}, [mEx]);
+	const cS = useMemo(() => {
+		const m = new Map<string, number>();
+		for (const e of mEx)
+			m.set(e.categoryId, (m.get(e.categoryId) ?? 0) + e.amount);
+		return m;
+	}, [mEx]);
+	const pmE = useMemo(() => {
+		const p = new Date();
+		p.setMonth(p.getMonth() - 1);
+		p.setDate(1);
+		p.setHours(0, 0, 0, 0);
+		const pe = new Date();
+		pe.setDate(0);
+		pe.setHours(23, 59, 59, 999);
+		return exps.filter((e) => {
+			const d = new Date(e.date);
+			return d >= p && d <= pe;
 		});
-	};
+	}, [exps]);
+	const pmT = pmE.reduce((s, e) => s + e.amount, 0);
+	const rT = filt.reduce((s, e) => s + e.amount, 0);
+	const dFull = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+	const proj = dim > 0 ? (tM / dim) * dFull : 0;
+	const t5 = useMemo(
+		() =>
+			[...cS.entries()]
+				.map(([id, t]) => ({ cat: cats.find((c) => c.id === id), total: t }))
+				.filter((x) => x.cat)
+				.sort((a, b) => b.total - a.total)
+				.slice(0, 5),
+		[cS, cats],
+	);
+	const mCT = t5[0]?.total ?? 1;
 
-	if (loading) {
-		return (
-			<div
-				className="flex items-center justify-center"
-				style={{ minHeight: "100vh", background: "var(--s0)" }}
-			>
-				<Loader2
-					size={28}
-					className="animate-spin"
-					style={{ color: "var(--gold)" }}
-				/>
-			</div>
-		);
-	}
+	const oNE = () => {
+		setEdE(null);
+		setEf({
+			description: "",
+			amount: "",
+			date: td(),
+			categoryId: cats[0]?.id ?? "",
+			supplierId: "",
+			paymentMethod: "Efectivo",
+			notes: "",
+			isRecurring: false,
+			recurringDay: "",
+		});
+		setExpMdl(true);
+	};
+	const oEE = (e: Expense) => {
+		setEdE(e);
+		setEf({
+			description: e.description,
+			amount: String(e.amount),
+			date: e.date.slice(0, 10),
+			categoryId: e.categoryId,
+			supplierId: e.supplierId ?? "",
+			paymentMethod: e.paymentMethod ?? "Efectivo",
+			notes: e.notes ?? "",
+			isRecurring: e.isRecurring,
+			recurringDay: e.recurringDay ? String(e.recurringDay) : "",
+		});
+		setExpMdl(true);
+	};
+	const sE = async () => {
+		const b = {
+			description: ef.description,
+			amount: parseFloat(ef.amount) || 0,
+			date: ef.date,
+			categoryId: ef.categoryId,
+			supplierId: ef.supplierId || null,
+			paymentMethod: ef.paymentMethod,
+			notes: ef.notes || null,
+			isRecurring: ef.isRecurring,
+			recurringDay: ef.recurringDay ? parseInt(ef.recurringDay) : null,
+		};
+		const h = { "Content-Type": "application/json" };
+		if (edE)
+			await fetch(`/api/expenses/${edE.id}`, {
+				method: "PATCH",
+				headers: h,
+				body: JSON.stringify(b),
+			});
+		else
+			await fetch("/api/expenses", {
+				method: "POST",
+				headers: h,
+				body: JSON.stringify(b),
+			});
+		setExpMdl(false);
+		mE();
+	};
+	const dE = async (id: string) => {
+		await fetch(`/api/expenses/${id}`, { method: "DELETE" });
+		setDelId(null);
+		mE();
+	};
+	const oNC = () => {
+		setEdC(null);
+		setCf({ name: "", icon: "", order: "0", budgetMonthly: "", parentId: "" });
+		setCatMdl(true);
+	};
+	const oEC = (c: ExpenseCategory) => {
+		setEdC(c);
+		setCf({
+			name: c.name,
+			icon: c.icon,
+			order: String(c.order),
+			budgetMonthly: c.budgetMonthly ? String(c.budgetMonthly) : "",
+			parentId: c.parentId ?? "",
+		});
+		setCatMdl(true);
+	};
+	const sC = async () => {
+		const b = {
+			name: cf.name,
+			icon: cf.icon || undefined,
+			order: parseInt(cf.order) || 0,
+			budgetMonthly: cf.budgetMonthly ? parseFloat(cf.budgetMonthly) : null,
+			parentId: cf.parentId || null,
+		};
+		const h = { "Content-Type": "application/json" };
+		if (edC)
+			await fetch(`/api/expense-categories/${edC.id}`, {
+				method: "PATCH",
+				headers: h,
+				body: JSON.stringify(b),
+			});
+		else
+			await fetch("/api/expense-categories", {
+				method: "POST",
+				headers: h,
+				body: JSON.stringify(b),
+			});
+		setCatMdl(false);
+		mC();
+	};
+	const dC = async (id: string) => {
+		await fetch(`/api/expense-categories/${id}`, { method: "DELETE" });
+		mC();
+	};
 
 	return (
 		<div style={{ minHeight: "100vh", background: "var(--s0)" }}>
@@ -1169,177 +638,438 @@ export default function ExpensesPage() {
 									lineHeight: 1.1,
 								}}
 							>
-								GASTOS
+								Control de Gastos
 							</h1>
 							<p
 								className="font-body"
 								style={{ fontSize: 12, color: "#666", marginTop: 2 }}
 							>
-								Control y registro de gastos operativos
+								Seguimiento completo de egresos
 							</p>
 						</div>
 					</div>
-					<div className="flex items-center gap-2">
+					{tab === "GASTOS" && (
 						<button
-							className="btn-ghost flex items-center gap-1.5"
-							onClick={handlePrint}
-						>
-							<Printer size={13} />
-							<span
-								className="font-display"
-								style={{ fontSize: 10, letterSpacing: "0.1em" }}
-							>
-								Imprimir
-							</span>
-						</button>
-						<button
-							className="btn-secondary flex items-center gap-1.5"
-							onClick={() => setShowCatModal(true)}
-						>
-							<Settings size={13} />
-							<span
-								className="font-display"
-								style={{ fontSize: 10, letterSpacing: "0.1em" }}
-							>
-								Categorias
-							</span>
-						</button>
-						<button
-							className="btn-primary flex items-center gap-1.5"
-							onClick={() => {
-								setEditingExpense(null);
-								setShowNewModal(true);
+							onClick={oNE}
+							style={{
+								...BP,
+								display: "flex",
+								alignItems: "center",
+								gap: 6,
+								fontSize: 12,
 							}}
 						>
-							<Plus size={14} />
-							<span
-								className="font-display"
-								style={{ fontSize: 10, letterSpacing: "0.1em" }}
-							>
-								Nuevo Gasto
-							</span>
+							<Plus size={14} /> Nuevo Gasto
 						</button>
-					</div>
-				</div>
-
-				{/* Period Selector */}
-				<div
-					className="flex flex-wrap items-center gap-3 animate-fade-in"
-					style={{ marginBottom: 12 }}
-				>
-					<div
-						className="flex items-center gap-0.5 p-1 rounded-xl"
-						style={{ background: "var(--s2)", border: "1px solid var(--s3)" }}
-					>
-						{PERIODS.map((p) => (
-							<button
-								key={p}
-								onClick={() => setPeriod(p)}
-								style={{
-									padding: "7px 16px",
-									borderRadius: 10,
-									background: period === p ? "#f59e0b" : "transparent",
-									color: period === p ? "#0a0a0a" : "#666",
-									fontFamily: "var(--font-syne)",
-									fontWeight: 700,
-									fontSize: 11,
-									letterSpacing: "0.1em",
-									border: "none",
-									cursor: "pointer",
-									transition: "all 0.15s",
-									boxShadow:
-										period === p ? "0 0 10px rgba(245,158,11,0.3)" : "none",
-								}}
-							>
-								{p}
-							</button>
-						))}
-					</div>
-					{period === "Custom" && (
-						<div className="flex items-center gap-2">
-							<input
-								className="input-base"
-								type="date"
-								value={customFrom}
-								onChange={(e) => setCustomFrom(e.target.value)}
-								style={{ fontSize: 12 }}
-							/>
-							<span style={{ fontSize: 12, color: "#666" }}>a</span>
-							<input
-								className="input-base"
-								type="date"
-								value={customTo}
-								onChange={(e) => setCustomTo(e.target.value)}
-								style={{ fontSize: 12 }}
-							/>
-						</div>
+					)}
+					{tab === "CATEGORÍAS" && (
+						<button
+							onClick={oNC}
+							style={{
+								...BP,
+								display: "flex",
+								alignItems: "center",
+								gap: 6,
+								fontSize: 12,
+							}}
+						>
+							<Plus size={14} /> Nueva Categoría
+						</button>
 					)}
 				</div>
-
-				<div className="divider-gold" style={{ marginBottom: 28 }} />
-
-				{/* KPI Cards */}
+				<div className="divider-gold" style={{ marginBottom: 20 }} />
+				{/* Tabs */}
 				<div
-					className="grid gap-4 grid-cols-2 md:grid-cols-3"
-					style={{ marginBottom: 28 }}
+					className="flex items-center gap-1"
+					style={{
+						marginBottom: 24,
+						background: "var(--s1)",
+						borderRadius: 12,
+						padding: 4,
+						border: "1px solid var(--s3)",
+					}}
 				>
-					<KpiCard
-						label="Gasto Total Periodo"
-						value={formatCurrency(totalMes)}
-						Icon={DollarSign}
-						color="#f59e0b"
-						sub={`${expenses.length} registro${expenses.length !== 1 ? "s" : ""}`}
-					/>
-					<KpiCard
-						label="Gastos Hoy"
-						value={formatCurrency(gastosHoy)}
-						Icon={CalendarDays}
-						color="#60a5fa"
-					/>
-					<KpiCard
-						label="Categorias Activas"
-						value={String(uniqueCats)}
-						Icon={Tag}
-						color="#8b5cf6"
-					/>
-				</div>
-
-				{/* Category Summary */}
-				{catSummaries.length > 0 && (
-					<div className="animate-fade-in" style={{ marginBottom: 28 }}>
-						<div
-							className="font-display uppercase"
+					{TABS.map((t) => (
+						<button
+							key={t}
+							onClick={() => setTab(t)}
 							style={{
-								fontSize: 10,
-								letterSpacing: "0.2em",
-								color: "#888",
-								fontWeight: 600,
-								marginBottom: 12,
+								flex: 1,
+								padding: "10px 8px",
+								borderRadius: 10,
+								border: "none",
+								cursor: "pointer",
+								fontFamily: "'Syne',sans-serif",
+								fontSize: 11,
+								fontWeight: 700,
+								letterSpacing: "0.1em",
+								textTransform: "uppercase",
+								transition: "all .2s",
+								background: tab === t ? "#f59e0b" : "transparent",
+								color: tab === t ? "#080808" : "#888",
 							}}
 						>
-							Resumen por Categoria
+							{t}
+						</button>
+					))}
+				</div>
+
+				{/* ── TAB 1: GASTOS ── */}
+				{tab === "GASTOS" && (
+					<>
+						<div
+							style={{
+								display: "grid",
+								gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+								gap: 16,
+								marginBottom: 24,
+							}}
+						>
+							<Kpi
+								label="Total Mes"
+								value={formatCurrency(tM)}
+								sub={pc(tM, pmT) + " vs mes anterior"}
+								color="#3b82f6"
+								icon={DollarSign}
+								idx={0}
+							/>
+							<Kpi
+								label="Total Semana"
+								value={formatCurrency(tW)}
+								color="#f59e0b"
+								icon={CalendarDays}
+								idx={1}
+							/>
+							<Kpi
+								label="Promedio Diario"
+								value={formatCurrency(avg)}
+								sub={`${dim} días transcurridos`}
+								color="#8b5cf6"
+								icon={BarChart3}
+								idx={2}
+							/>
+							<Kpi
+								label="Gastos Recurrentes"
+								value={rN}
+								sub="Gastos fijos mensuales"
+								color="#10b981"
+								icon={Repeat}
+								idx={3}
+							/>
 						</div>
-						<div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-							{catSummaries.map((cat) => {
-								const isActive = filterCat === cat.id;
-								const pct =
-									totalMes > 0
-										? ((cat.total / totalMes) * 100).toFixed(1)
-										: "0";
-								return (
-									<button
-										key={cat.id}
-										onClick={() => setFilterCat(isActive ? "" : cat.id)}
+						<Sec title="Filtros" icon={Filter} delay={300}>
+							<div
+								style={{
+									padding: "14px 20px",
+									display: "flex",
+									flexWrap: "wrap",
+									gap: 12,
+									alignItems: "end",
+								}}
+							>
+								<div>
+									<label style={LS}>Desde</label>
+									<input
+										type="date"
+										value={dF}
+										onChange={(e) => setDF(e.target.value)}
+										style={{ ...IS, width: 150 }}
+									/>
+								</div>
+								<div>
+									<label style={LS}>Hasta</label>
+									<input
+										type="date"
+										value={dT}
+										onChange={(e) => setDT(e.target.value)}
+										style={{ ...IS, width: 150 }}
+									/>
+								</div>
+								<div>
+									<label style={LS}>Categoría</label>
+									<select
+										value={fC}
+										onChange={(e) => setFC(e.target.value)}
+										style={{ ...IS, width: 170 }}
+									>
+										<option value="">Todas</option>
+										{cats.map((c) => (
+											<option key={c.id} value={c.id}>
+												{c.icon} {c.name}
+											</option>
+										))}
+									</select>
+								</div>
+								<div>
+									<label style={LS}>Proveedor</label>
+									<select
+										value={fS}
+										onChange={(e) => setFS(e.target.value)}
+										style={{ ...IS, width: 170 }}
+									>
+										<option value="">Todos</option>
+										{sups.map((s) => (
+											<option key={s.id} value={s.id}>
+												{s.name}
+											</option>
+										))}
+									</select>
+								</div>
+								<div>
+									<label style={LS}>Pago</label>
+									<select
+										value={fP}
+										onChange={(e) => setFP(e.target.value)}
+										style={{ ...IS, width: 150 }}
+									>
+										<option value="">Todos</option>
+										{PAY.map((m) => (
+											<option key={m} value={m}>
+												{m}
+											</option>
+										))}
+									</select>
+								</div>
+							</div>
+						</Sec>
+						<div style={{ marginTop: 20 }}>
+							<Sec
+								title={`Gastos (${filt.length})`}
+								icon={FileText}
+								delay={400}
+								right={
+									<span
+										className="font-kds"
+										style={{ fontSize: 18, color: "var(--gold)" }}
+									>
+										{formatCurrency(rT)}
+									</span>
+								}
+							>
+								{filt.length === 0 ? (
+									<div
+										className="flex flex-col items-center justify-center"
+										style={{ padding: "48px 20px" }}
+									>
+										<DollarSign
+											size={28}
+											style={{ color: "#333", marginBottom: 8 }}
+										/>
+										<span
+											className="font-body"
+											style={{ fontSize: 13, color: "#555" }}
+										>
+											Sin gastos para este período
+										</span>
+									</div>
+								) : (
+									<div style={{ overflowX: "auto" }}>
+										<table
+											style={{ width: "100%", borderCollapse: "collapse" }}
+										>
+											<thead>
+												<tr style={{ borderBottom: "1px solid var(--s3)" }}>
+													{[
+														"Fecha",
+														"Descripción",
+														"Categoría",
+														"Proveedor",
+														"Monto",
+														"Pago",
+														"",
+													].map((h) => (
+														<th
+															key={h}
+															style={{
+																padding: "10px 16px",
+																textAlign: "left",
+																fontSize: 9,
+																fontWeight: 700,
+																letterSpacing: "0.15em",
+																color: "#666",
+																fontFamily: "'Syne',sans-serif",
+																textTransform: "uppercase",
+															}}
+														>
+															{h}
+														</th>
+													))}
+												</tr>
+											</thead>
+											<tbody>
+												{filt.map((e) => {
+													const pm = PCOL[e.paymentMethod ?? ""] ?? "#666";
+													return (
+														<tr
+															key={e.id}
+															style={{
+																borderBottom: "1px solid var(--s3)",
+																cursor: "pointer",
+																transition: "background .15s",
+															}}
+															onMouseEnter={(ev) => hv(ev, "var(--s2)")}
+															onMouseLeave={(ev) => hv(ev, "transparent")}
+														>
+															<td style={{ padding: "12px 16px" }}>
+																<span
+																	className="font-body"
+																	style={{ fontSize: 13, color: "#bbb" }}
+																>
+																	{fd(e.date)}
+																</span>
+															</td>
+															<td style={{ padding: "12px 16px" }}>
+																<div
+																	className="font-body"
+																	style={{ fontSize: 13, color: "#eee" }}
+																>
+																	{e.description}
+																	{e.isRecurring && (
+																		<Repeat
+																			size={11}
+																			style={{
+																				color: "#f59e0b",
+																				marginLeft: 6,
+																				verticalAlign: "middle",
+																			}}
+																		/>
+																	)}
+																</div>
+																{e.notes && (
+																	<div
+																		className="font-body"
+																		style={{
+																			fontSize: 11,
+																			color: "#555",
+																			marginTop: 2,
+																		}}
+																	>
+																		{e.notes}
+																	</div>
+																)}
+															</td>
+															<td style={{ padding: "12px 16px" }}>
+																<span
+																	style={{
+																		fontSize: 11,
+																		padding: "3px 10px",
+																		borderRadius: 20,
+																		background: "var(--s3)",
+																		color: "#bbb",
+																		fontFamily: "'DM Sans',sans-serif",
+																	}}
+																>
+																	{e.category?.icon} {e.category?.name ?? "—"}
+																</span>
+															</td>
+															<td style={{ padding: "12px 16px" }}>
+																<span
+																	className="font-body"
+																	style={{ fontSize: 12, color: "#999" }}
+																>
+																	{e.supplier?.name ?? "—"}
+																</span>
+															</td>
+															<td style={{ padding: "12px 16px" }}>
+																<span
+																	className="font-kds"
+																	style={{ fontSize: 16, color: "#ef4444" }}
+																>
+																	{formatCurrency(e.amount)}
+																</span>
+															</td>
+															<td style={{ padding: "12px 16px" }}>
+																<span
+																	style={{
+																		fontSize: 10,
+																		padding: "3px 10px",
+																		borderRadius: 20,
+																		background: `${pm}15`,
+																		color: pm,
+																		border: `1px solid ${pm}30`,
+																		fontFamily: "'DM Sans',sans-serif",
+																		fontWeight: 600,
+																	}}
+																>
+																	{e.paymentMethod ?? "—"}
+																</span>
+															</td>
+															<td style={{ padding: "12px 16px" }}>
+																<div className="flex items-center gap-2">
+																	<button
+																		onClick={() => oEE(e)}
+																		style={{
+																			background: "none",
+																			border: "none",
+																			cursor: "pointer",
+																			padding: 4,
+																		}}
+																	>
+																		<Pencil
+																			size={14}
+																			style={{ color: "#666" }}
+																		/>
+																	</button>
+																	<button
+																		onClick={() => setDelId(e.id)}
+																		style={{
+																			background: "none",
+																			border: "none",
+																			cursor: "pointer",
+																			padding: 4,
+																		}}
+																	>
+																		<Trash2
+																			size={14}
+																			style={{ color: "#666" }}
+																		/>
+																	</button>
+																</div>
+															</td>
+														</tr>
+													);
+												})}
+											</tbody>
+										</table>
+									</div>
+								)}
+							</Sec>
+						</div>
+					</>
+				)}
+
+				{/* ── TAB 2: CATEGORÍAS ── */}
+				{tab === "CATEGORÍAS" && (
+					<div
+						style={{
+							display: "grid",
+							gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))",
+							gap: 16,
+						}}
+					>
+						{pC.map((cat, ci) => {
+							const sp = cS.get(cat.id) ?? 0;
+							const bu = cat.budgetMonthly ?? 0;
+							const r = bu > 0 ? Math.min(sp / bu, 1) : 0;
+							const bc = r > 0.9 ? "#ef4444" : r > 0.7 ? "#f59e0b" : "#10b981";
+							const co = CC[ci % CC.length];
+							const kids = kOf(cat.id);
+							return (
+								<div
+									key={cat.id}
+									style={{
+										background: "var(--s1)",
+										border: `1px solid ${co}20`,
+										borderRadius: 16,
+										overflow: "hidden",
+										animation: `slideUp .5s cubic-bezier(.16,1,.3,1) ${ci * 60}ms both`,
+									}}
+								>
+									<div
 										style={{
-											padding: 16,
-											borderRadius: 14,
-											cursor: "pointer",
-											textAlign: "left",
-											border: isActive
-												? `1px solid ${cat.color}55`
-												: "1px solid var(--s3)",
-											background: isActive ? `${cat.color}08` : "var(--s1)",
-											transition: "all 0.2s",
+											padding: "18px 20px",
+											borderBottom:
+												kids.length > 0 ? "1px solid var(--s3)" : "none",
 											position: "relative",
 											overflow: "hidden",
 										}}
@@ -1348,601 +1078,983 @@ export default function ExpensesPage() {
 											style={{
 												position: "absolute",
 												top: 0,
-												left: 0,
 												right: 0,
-												height: 2,
-												background: cat.color,
-												opacity: isActive ? 0.6 : 0.2,
-												transition: "opacity 0.2s",
+												width: 100,
+												height: 100,
+												background: `radial-gradient(circle at 100% 0%,${co}10 0%,transparent 70%)`,
+												pointerEvents: "none",
 											}}
 										/>
 										<div
-											className="flex items-center gap-2.5"
+											className="flex items-center justify-between"
 											style={{ marginBottom: 12 }}
 										>
-											<div
-												style={{
-													width: 30,
-													height: 30,
-													borderRadius: 9,
-													background: `${cat.color}18`,
-													border: `1px solid ${cat.color}30`,
-													display: "flex",
-													alignItems: "center",
-													justifyContent: "center",
-												}}
-											>
-												<CategoryIcon
-													iconName={cat.icon}
-													size={14}
-													style={{ color: cat.color }}
-												/>
+											<div className="flex items-center gap-3">
+												<span style={{ fontSize: 28 }}>{cat.icon}</span>
+												<div>
+													<div
+														className="font-display"
+														style={{
+															fontSize: 14,
+															color: "#eee",
+															fontWeight: 700,
+														}}
+													>
+														{cat.name}
+													</div>
+													<div
+														className="font-body"
+														style={{ fontSize: 11, color: "#666" }}
+													>
+														{cat._count?.expenses ?? 0} gastos
+													</div>
+												</div>
 											</div>
-											<div style={{ flex: 1, minWidth: 0 }}>
-												<span
-													className="font-body"
+											<div className="flex items-center gap-2">
+												<button
+													onClick={() => oEC(cat)}
 													style={{
-														fontSize: 12,
-														fontWeight: 500,
-														display: "block",
-														color: "#f5f5f5",
+														background: "none",
+														border: "none",
+														cursor: "pointer",
+														padding: 4,
 													}}
 												>
-													{cat.name}
-												</span>
-												<span
-													className="font-body"
-													style={{ fontSize: 10, color: "#666" }}
+													<Pencil size={13} style={{ color: "#666" }} />
+												</button>
+												<button
+													onClick={() => dC(cat.id)}
+													style={{
+														background: "none",
+														border: "none",
+														cursor: "pointer",
+														padding: 4,
+													}}
 												>
-													{cat.count} gasto{cat.count !== 1 ? "s" : ""} / {pct}%
-												</span>
+													<Trash2 size={13} style={{ color: "#666" }} />
+												</button>
 											</div>
 										</div>
-										<div
-											className="font-kds"
-											style={{
-												fontSize: 22,
-												lineHeight: 1,
-												color: isActive ? cat.color : "#e5e5e5",
-											}}
-										>
-											{formatCurrency(cat.total)}
-										</div>
-										<div
-											style={{
-												marginTop: 8,
-												width: "100%",
-												height: 3,
-												borderRadius: 2,
-												background: "var(--s3)",
-												overflow: "hidden",
-											}}
-										>
+										{bu > 0 ? (
+											<>
+												<div
+													className="flex items-center justify-between"
+													style={{ marginBottom: 4 }}
+												>
+													<span
+														className="font-body"
+														style={{ fontSize: 11, color: "#888" }}
+													>
+														{formatCurrency(sp)} / {formatCurrency(bu)}
+													</span>
+													<span
+														className="font-kds"
+														style={{ fontSize: 13, color: bc }}
+													>
+														{(r * 100).toFixed(0)}%
+													</span>
+												</div>
+												<div
+													style={{
+														height: 6,
+														borderRadius: 3,
+														background: "var(--s3)",
+														overflow: "hidden",
+													}}
+												>
+													<div
+														style={{
+															width: `${r * 100}%`,
+															height: "100%",
+															borderRadius: 3,
+															background: bc,
+															boxShadow: `0 0 8px ${bc}50`,
+															transition: "width .5s",
+														}}
+													/>
+												</div>
+											</>
+										) : (
 											<div
+												className="font-kds"
+												style={{ fontSize: 22, color: co }}
+											>
+												{formatCurrency(sp)}
+											</div>
+										)}
+									</div>
+									{kids.length > 0 && (
+										<div style={{ padding: "8px 16px 12px" }}>
+											<div
+												className="font-display uppercase"
 												style={{
-													width: `${totalMes > 0 ? (cat.total / totalMes) * 100 : 0}%`,
-													height: "100%",
-													borderRadius: 2,
-													background: cat.color,
-													transition: "width 0.3s",
+													fontSize: 9,
+													letterSpacing: "0.15em",
+													color: "#555",
+													marginBottom: 6,
 												}}
-											/>
+											>
+												Subcategorías
+											</div>
+											{kids.map((k) => {
+												const ks = cS.get(k.id) ?? 0;
+												return (
+													<div
+														key={k.id}
+														className="flex items-center justify-between"
+														style={{
+															padding: "6px 8px",
+															borderRadius: 8,
+															transition: "background .15s",
+														}}
+														onMouseEnter={(ev) => hv(ev, "var(--s2)")}
+														onMouseLeave={(ev) => hv(ev, "transparent")}
+													>
+														<div className="flex items-center gap-2">
+															<span style={{ fontSize: 14 }}>{k.icon}</span>
+															<span
+																className="font-body"
+																style={{ fontSize: 12, color: "#bbb" }}
+															>
+																{k.name}
+															</span>
+														</div>
+														<div className="flex items-center gap-2">
+															<span
+																className="font-kds"
+																style={{ fontSize: 13, color: "#999" }}
+															>
+																{formatCurrency(ks)}
+															</span>
+															<button
+																onClick={() => oEC(k)}
+																style={{
+																	background: "none",
+																	border: "none",
+																	cursor: "pointer",
+																	padding: 2,
+																}}
+															>
+																<Pencil size={11} style={{ color: "#555" }} />
+															</button>
+														</div>
+													</div>
+												);
+											})}
 										</div>
-									</button>
-								);
-							})}
-						</div>
-						{filterCat && (
-							<button
-								className="btn-ghost flex items-center gap-1.5"
-								style={{
-									fontSize: 11,
-									padding: "6px 12px",
-									borderRadius: 8,
-									marginTop: 12,
-								}}
-								onClick={() => setFilterCat("")}
-							>
-								<X size={10} />
-								Limpiar filtro
-							</button>
-						)}
+									)}
+								</div>
+							);
+						})}
 					</div>
 				)}
 
-				{/* Expense List */}
-				<div
-					style={{
-						background: "var(--s1)",
-						border: "1px solid var(--s4)",
-						borderRadius: 16,
-						overflow: "hidden",
-						boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-					}}
-				>
-					{/* List header */}
-					<div
-						className="flex items-center justify-between"
-						style={{
-							padding: "14px 20px",
-							borderBottom: "1px solid var(--s3)",
-							background: "var(--s2)",
-						}}
-					>
-						<div className="flex items-center gap-2.5">
-							<Wallet size={14} style={{ color: "var(--gold)" }} />
-							<span
-								className="font-display uppercase"
-								style={{
-									fontSize: 11,
-									letterSpacing: "0.15em",
-									color: "#ccc",
-									fontWeight: 600,
-								}}
-							>
-								LISTADO DE GASTOS
-							</span>
-							<span
-								className="font-body"
-								style={{ fontSize: 11, color: "#666" }}
-							>
-								{expenses.length} registro{expenses.length !== 1 ? "s" : ""}
-								{filterCat ? ` -- ${catName(filterCat)}` : ""}
-							</span>
-						</div>
-						{sortedExpenses.length > 0 && (
+				{/* ── TAB 3: POR PROVEEDOR ── */}
+				{tab === "POR PROVEEDOR" && (
+					<Sec title="Gastos por Proveedor" icon={Truck} delay={200}>
+						{sG.length === 0 ? (
 							<div
-								className="font-kds"
-								style={{ fontSize: 22, color: "var(--gold)" }}
+								className="flex flex-col items-center justify-center"
+								style={{ padding: "48px 20px" }}
 							>
-								{formatCurrency(totalMes)}
+								<Truck size={28} style={{ color: "#333", marginBottom: 8 }} />
+								<span
+									className="font-body"
+									style={{ fontSize: 13, color: "#555" }}
+								>
+									Sin gastos este mes
+								</span>
 							</div>
-						)}
-					</div>
-
-					{sortedExpenses.length === 0 ? (
-						<div
-							className="flex flex-col items-center justify-center"
-							style={{ padding: "48px 20px" }}
-						>
-							<Wallet size={32} style={{ color: "#333", marginBottom: 12 }} />
-							<span
-								className="font-body"
-								style={{ fontSize: 13, color: "#666" }}
-							>
-								No hay gastos registrados en este periodo
-							</span>
-							<button
-								className="btn-primary flex items-center gap-1.5"
-								style={{ padding: "8px 20px", fontSize: 12, marginTop: 16 }}
-								onClick={() => {
-									setEditingExpense(null);
-									setShowNewModal(true);
-								}}
-							>
-								<Plus size={13} />
-								Registrar gasto
-							</button>
-						</div>
-					) : (
-						<>
-							{/* Desktop table */}
-							<div className="hidden md:block" style={{ overflowX: "auto" }}>
-								<table style={{ width: "100%", borderCollapse: "collapse" }}>
-									<thead>
-										<tr style={{ borderBottom: "1px solid var(--s3)" }}>
-											{[
-												{ label: "Categoria", field: null, align: "left" },
-												{ label: "Descripcion", field: null, align: "left" },
-												{ label: "Proveedor", field: null, align: "left" },
-												{
-													label: "Fecha",
-													field: "date" as const,
-													align: "left",
-												},
-												{
-													label: "Monto",
-													field: "amount" as const,
-													align: "right",
-												},
-												{ label: "Pago", field: null, align: "center" },
-											].map((col) => (
-												<th
-													key={col.label}
-													className="font-display uppercase"
+						) : (
+							sG.map((g, gi) => {
+								const op = xS === g.s.id;
+								const co = CC[gi % CC.length];
+								return (
+									<div key={g.s.id}>
+										<div
+											className="flex items-center gap-3"
+											style={{
+												padding: "14px 20px",
+												borderBottom: "1px solid var(--s3)",
+												cursor: "pointer",
+												transition: "background .15s",
+											}}
+											onClick={() => setXS(op ? null : g.s.id)}
+											onMouseEnter={(ev) => hv(ev, "var(--s2)")}
+											onMouseLeave={(ev) => hv(ev, "transparent")}
+										>
+											{op ? (
+												<ChevronDown size={14} style={{ color: "#666" }} />
+											) : (
+												<ChevronRight size={14} style={{ color: "#666" }} />
+											)}
+											<div
+												style={{
+													width: 8,
+													height: 8,
+													borderRadius: "50%",
+													background: co,
+													flexShrink: 0,
+												}}
+											/>
+											<div style={{ flex: 1, minWidth: 0 }}>
+												<div
+													className="font-body"
 													style={{
-														fontSize: 9,
-														letterSpacing: "0.25em",
-														padding: "12px 16px",
-														textAlign: col.align as "left" | "right" | "center",
+														fontSize: 14,
+														color: "#eee",
 														fontWeight: 600,
-														color: "#888",
-														cursor: col.field ? "pointer" : "default",
-														userSelect: "none",
 													}}
-													onClick={
-														col.field ? () => toggleSort(col.field!) : undefined
-													}
 												>
-													<span
-														className="flex items-center gap-1"
+													{g.s.name}
+												</div>
+												<div
+													className="font-body"
+													style={{ fontSize: 11, color: "#666" }}
+												>
+													{g.e.length} gastos — Último: {fd(g.l)}
+												</div>
+											</div>
+											<span
+												className="font-kds"
+												style={{ fontSize: 20, color: co }}
+											>
+												{formatCurrency(g.t)}
+											</span>
+										</div>
+										{op && (
+											<div style={{ background: "var(--s0)" }}>
+												{g.e.map((e) => (
+													<div
+														key={e.id}
+														className="flex items-center"
 														style={{
-															justifyContent:
-																col.align === "right"
-																	? "flex-end"
-																	: col.align === "center"
-																		? "center"
-																		: "flex-start",
+															padding: "10px 20px 10px 48px",
+															borderBottom: "1px solid var(--s3)",
 														}}
 													>
-														{col.label}
-														{col.field && <SortIcon field={col.field} />}
-													</span>
-												</th>
-											))}
-											<th style={{ width: 72 }} />
-										</tr>
-									</thead>
-									<tbody>
-										{sortedExpenses.map((exp) => (
-											<tr
-												key={exp.id}
-												style={{
-													borderBottom: "1px solid var(--s3)",
-													transition: "background 0.1s",
-												}}
-												onMouseEnter={(e) =>
-													(e.currentTarget.style.background = "var(--s2)")
-												}
-												onMouseLeave={(e) =>
-													(e.currentTarget.style.background = "transparent")
-												}
-											>
-												<td style={{ padding: "12px 16px" }}>
-													<div className="flex items-center gap-2.5">
-														<div
-															style={{
-																width: 26,
-																height: 26,
-																borderRadius: 7,
-																background: `${catColor(exp.categoryId)}18`,
-																border: `1px solid ${catColor(exp.categoryId)}30`,
-																display: "flex",
-																alignItems: "center",
-																justifyContent: "center",
-																flexShrink: 0,
-															}}
-														>
-															<CategoryIcon
-																iconName={catIcon(exp.categoryId)}
-																size={11}
-																style={{ color: catColor(exp.categoryId) }}
-															/>
-														</div>
 														<span
 															className="font-body"
-															style={{ fontSize: 12, color: "#aaa" }}
+															style={{ fontSize: 12, color: "#888", width: 70 }}
 														>
-															{catName(exp.categoryId)}
+															{fd(e.date)}
 														</span>
-													</div>
-												</td>
-												<td style={{ padding: "12px 16px" }}>
-													<span
-														className="font-body"
-														style={{ fontSize: 13, color: "#f5f5f5" }}
-													>
-														{exp.description}
-													</span>
-													{exp.notes && (
-														<div
+														<span
 															className="font-body"
-															style={{
-																fontSize: 10,
-																color: "#666",
-																marginTop: 2,
-															}}
+															style={{ fontSize: 12, color: "#bbb", flex: 1 }}
 														>
-															{exp.notes}
-														</div>
-													)}
-												</td>
-												<td style={{ padding: "12px 16px" }}>
-													<span
-														className="font-body"
-														style={{ fontSize: 12, color: "#666" }}
-													>
-														{exp.supplier?.name ?? "--"}
-													</span>
-												</td>
-												<td style={{ padding: "12px 16px" }}>
-													<span
-														className="font-body"
-														style={{
-															fontSize: 12,
-															color: "#aaa",
-															fontFamily: "monospace",
-														}}
-													>
-														{formatDate(exp.date)}
-													</span>
-												</td>
-												<td
-													style={{ padding: "12px 16px", textAlign: "right" }}
-												>
-													<span
-														className="font-kds"
-														style={{ fontSize: 20, color: "#e5e5e5" }}
-													>
-														{formatCurrency(exp.amount)}
-													</span>
-												</td>
-												<td
-													style={{
-														padding: "12px 16px",
-														textAlign: "center",
-													}}
-												>
-													<span
-														className="badge"
-														style={{
-															fontSize: 10,
-															padding: "4px 12px",
-															borderRadius: 8,
-															background: `${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}15`,
-															color:
-																PAYMENT_COLORS[exp.paymentMethod] ?? "#888",
-															border: `1px solid ${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}30`,
-															fontWeight: 600,
-														}}
-													>
-														{exp.paymentMethod}
-													</span>
-												</td>
-												<td style={{ padding: "12px 8px" }}>
-													<div className="flex items-center gap-1">
-														<button
-															className="btn-ghost"
-															style={{ padding: 6, borderRadius: 8 }}
-															onClick={() => {
-																setEditingExpense(exp);
-																setShowNewModal(true);
-															}}
-														>
-															<Pencil size={12} style={{ color: "#888" }} />
-														</button>
-														<button
-															className="btn-ghost"
-															style={{ padding: 6, borderRadius: 8 }}
-															onClick={() => handleDelete(exp.id)}
-														>
-															<Trash2 size={12} style={{ color: "#ef4444" }} />
-														</button>
-													</div>
-												</td>
-											</tr>
-										))}
-									</tbody>
-									<tfoot>
-										<tr style={{ borderTop: "2px solid var(--s4)" }}>
-											<td
-												colSpan={4}
-												className="font-display"
-												style={{
-													padding: "16px 16px",
-													fontSize: 12,
-													fontWeight: 700,
-													color: "#f5f5f5",
-												}}
-											>
-												Total
-											</td>
-											<td style={{ padding: "16px 16px", textAlign: "right" }}>
-												<span
-													className="font-kds"
-													style={{ fontSize: 24, color: "#f59e0b" }}
-												>
-													{formatCurrency(totalMes)}
-												</span>
-											</td>
-											<td colSpan={2} />
-										</tr>
-									</tfoot>
-								</table>
-							</div>
-
-							{/* Mobile card list */}
-							<div className="md:hidden" style={{ padding: 8 }}>
-								<div
-									style={{
-										display: "flex",
-										flexDirection: "column",
-										gap: 6,
-									}}
-								>
-									{sortedExpenses.map((exp) => {
-										const color = catColor(exp.categoryId);
-										return (
-											<div
-												key={exp.id}
-												style={{
-													padding: "14px 16px",
-													borderRadius: 12,
-													background: "var(--s2)",
-													border: "1px solid var(--s3)",
-													position: "relative",
-													overflow: "hidden",
-												}}
-											>
-												<div
-													style={{
-														position: "absolute",
-														top: 0,
-														left: 0,
-														bottom: 0,
-														width: 3,
-														background: color,
-														borderRadius: "3px 0 0 3px",
-														opacity: 0.5,
-													}}
-												/>
-												<div className="flex items-start justify-between gap-3">
-													<div style={{ flex: 1, minWidth: 0 }}>
-														<div
-															className="flex items-center gap-2"
-															style={{ marginBottom: 4 }}
-														>
-															<CategoryIcon
-																iconName={catIcon(exp.categoryId)}
-																size={12}
-																style={{ color, flexShrink: 0 }}
-															/>
-															<span
-																className="font-body"
-																style={{ fontSize: 10, color: "#666" }}
-															>
-																{catName(exp.categoryId)}
-															</span>
-															<span
-																className="badge"
-																style={{
-																	fontSize: 9,
-																	padding: "2px 8px",
-																	borderRadius: 6,
-																	background: `${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}15`,
-																	color:
-																		PAYMENT_COLORS[exp.paymentMethod] ?? "#888",
-																	border: `1px solid ${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}30`,
-																}}
-															>
-																{exp.paymentMethod}
-															</span>
-														</div>
-														<div
-															className="font-body"
-															style={{
-																fontSize: 13,
-																fontWeight: 500,
-																color: "#f5f5f5",
-															}}
-														>
-															{exp.description}
-														</div>
-														<div
+															{e.description}
+														</span>
+														<span
 															className="font-body"
 															style={{
 																fontSize: 11,
 																color: "#666",
-																fontFamily: "monospace",
-																marginTop: 2,
+																marginRight: 12,
 															}}
 														>
-															{formatDate(exp.date)}
-															{exp.supplier?.name
-																? ` / ${exp.supplier.name}`
-																: ""}
-														</div>
-													</div>
-													<div style={{ textAlign: "right", flexShrink: 0 }}>
-														<div
+															{e.paymentMethod ?? ""}
+														</span>
+														<span
 															className="font-kds"
-															style={{
-																fontSize: 20,
-																color: "#e5e5e5",
-																lineHeight: 1,
-															}}
+															style={{ fontSize: 14, color: "#ef4444" }}
 														>
-															{formatCurrency(exp.amount)}
+															{formatCurrency(e.amount)}
+														</span>
+													</div>
+												))}
+											</div>
+										)}
+									</div>
+								);
+							})
+						)}
+					</Sec>
+				)}
+
+				{/* ── TAB 4: RESUMEN ── */}
+				{tab === "RESUMEN" && (
+					<>
+						<div
+							style={{
+								display: "grid",
+								gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+								gap: 16,
+								marginBottom: 24,
+							}}
+						>
+							<Kpi
+								label="Total Mes"
+								value={formatCurrency(tM)}
+								sub={pc(tM, pmT) + " vs anterior"}
+								color="#3b82f6"
+								icon={DollarSign}
+								idx={0}
+							/>
+							<Kpi
+								label="Promedio Diario"
+								value={formatCurrency(avg)}
+								color="#8b5cf6"
+								icon={BarChart3}
+								idx={1}
+							/>
+							<Kpi
+								label="Proyección Mensual"
+								value={formatCurrency(proj)}
+								sub={`Basado en ${dim} días`}
+								color="#f59e0b"
+								icon={TrendingUp}
+								idx={2}
+							/>
+							<Kpi
+								label="Mes Anterior"
+								value={formatCurrency(pmT)}
+								sub={tM > pmT ? "Mes actual mayor" : "Mes actual menor"}
+								color={tM > pmT ? "#ef4444" : "#10b981"}
+								icon={tM > pmT ? TrendingUp : TrendingDown}
+								idx={3}
+							/>
+						</div>
+						<div
+							style={{
+								display: "grid",
+								gridTemplateColumns: "1fr 1fr",
+								gap: 20,
+							}}
+						>
+							{/* Top 5 */}
+							<Sec title="Top 5 Categorías" icon={PieChart} delay={300}>
+								<div style={{ padding: "16px 20px" }}>
+									{t5.length === 0 ? (
+										<div
+											className="font-body"
+											style={{
+												fontSize: 13,
+												color: "#555",
+												textAlign: "center",
+												padding: 20,
+											}}
+										>
+											Sin datos
+										</div>
+									) : (
+										t5.map((it, i) => {
+											const c = it.cat!;
+											const p = mCT > 0 ? (it.total / mCT) * 100 : 0;
+											const co = CC[i % CC.length];
+											return (
+												<div key={c.id} style={{ marginBottom: 14 }}>
+													<div
+														className="flex items-center justify-between"
+														style={{ marginBottom: 4 }}
+													>
+														<div className="flex items-center gap-2">
+															<span style={{ fontSize: 16 }}>{c.icon}</span>
+															<span
+																className="font-body"
+																style={{ fontSize: 13, color: "#ccc" }}
+															>
+																{c.name}
+															</span>
+														</div>
+														<span
+															className="font-kds"
+															style={{ fontSize: 15, color: co }}
+														>
+															{formatCurrency(it.total)}
+														</span>
+													</div>
+													<div
+														style={{
+															height: 6,
+															borderRadius: 3,
+															background: "var(--s3)",
+															overflow: "hidden",
+														}}
+													>
+														<div
+															style={{
+																width: `${p}%`,
+																height: "100%",
+																borderRadius: 3,
+																background: co,
+																boxShadow: `0 0 8px ${co}40`,
+																transition: "width .6s",
+															}}
+														/>
+													</div>
+												</div>
+											);
+										})
+									)}
+								</div>
+							</Sec>
+							{/* Budget vs Actual */}
+							<Sec title="Presupuesto vs Real" icon={Layers} delay={380}>
+								<div style={{ padding: "16px 20px" }}>
+									{pC.filter((c) => c.budgetMonthly && c.budgetMonthly > 0)
+										.length === 0 ? (
+										<div
+											className="flex flex-col items-center justify-center"
+											style={{ padding: "30px 20px" }}
+										>
+											<AlertCircle
+												size={24}
+												style={{ color: "#555", marginBottom: 8 }}
+											/>
+											<span
+												className="font-body"
+												style={{ fontSize: 13, color: "#555" }}
+											>
+												Sin presupuestos configurados
+											</span>
+										</div>
+									) : (
+										pC
+											.filter((c) => c.budgetMonthly && c.budgetMonthly > 0)
+											.map((cat) => {
+												const sp = cS.get(cat.id) ?? 0;
+												const b = cat.budgetMonthly!;
+												const r = Math.min(sp / b, 1);
+												const ov = sp > b;
+												const bc = ov
+													? "#ef4444"
+													: r > 0.7
+														? "#f59e0b"
+														: "#10b981";
+												return (
+													<div key={cat.id} style={{ marginBottom: 16 }}>
+														<div
+															className="flex items-center justify-between"
+															style={{ marginBottom: 4 }}
+														>
+															<div className="flex items-center gap-2">
+																<span style={{ fontSize: 14 }}>{cat.icon}</span>
+																<span
+																	className="font-body"
+																	style={{ fontSize: 12, color: "#ccc" }}
+																>
+																	{cat.name}
+																</span>
+															</div>
+															<div className="flex items-center gap-2">
+																<span
+																	className="font-kds"
+																	style={{
+																		fontSize: 13,
+																		color: ov ? "#ef4444" : "#eee",
+																	}}
+																>
+																	{formatCurrency(sp)}
+																</span>
+																<span
+																	className="font-body"
+																	style={{ fontSize: 11, color: "#555" }}
+																>
+																	/ {formatCurrency(b)}
+																</span>
+															</div>
 														</div>
 														<div
-															className="flex items-center gap-1"
 															style={{
-																justifyContent: "flex-end",
-																marginTop: 8,
+																height: 6,
+																borderRadius: 3,
+																background: "var(--s3)",
+																overflow: "hidden",
 															}}
 														>
-															<button
-																className="btn-ghost"
-																style={{ padding: 4, borderRadius: 6 }}
-																onClick={() => {
-																	setEditingExpense(exp);
-																	setShowNewModal(true);
+															<div
+																style={{
+																	width: `${r * 100}%`,
+																	height: "100%",
+																	borderRadius: 3,
+																	background: bc,
+																	boxShadow: `0 0 6px ${bc}40`,
+																	transition: "width .5s",
+																}}
+															/>
+														</div>
+														{ov && (
+															<div
+																className="font-body"
+																style={{
+																	fontSize: 10,
+																	color: "#ef4444",
+																	marginTop: 2,
 																}}
 															>
-																<Pencil size={11} style={{ color: "#888" }} />
-															</button>
-															<button
-																className="btn-ghost"
-																style={{ padding: 4, borderRadius: 6 }}
-																onClick={() => handleDelete(exp.id)}
-															>
-																<Trash2
-																	size={11}
-																	style={{ color: "#ef4444" }}
-																/>
-															</button>
-														</div>
+																Excedido por {formatCurrency(sp - b)}
+															</div>
+														)}
 													</div>
+												);
+											})
+									)}
+								</div>
+							</Sec>
+						</div>
+						{/* Trend */}
+						<div style={{ marginTop: 20 }}>
+							<Sec title="Tendencia Mensual" icon={TrendingUp} delay={460}>
+								<div style={{ padding: "16px 20px" }}>
+									<div
+										className="flex items-center gap-4"
+										style={{ marginBottom: 12 }}
+									>
+										<div style={{ flex: 1 }}>
+											<div
+												className="font-display uppercase"
+												style={{
+													fontSize: 9,
+													letterSpacing: "0.15em",
+													color: "#666",
+													marginBottom: 4,
+												}}
+											>
+												Mes actual
+											</div>
+											<div
+												className="font-kds"
+												style={{ fontSize: 28, color: "#3b82f6" }}
+											>
+												{formatCurrency(tM)}
+											</div>
+										</div>
+										<div
+											style={{
+												padding: "8px 16px",
+												borderRadius: 10,
+												background:
+													tM > pmT
+														? "rgba(239,68,68,.1)"
+														: "rgba(16,185,129,.1)",
+												border: `1px solid ${tM > pmT ? "rgba(239,68,68,.25)" : "rgba(16,185,129,.25)"}`,
+											}}
+										>
+											<div className="flex items-center gap-1">
+												{tM > pmT ? (
+													<TrendingUp size={14} style={{ color: "#ef4444" }} />
+												) : (
+													<TrendingDown
+														size={14}
+														style={{ color: "#10b981" }}
+													/>
+												)}
+												<span
+													className="font-kds"
+													style={{
+														fontSize: 18,
+														color: tM > pmT ? "#ef4444" : "#10b981",
+													}}
+												>
+													{pc(tM, pmT)}
+												</span>
+											</div>
+										</div>
+										<div style={{ flex: 1, textAlign: "right" }}>
+											<div
+												className="font-display uppercase"
+												style={{
+													fontSize: 9,
+													letterSpacing: "0.15em",
+													color: "#666",
+													marginBottom: 4,
+												}}
+											>
+												Mes anterior
+											</div>
+											<div
+												className="font-kds"
+												style={{ fontSize: 28, color: "#666" }}
+											>
+												{formatCurrency(pmT)}
+											</div>
+										</div>
+									</div>
+									{t5.map((it, i) => {
+										const c = it.cat!;
+										const pv = pmE
+											.filter((e) => e.categoryId === c.id)
+											.reduce((s, e) => s + e.amount, 0);
+										const co = CC[i % CC.length];
+										const ch = pc(it.total, pv);
+										const up = it.total > pv;
+										return (
+											<div
+												key={c.id}
+												className="flex items-center justify-between"
+												style={{
+													padding: "8px 0",
+													borderBottom: "1px solid var(--s3)",
+												}}
+											>
+												<div className="flex items-center gap-2">
+													<span style={{ fontSize: 14 }}>{c.icon}</span>
+													<span
+														className="font-body"
+														style={{ fontSize: 12, color: "#bbb" }}
+													>
+														{c.name}
+													</span>
+												</div>
+												<div className="flex items-center gap-3">
+													<span
+														className="font-kds"
+														style={{ fontSize: 13, color: co }}
+													>
+														{formatCurrency(it.total)}
+													</span>
+													<span
+														style={{
+															fontSize: 10,
+															padding: "2px 8px",
+															borderRadius: 10,
+															background: up
+																? "rgba(239,68,68,.1)"
+																: "rgba(16,185,129,.1)",
+															color: up ? "#ef4444" : "#10b981",
+															fontFamily: "'DM Sans',sans-serif",
+															fontWeight: 600,
+														}}
+													>
+														{ch}
+													</span>
 												</div>
 											</div>
 										);
 									})}
 								</div>
+							</Sec>
+						</div>
+					</>
+				)}
+			</div>
+
+			{/* EXPENSE MODAL */}
+			{expMdl && (
+				<Mdl
+					title={edE ? "Editar Gasto" : "Nuevo Gasto"}
+					onClose={() => setExpMdl(false)}
+				>
+					<div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+						<div>
+							<label style={LS}>Descripción</label>
+							<input
+								value={ef.description}
+								onChange={(e) => setEf({ ...ef, description: e.target.value })}
+								style={IS}
+								placeholder="Ej: Compra de insumos"
+							/>
+						</div>
+						<div
+							style={{
+								display: "grid",
+								gridTemplateColumns: "1fr 1fr",
+								gap: 12,
+							}}
+						>
+							<div>
+								<label style={LS}>Monto</label>
+								<input
+									type="number"
+									value={ef.amount}
+									onChange={(e) => setEf({ ...ef, amount: e.target.value })}
+									style={IS}
+									placeholder="0"
+								/>
+							</div>
+							<div>
+								<label style={LS}>Fecha</label>
+								<input
+									type="date"
+									value={ef.date}
+									onChange={(e) => setEf({ ...ef, date: e.target.value })}
+									style={IS}
+								/>
+							</div>
+						</div>
+						<div
+							style={{
+								display: "grid",
+								gridTemplateColumns: "1fr 1fr",
+								gap: 12,
+							}}
+						>
+							<div>
+								<label style={LS}>Categoría</label>
+								<select
+									value={ef.categoryId}
+									onChange={(e) => setEf({ ...ef, categoryId: e.target.value })}
+									style={IS}
+								>
+									<option value="">Seleccionar...</option>
+									{cats.map((c) => (
+										<option key={c.id} value={c.id}>
+											{c.icon} {c.name}
+										</option>
+									))}
+								</select>
+							</div>
+							<div>
+								<label style={LS}>Proveedor</label>
+								<select
+									value={ef.supplierId}
+									onChange={(e) => setEf({ ...ef, supplierId: e.target.value })}
+									style={IS}
+								>
+									<option value="">Sin proveedor</option>
+									{sups.map((s) => (
+										<option key={s.id} value={s.id}>
+											{s.name}
+										</option>
+									))}
+								</select>
+							</div>
+						</div>
+						<div>
+							<label style={LS}>Método de Pago</label>
+							<div
+								className="flex items-center gap-2"
+								style={{ flexWrap: "wrap" }}
+							>
+								{PAY.map((m) => {
+									const a = ef.paymentMethod === m;
+									const c = PCOL[m];
+									return (
+										<button
+											key={m}
+											onClick={() => setEf({ ...ef, paymentMethod: m })}
+											style={{
+												padding: "7px 14px",
+												borderRadius: 10,
+												fontSize: 12,
+												cursor: "pointer",
+												fontFamily: "'DM Sans',sans-serif",
+												fontWeight: 600,
+												transition: "all .15s",
+												border: `1px solid ${a ? c : "var(--s4)"}`,
+												background: a ? `${c}15` : "transparent",
+												color: a ? c : "#888",
+											}}
+										>
+											{m}
+										</button>
+									);
+								})}
+							</div>
+						</div>
+						<div>
+							<label style={LS}>Notas</label>
+							<textarea
+								value={ef.notes}
+								onChange={(e) => setEf({ ...ef, notes: e.target.value })}
+								style={{ ...IS, minHeight: 60, resize: "vertical" }}
+								placeholder="Notas opcionales..."
+							/>
+						</div>
+						<div className="flex items-center gap-4">
+							<label
+								className="flex items-center gap-2"
+								style={{ cursor: "pointer" }}
+							>
 								<div
-									className="flex items-center justify-between"
+									onClick={() => setEf({ ...ef, isRecurring: !ef.isRecurring })}
 									style={{
-										padding: "16px 16px 8px",
-										borderTop: "2px solid var(--s4)",
-										marginTop: 8,
+										width: 20,
+										height: 20,
+										borderRadius: 6,
+										border: `1px solid ${ef.isRecurring ? "#f59e0b" : "var(--s4)"}`,
+										background: ef.isRecurring ? "#f59e0b15" : "transparent",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										cursor: "pointer",
 									}}
 								>
-									<span
-										className="font-display"
-										style={{
-											fontSize: 12,
-											fontWeight: 700,
-											color: "#f5f5f5",
-										}}
-									>
-										Total
-									</span>
-									<span
-										className="font-kds"
-										style={{ fontSize: 24, color: "#f59e0b" }}
-									>
-										{formatCurrency(totalMes)}
-									</span>
+									{ef.isRecurring && (
+										<Check size={12} style={{ color: "#f59e0b" }} />
+									)}
 								</div>
-							</div>
-						</>
-					)}
-				</div>
+								<span
+									className="font-body"
+									style={{ fontSize: 12, color: "#bbb" }}
+								>
+									Gasto recurrente
+								</span>
+							</label>
+							{ef.isRecurring && (
+								<div className="flex items-center gap-2">
+									<label style={{ ...LS, marginBottom: 0 }}>Día</label>
+									<input
+										type="number"
+										min={1}
+										max={31}
+										value={ef.recurringDay}
+										onChange={(e) =>
+											setEf({ ...ef, recurringDay: e.target.value })
+										}
+										style={{ ...IS, width: 70 }}
+										placeholder="1-31"
+									/>
+								</div>
+							)}
+						</div>
+						<div
+							className="flex items-center justify-end gap-3"
+							style={{ marginTop: 8 }}
+						>
+							<button onClick={() => setExpMdl(false)} style={BS}>
+								Cancelar
+							</button>
+							<button onClick={sE} style={BP}>
+								{edE ? "Guardar" : "Crear Gasto"}
+							</button>
+						</div>
+					</div>
+				</Mdl>
+			)}
 
-				{/* Modals */}
-				<NuevoGastoModal
-					open={showNewModal}
-					onClose={() => {
-						setShowNewModal(false);
-						setEditingExpense(null);
-					}}
-					categories={categories}
-					suppliers={suppliers}
-					onSaved={() => {
-						fetchExpenses();
-						fetchCategories();
-					}}
-					editing={editingExpense}
-				/>
-				<CategoriasModal
-					open={showCatModal}
-					onClose={() => setShowCatModal(false)}
-					categories={categories}
-					onChanged={() => {
-						fetchCategories();
-						fetchExpenses();
-					}}
-				/>
-			</div>
+			{/* CATEGORY MODAL */}
+			{catMdl && (
+				<Mdl
+					title={edC ? "Editar Categoría" : "Nueva Categoría"}
+					onClose={() => setCatMdl(false)}
+				>
+					<div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+						<div
+							style={{
+								display: "grid",
+								gridTemplateColumns: "1fr auto",
+								gap: 12,
+							}}
+						>
+							<div>
+								<label style={LS}>Nombre</label>
+								<input
+									value={cf.name}
+									onChange={(e) => setCf({ ...cf, name: e.target.value })}
+									style={IS}
+									placeholder="Ej: Insumos de cocina"
+								/>
+							</div>
+							<div>
+								<label style={LS}>Icono</label>
+								<input
+									value={cf.icon}
+									onChange={(e) => setCf({ ...cf, icon: e.target.value })}
+									style={{
+										...IS,
+										width: 60,
+										textAlign: "center",
+										fontSize: 20,
+									}}
+									placeholder=""
+								/>
+							</div>
+						</div>
+						<div
+							style={{
+								display: "grid",
+								gridTemplateColumns: "1fr 1fr",
+								gap: 12,
+							}}
+						>
+							<div>
+								<label style={LS}>Orden</label>
+								<input
+									type="number"
+									value={cf.order}
+									onChange={(e) => setCf({ ...cf, order: e.target.value })}
+									style={IS}
+								/>
+							</div>
+							<div>
+								<label style={LS}>Presupuesto Mensual</label>
+								<input
+									type="number"
+									value={cf.budgetMonthly}
+									onChange={(e) =>
+										setCf({ ...cf, budgetMonthly: e.target.value })
+									}
+									style={IS}
+									placeholder="0 = sin límite"
+								/>
+							</div>
+						</div>
+						<div>
+							<label style={LS}>Categoría Padre</label>
+							<select
+								value={cf.parentId}
+								onChange={(e) => setCf({ ...cf, parentId: e.target.value })}
+								style={IS}
+							>
+								<option value="">Ninguna (principal)</option>
+								{pC
+									.filter((c) => c.id !== edC?.id)
+									.map((c) => (
+										<option key={c.id} value={c.id}>
+											{c.icon} {c.name}
+										</option>
+									))}
+							</select>
+						</div>
+						<div
+							className="flex items-center justify-end gap-3"
+							style={{ marginTop: 8 }}
+						>
+							<button onClick={() => setCatMdl(false)} style={BS}>
+								Cancelar
+							</button>
+							<button onClick={sC} style={BP}>
+								{edC ? "Guardar" : "Crear"}
+							</button>
+						</div>
+					</div>
+				</Mdl>
+			)}
+
+			{/* DELETE CONFIRM */}
+			{delId && (
+				<Mdl
+					title="Confirmar Eliminación"
+					onClose={() => setDelId(null)}
+					width={380}
+				>
+					<div className="flex flex-col items-center" style={{ gap: 16 }}>
+						<div
+							style={{
+								width: 48,
+								height: 48,
+								borderRadius: 14,
+								background: "rgba(239,68,68,.1)",
+								border: "1px solid rgba(239,68,68,.25)",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+							}}
+						>
+							<Trash2 size={20} style={{ color: "#ef4444" }} />
+						</div>
+						<p
+							className="font-body"
+							style={{ fontSize: 14, color: "#ccc", textAlign: "center" }}
+						>
+							Estás seguro de eliminar este gasto? No se puede deshacer.
+						</p>
+						<div className="flex items-center gap-3">
+							<button onClick={() => setDelId(null)} style={BS}>
+								Cancelar
+							</button>
+							<button
+								onClick={() => dE(delId)}
+								style={{ ...BP, background: "#ef4444", color: "#fff" }}
+							>
+								Eliminar
+							</button>
+						</div>
+					</div>
+				</Mdl>
+			)}
 		</div>
 	);
 }

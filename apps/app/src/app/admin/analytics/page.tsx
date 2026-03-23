@@ -1,27 +1,34 @@
 "use client";
-
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import useSWR from "swr";
 import {
 	DollarSign,
 	ShoppingBag,
 	Receipt,
-	Wallet,
-	FileText,
-	Landmark,
+	Truck,
 	TrendingUp,
 	AlertTriangle,
 	Loader2,
 	BarChart3,
 	CreditCard,
 	Package,
-	FolderOpen,
 	Clock,
+	Percent,
+	FileText,
+	Printer,
+	Calendar,
+	ArrowUpDown,
+	ChefHat,
+	AlertCircle,
+	PieChart,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { apiFetch } from "@/lib/api";
 
-/* ─── Types ──────────────────────────────────────────────────────────────── */
-interface OItem {
+const f = (u: string) => fetch(u).then((r) => r.json());
+type E = React.ElementType;
+type N = React.ReactNode;
+
+interface OI {
 	id: string;
 	name: string;
 	qty: number;
@@ -34,56 +41,98 @@ interface Ord {
 	paymentMethod: string | null;
 	createdAt: string;
 	closedAt: string | null;
-	items: OItem[];
+	items: OI[];
 }
-interface Exp {
-	id: string;
-	amount: number;
-	date: string;
-	category: { id: string; name: string } | null;
-}
-interface Inv {
+interface DO {
 	id: string;
 	status: string;
 	total: number;
-	cae: string | null;
 	createdAt: string;
 }
-interface CReg {
+interface CP {
+	id: string;
+	name: string;
+	category: string;
+	salePrice: number;
+	costPrice: number;
+	profit: number;
+	marginPercent: number;
+	ingredientCount: number;
+	hasRecipe: boolean;
+}
+interface CD {
+	products: CP[];
+	summary: {
+		totalProducts: number;
+		withRecipe: number;
+		withoutRecipe: number;
+		avgMargin: number;
+	};
+}
+interface DR {
 	id: string;
 	date: string;
-	status: string;
-	openingBalance: number;
-	closingBalance: number | null;
-	closedAt: string | null;
+	totalRevenue: number;
+	totalCost: number;
+	totalExpenses: number;
+	grossProfit: number;
+	netProfit: number;
+	ordersCount: number;
+	deliveryCount: number;
+	avgTicket: number;
+	topProducts: string | null;
+	paymentBreakdown: string | null;
 }
+type Tab = "dashboard" | "costos" | "reportes";
+type Per = "Hoy" | "Semana" | "Mes";
+type SK =
+	| "name"
+	| "category"
+	| "salePrice"
+	| "costPrice"
+	| "profit"
+	| "marginPercent";
 
-const PERIODS = ["Hoy", "Esta Semana", "Este Mes"] as const;
-type Period = (typeof PERIODS)[number];
-
-function sod(d: Date) {
-	d.setHours(0, 0, 0, 0);
-	return d;
-}
-function periodStart(p: Period): Date {
+const sod = (d: Date) => {
+	const n = new Date(d);
+	n.setHours(0, 0, 0, 0);
+	return n;
+};
+const pStart = (p: Per) => {
 	const d = new Date();
 	if (p === "Hoy") return sod(d);
-	if (p === "Esta Semana") {
-		const day = d.getDay();
-		d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+	if (p === "Semana") {
+		const w = d.getDay();
+		d.setDate(d.getDate() - (w === 0 ? 6 : w - 1));
 		return sod(d);
 	}
 	d.setDate(1);
 	return sod(d);
-}
-function inP(ds: string | null, s: Date) {
-	return ds ? new Date(ds) >= s : false;
-}
-function orderTotal(o: Ord) {
-	return o.items.reduce((s, i) => s + i.qty * i.price, 0);
-}
-
-const COLORS = [
+};
+const inP = (ds: string | null, s: Date) => (ds ? new Date(ds) >= s : false);
+const oT = (o: Ord) => o.items.reduce((s, i) => s + i.qty * i.price, 0);
+const fD = (d: string | Date) =>
+	new Date(d).toLocaleDateString("es-AR", {
+		weekday: "long",
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+	});
+const mc = (m: number) =>
+	m > 50 ? "#22c55e" : m >= 30 ? "#f59e0b" : "#ef4444";
+const PL: Record<string, string> = {
+	cash: "Efectivo",
+	mercadopago: "MercadoPago",
+	card: "Tarjeta",
+	sin_definir: "Sin definir",
+};
+const PC: Record<string, string> = {
+	cash: "#f59e0b",
+	mercadopago: "#3b82f6",
+	card: "#8b5cf6",
+	sin_definir: "#64748b",
+};
+const CL = [
 	"#f59e0b",
 	"#f97316",
 	"#ec4899",
@@ -95,18 +144,21 @@ const COLORS = [
 	"#a855f7",
 	"#64748b",
 ];
-const PM_C: Record<string, string> = {
-	cash: "#f59e0b",
-	mercadopago: "#3b82f6",
-	card: "#8b5cf6",
-};
-const PM_L: Record<string, string> = {
-	cash: "Efectivo",
-	mercadopago: "MercadoPago",
-	card: "Tarjeta",
-};
+const pill = (on: boolean): React.CSSProperties => ({
+	padding: "6px 16px",
+	borderRadius: 10,
+	background: on ? "#f59e0b" : "transparent",
+	color: on ? "#0a0a0a" : "#666",
+	fontFamily: "var(--font-syne)",
+	fontWeight: 600,
+	fontSize: 11,
+	letterSpacing: "0.1em",
+	border: "none",
+	cursor: "pointer",
+	transition: "all .15s",
+	boxShadow: on ? "0 0 8px rgba(245,158,11,0.3)" : "none",
+});
 
-/* ─── KPI Card ──────────────────────────────────────────────────────────── */
 function Kpi({
 	label,
 	value,
@@ -115,7 +167,7 @@ function Kpi({
 }: {
 	label: string;
 	value: string;
-	Icon: React.ElementType;
+	Icon: E;
 	color?: string;
 }) {
 	return (
@@ -136,7 +188,7 @@ function Kpi({
 					left: "20%",
 					right: "20%",
 					height: 1,
-					background: `linear-gradient(90deg, transparent, ${color}50, transparent)`,
+					background: `linear-gradient(90deg,transparent,${color}50,transparent)`,
 				}}
 			/>
 			<div
@@ -146,7 +198,7 @@ function Kpi({
 					right: 0,
 					width: 120,
 					height: 120,
-					background: `radial-gradient(circle at 100% 0%, ${color}12 0%, transparent 70%)`,
+					background: `radial-gradient(circle at 100% 0%,${color}12 0%,transparent 70%)`,
 					pointerEvents: "none",
 				}}
 			/>
@@ -192,20 +244,20 @@ function Kpi({
 	);
 }
 
-/* ─── Section Card ──────────────────────────────────────────────────────── */
-function SectionCard({
+function SC({
 	title,
 	Icon,
 	children,
-	rightHeader,
+	rh,
 }: {
 	title: string;
-	Icon: React.ElementType;
-	children: React.ReactNode;
-	rightHeader?: React.ReactNode;
+	Icon: E;
+	children: N;
+	rh?: N;
 }) {
 	return (
 		<div
+			className="print-section"
 			style={{
 				background: "var(--s1)",
 				border: "1px solid var(--s4)",
@@ -236,211 +288,112 @@ function SectionCard({
 						{title}
 					</span>
 				</div>
-				{rightHeader}
+				{rh}
 			</div>
 			{children}
 		</div>
 	);
 }
 
-/* ─── Horizontal bars ────────────────────────────────────────────────────── */
-function HBar({
-	items,
-	title,
-	sub,
-	Icon,
-}: {
-	items: { l: string; v: number; c: string }[];
-	title: string;
-	sub: string;
-	Icon: React.ElementType;
-}) {
-	const mx = Math.max(...items.map((i) => i.v), 1);
-	const tot = items.reduce((s, i) => s + i.v, 0);
+function Bar({ w, c }: { w: string; c: string }) {
 	return (
-		<SectionCard title={title} Icon={Icon}>
-			<div style={{ padding: "6px 20px 8px" }}>
-				<div
-					className="font-body"
-					style={{ fontSize: 11, color: "#666", marginBottom: 16 }}
-				>
-					{sub}
-				</div>
-				<div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-					{items.map((it) => (
-						<div key={it.l}>
-							<div
-								className="flex items-center justify-between"
-								style={{ marginBottom: 4 }}
-							>
-								<span
-									className="font-body"
-									style={{ fontSize: 12, color: "#bbb" }}
-								>
-									{it.l}
-								</span>
-								<span
-									className="font-body"
-									style={{
-										fontSize: 11,
-										fontFamily: "monospace",
-										color: "#888",
-									}}
-								>
-									{formatCurrency(it.v)} (
-									{tot > 0 ? ((it.v / tot) * 100).toFixed(1) : "0"}%)
-								</span>
-							</div>
-							<div
-								style={{
-									width: "100%",
-									height: 8,
-									borderRadius: 4,
-									background: "var(--s3)",
-									overflow: "hidden",
-								}}
-							>
-								<div
-									style={{
-										width: `${(it.v / mx) * 100}%`,
-										height: "100%",
-										borderRadius: 4,
-										background: it.c,
-										boxShadow: `0 0 8px ${it.c}40`,
-										transition: "width .3s",
-									}}
-								/>
-							</div>
-						</div>
-					))}
-				</div>
-			</div>
-		</SectionCard>
+		<div
+			style={{
+				width: "100%",
+				height: 7,
+				borderRadius: 4,
+				background: "var(--s3)",
+				overflow: "hidden",
+			}}
+		>
+			<div
+				style={{
+					width: w,
+					height: "100%",
+					borderRadius: 4,
+					background: c,
+					boxShadow: `0 0 8px ${c}40`,
+					transition: "width .3s",
+				}}
+			/>
+		</div>
 	);
 }
 
-/* ─── Page ───────────────────────────────────────────────────────────────── */
+function RR({ l, v, c }: { l: string; v: string; c: string }) {
+	return (
+		<div
+			className="flex items-center justify-between pr"
+			style={{ padding: "8px 0" }}
+		>
+			<span className="font-body" style={{ fontSize: 13, color: "#bbb" }}>
+				{l}
+			</span>
+			<span
+				className="font-body"
+				style={{ fontSize: 14, fontFamily: "monospace", color: c }}
+			>
+				{v}
+			</span>
+		</div>
+	);
+}
+
+const PCSS = `@media print{body{background:#fff!important;color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}nav,.no-print,.sidebar,[data-sidebar],header{display:none!important}.print-page{background:#fff!important;padding:0!important}.print-page *{color:#000!important;border-color:#ddd!important;background:transparent!important;box-shadow:none!important}.print-section{border:1px solid #ddd!important;break-inside:avoid;margin-bottom:16px}.ph{display:block!important;font-size:24px;font-weight:700;text-align:center;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:4px}.ps{display:block!important;font-size:14px;text-align:center;margin-bottom:24px;color:#444!important}}`;
+
 export default function AnalyticsPage() {
-	const [period, setPeriod] = useState<Period>("Hoy");
-	const [orders, setOrders] = useState<Ord[]>([]);
-	const [expenses, setExpenses] = useState<Exp[]>([]);
-	const [invoices, setInvoices] = useState<Inv[]>([]);
-	const [registers, setRegisters] = useState<CReg[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-
-	useEffect(() => {
-		let c = false;
-		(async () => {
-			setLoading(true);
-			setError(null);
-			try {
-				const [o, e, i, r] = await Promise.all([
-					apiFetch<Ord[]>("/api/orders?includeClosed=true"),
-					apiFetch<Exp[]>("/api/expenses"),
-					apiFetch<Inv[]>("/api/invoices"),
-					apiFetch<CReg[]>("/api/cash-register"),
-				]);
-				if (!c) {
-					setOrders(o);
-					setExpenses(e);
-					setInvoices(i);
-					setRegisters(r);
-				}
-			} catch (err) {
-				if (!c) setError(String(err));
-			} finally {
-				if (!c) setLoading(false);
-			}
-		})();
-		return () => {
-			c = true;
-		};
-	}, []);
-
-	const start = useMemo(() => periodStart(period), [period]);
+	const [tab, setTab] = useState<Tab>("dashboard");
+	const [period, setPeriod] = useState<Per>("Hoy");
+	const [sk, setSk] = useState<SK>("marginPercent");
+	const [sd, setSd] = useState<"asc" | "desc">("asc");
+	const [rDate, setRDate] = useState(() => {
+		const d = new Date();
+		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+	});
+	const [rpt, setRpt] = useState<DR | null>(null);
+	const [gen, setGen] = useState(false);
+	const { data: orders, isLoading: lo } = useSWR<Ord[]>(
+		"/api/orders?includeClosed=true",
+		f,
+	);
+	const { data: dD, isLoading: ld } = useSWR<{ orders: DO[] }>(
+		"/api/delivery",
+		f,
+	);
+	const { data: cd, isLoading: lc } = useSWR<CD>(
+		tab === "costos" ? "/api/cost-calculator" : null,
+		f,
+	);
+	const loading = lo || ld;
+	const start = useMemo(() => pStart(period), [period]);
 	const closed = useMemo(
 		() =>
-			orders.filter(
+			(orders ?? []).filter(
 				(o) => o.status === "closed" && o.closedAt && inP(o.closedAt, start),
 			),
 		[orders, start],
 	);
-	const pExp = useMemo(
-		() => expenses.filter((e) => inP(e.date, start)),
-		[expenses, start],
+	const dels = useMemo(
+		() => (dD?.orders ?? []).filter((d) => inP(d.createdAt, start)),
+		[dD, start],
 	);
-	const pInv = useMemo(
-		() => invoices.filter((i) => inP(i.createdAt, start)),
-		[invoices, start],
-	);
-
-	const revenue = useMemo(
-		() => closed.reduce((s, o) => s + orderTotal(o), 0),
-		[closed],
-	);
+	const rev = useMemo(() => closed.reduce((a, o) => a + oT(o), 0), [closed]);
 	const cnt = closed.length;
-	const avgTicket = cnt > 0 ? Math.round(revenue / cnt) : 0;
-	const totExp = useMemo(() => pExp.reduce((s, e) => s + e.amount, 0), [pExp]);
+	const avg = cnt > 0 ? Math.round(rev / cnt) : 0;
 
-	const mercExp = useMemo(
-		() =>
-			pExp
-				.filter((e) => e.category?.name === "Mercaderia")
-				.reduce((s, e) => s + e.amount, 0),
-		[pExp],
-	);
-	const persExp = useMemo(
-		() =>
-			pExp
-				.filter((e) => e.category?.name === "Personal")
-				.reduce((s, e) => s + e.amount, 0),
-		[pExp],
-	);
-	const resultado = revenue - totExp;
-	const foodPct = revenue > 0 ? (mercExp / revenue) * 100 : 0;
-	const primePct = revenue > 0 ? ((mercExp + persExp) / revenue) * 100 : 0;
-
-	const pmBreak = useMemo(() => {
+	const pmB = useMemo(() => {
 		const m: Record<string, { amt: number; n: number }> = {};
 		for (const o of closed) {
 			const k = o.paymentMethod || "cash";
-			const t = orderTotal(o);
+			const t = oT(o);
 			if (!m[k]) m[k] = { amt: 0, n: 0 };
 			m[k].amt += t;
 			m[k].n++;
 		}
 		return Object.entries(m)
-			.map(([k, v]) => ({
-				k,
-				label: PM_L[k] || k,
-				color: PM_C[k] || "#64748b",
-				...v,
-			}))
+			.map(([k, v]) => ({ k, l: PL[k] || k, c: PC[k] || "#64748b", ...v }))
 			.sort((a, b) => b.amt - a.amt);
 	}, [closed]);
-	const pmTotal = pmBreak.reduce((s, p) => s + p.amt, 0);
-
-	const prodBreak = useMemo(() => {
-		const m: Record<string, number> = {};
-		for (const o of closed)
-			for (const i of o.items) m[i.name] = (m[i.name] || 0) + i.qty * i.price;
-		return Object.entries(m)
-			.map(([n, v]) => ({ n, v }))
-			.sort((a, b) => b.v - a.v)
-			.slice(0, 10);
-	}, [closed]);
-
-	const expBreak = useMemo(() => {
-		const m: Record<string, number> = {};
-		for (const e of pExp) {
-			const c = e.category?.name || "Sin categoria";
-			m[c] = (m[c] || 0) + e.amount;
-		}
-		return Object.entries(m)
-			.map(([n, v]) => ({ n, v }))
-			.sort((a, b) => b.v - a.v);
-	}, [pExp]);
 
 	const hourly = useMemo(() => {
 		if (period !== "Hoy") return [];
@@ -448,30 +401,78 @@ export default function AnalyticsPage() {
 		for (const o of closed) {
 			if (!o.closedAt) continue;
 			const hr = new Date(o.closedAt).getHours();
-			h[hr] = (h[hr] || 0) + orderTotal(o);
+			h[hr] = (h[hr] || 0) + oT(o);
 		}
 		return Object.entries(h)
 			.map(([k, v]) => ({ hr: Number(k), v }))
 			.sort((a, b) => a.hr - b.hr);
 	}, [closed, period]);
 
-	const afipAuth = useMemo(
-		() => pInv.filter((i) => i.status === "authorized"),
-		[pInv],
+	const top10 = useMemo(() => {
+		const m: Record<string, { qty: number; rev: number }> = {};
+		for (const o of closed)
+			for (const i of o.items) {
+				if (!m[i.name]) m[i.name] = { qty: 0, rev: 0 };
+				m[i.name].qty += i.qty;
+				m[i.name].rev += i.qty * i.price;
+			}
+		return Object.entries(m)
+			.map(([n, v]) => ({ name: n, ...v }))
+			.sort((a, b) => b.rev - a.rev)
+			.slice(0, 10);
+	}, [closed]);
+
+	const sorted = useMemo(() => {
+		if (!cd) return [];
+		const a = [...cd.products];
+		a.sort((x, y) => {
+			const xv = x[sk],
+				yv = y[sk];
+			if (typeof xv === "string" && typeof yv === "string")
+				return sd === "asc" ? xv.localeCompare(yv) : yv.localeCompare(xv);
+			return sd === "asc"
+				? (xv as number) - (yv as number)
+				: (yv as number) - (xv as number);
+		});
+		return a;
+	}, [cd, sk, sd]);
+
+	const estP = useMemo(
+		() =>
+			cd
+				? cd.products
+						.filter((p) => p.hasRecipe)
+						.reduce((a, p) => a + p.profit, 0)
+				: 0,
+		[cd],
 	);
-	const afipPend = useMemo(
-		() => pInv.filter((i) => i.status === "draft").length,
-		[pInv],
+	const togSort = useCallback(
+		(k: SK) => {
+			if (sk === k) setSd((d) => (d === "asc" ? "desc" : "asc"));
+			else {
+				setSk(k);
+				setSd("asc");
+			}
+		},
+		[sk],
 	);
 
-	const todayReg = useMemo(() => {
-		const t = new Date().toDateString();
-		return registers.find((r) => new Date(r.date).toDateString() === t);
-	}, [registers]);
-	const lastClosed = useMemo(
-		() => registers.find((r) => r.status === "closed"),
-		[registers],
-	);
+	const genRpt = useCallback(async () => {
+		setGen(true);
+		try {
+			const r = await fetch("/api/daily-reports", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ date: rDate }),
+			});
+			if (!r.ok) throw new Error("e");
+			setRpt(await r.json());
+		} catch {
+			/* */
+		} finally {
+			setGen(false);
+		}
+	}, [rDate]);
 
 	if (loading)
 		return (
@@ -487,701 +488,1186 @@ export default function AnalyticsPage() {
 			</div>
 		);
 
-	if (error)
-		return (
-			<div
-				className="min-h-screen flex items-center justify-center"
-				style={{ background: "var(--s0)" }}
-			>
-				<div
-					style={{
-						background: "var(--s1)",
-						border: "1px solid var(--s4)",
-						borderRadius: 16,
-						padding: 32,
-						maxWidth: 400,
-						textAlign: "center",
-						boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-					}}
-				>
-					<AlertTriangle
-						size={32}
-						style={{ color: "#ef4444", margin: "0 auto 12px" }}
-					/>
-					<p className="font-body" style={{ fontSize: 13, color: "#bbb" }}>
-						Error cargando datos
-					</p>
-					<p
-						className="font-body"
-						style={{ fontSize: 11, color: "#666", marginTop: 8 }}
-					>
-						{error}
-					</p>
-				</div>
-			</div>
-		);
+	const TBS: [Tab, string, E][] = [
+		["dashboard", "DASHBOARD", BarChart3],
+		["costos", "COSTOS & GANANCIAS", PieChart],
+		["reportes", "REPORTES", FileText],
+	];
 
 	return (
-		<div style={{ minHeight: "100vh", background: "var(--s0)" }}>
+		<div
+			className="print-page"
+			style={{ minHeight: "100vh", background: "var(--s0)" }}
+		>
+			<style>{PCSS}</style>
 			<div
 				style={{ padding: "28px 24px 48px", maxWidth: 1200, margin: "0 auto" }}
 			>
-				{/* Header */}
 				<div
-					className="flex items-center justify-between animate-fade-in"
+					className="no-print flex items-center gap-3"
 					style={{ marginBottom: 8 }}
 				>
-					<div className="flex items-center gap-3">
-						<div
-							style={{
-								width: 3,
-								height: 24,
-								borderRadius: 2,
-								background: "var(--gold)",
-							}}
-						/>
-						<div>
-							<h1
-								className="font-display"
-								style={{
-									fontSize: 22,
-									fontWeight: 700,
-									color: "#f5f5f5",
-									lineHeight: 1.1,
-								}}
-							>
-								ANALITICAS
-							</h1>
-							<p
-								className="font-body"
-								style={{ fontSize: 12, color: "#666", marginTop: 2 }}
-							>
-								Datos en tiempo real del sistema
-							</p>
-						</div>
-					</div>
-					{/* Period selector */}
 					<div
-						className="flex items-center gap-0.5"
 						style={{
-							padding: 4,
-							borderRadius: 12,
-							background: "var(--s2)",
-							border: "1px solid var(--s3)",
+							width: 3,
+							height: 24,
+							borderRadius: 2,
+							background: "var(--gold)",
 						}}
-					>
-						{PERIODS.map((p) => (
-							<button
-								key={p}
-								onClick={() => setPeriod(p)}
-								style={{
-									padding: "6px 16px",
-									borderRadius: 10,
-									background: period === p ? "#f59e0b" : "transparent",
-									color: period === p ? "#0a0a0a" : "#666",
-									fontFamily: "var(--font-syne)",
-									fontWeight: 600,
-									fontSize: 11,
-									letterSpacing: "0.1em",
-									border: "none",
-									cursor: "pointer",
-									transition: "all .15s",
-									boxShadow:
-										period === p ? "0 0 8px rgba(245,158,11,0.3)" : "none",
-								}}
-							>
-								{p}
-							</button>
-						))}
+					/>
+					<div>
+						<h1
+							className="font-display"
+							style={{
+								fontSize: 22,
+								fontWeight: 700,
+								color: "#f5f5f5",
+								lineHeight: 1.1,
+							}}
+						>
+							ANALITICAS
+						</h1>
+						<p
+							className="font-body"
+							style={{ fontSize: 12, color: "#666", marginTop: 2 }}
+						>
+							Datos en tiempo real del sistema
+						</p>
 					</div>
 				</div>
-				<div className="divider-gold" style={{ marginBottom: 28 }} />
+				<div className="divider-gold no-print" style={{ marginBottom: 20 }} />
 
-				<div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-					{/* KPI Row */}
-					<div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-						<Kpi
-							label="Ingresos"
-							value={formatCurrency(revenue)}
-							Icon={DollarSign}
-							color="#f59e0b"
-						/>
-						<Kpi
-							label="Pedidos"
-							value={String(cnt)}
-							Icon={ShoppingBag}
-							color="#22c55e"
-						/>
-						<Kpi
-							label="Ticket Promedio"
-							value={formatCurrency(avgTicket)}
-							Icon={Receipt}
-							color="#8b5cf6"
-						/>
-						<Kpi
-							label="Gastos del Periodo"
-							value={formatCurrency(totExp)}
-							Icon={Wallet}
-							color="#ef4444"
-						/>
-					</div>
+				<div
+					className="no-print"
+					style={{
+						display: "flex",
+						gap: 2,
+						padding: 4,
+						borderRadius: 12,
+						background: "var(--s2)",
+						border: "1px solid var(--s3)",
+						marginBottom: 24,
+						width: "fit-content",
+					}}
+				>
+					{TBS.map(([id, l, I]) => (
+						<button
+							key={id}
+							onClick={() => setTab(id)}
+							style={{
+								display: "flex",
+								alignItems: "center",
+								gap: 6,
+								...pill(tab === id),
+							}}
+						>
+							<I size={13} />
+							{l}
+						</button>
+					))}
+				</div>
 
-					{/* P&L */}
-					<SectionCard title="Resultado del Periodo" Icon={BarChart3}>
-						<div style={{ padding: "20px 24px" }}>
+				{/* ═══ DASHBOARD ═══ */}
+				{tab === "dashboard" && (
+					<div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+						<div className="flex items-center justify-between">
 							<div
-								style={{ display: "flex", flexDirection: "column", gap: 10 }}
+								className="flex items-center gap-0.5"
+								style={{
+									padding: 4,
+									borderRadius: 12,
+									background: "var(--s2)",
+									border: "1px solid var(--s3)",
+								}}
 							>
-								<div className="flex items-center justify-between">
-									<span
-										className="font-body"
-										style={{ fontSize: 13, color: "#bbb" }}
+								{(["Hoy", "Semana", "Mes"] as Per[]).map((p) => (
+									<button
+										key={p}
+										onClick={() => setPeriod(p)}
+										style={pill(period === p)}
 									>
-										Ingresos totales
-									</span>
-									<span
-										className="font-body"
-										style={{
-											fontSize: 14,
-											fontFamily: "monospace",
-											color: "#22c55e",
-										}}
-									>
-										{formatCurrency(revenue)}
-									</span>
-								</div>
-								<div className="flex items-center justify-between">
-									<span
-										className="font-body"
-										style={{ fontSize: 13, color: "#bbb" }}
-									>
-										- Gastos totales
-									</span>
-									<span
-										className="font-body"
-										style={{
-											fontSize: 14,
-											fontFamily: "monospace",
-											color: "#ef4444",
-										}}
-									>
-										{formatCurrency(totExp)}
-									</span>
-								</div>
-								<div
-									style={{
-										borderTop: "1px solid var(--s4)",
-										paddingTop: 10,
-										marginTop: 4,
-									}}
-								>
-									<div className="flex items-center justify-between">
-										<span
-											className="font-display"
-											style={{
-												fontSize: 14,
-												fontWeight: 700,
-												color: "#f5f5f5",
-											}}
-										>
-											= Resultado
-										</span>
-										<span
-											className="font-kds"
-											style={{
-												fontSize: 28,
-												color: resultado >= 0 ? "#22c55e" : "#ef4444",
-											}}
-										>
-											{formatCurrency(resultado)}
-										</span>
-									</div>
-								</div>
-								<div
-									className="grid grid-cols-2 gap-4 mt-3 pt-3"
-									style={{ borderTop: "1px solid var(--s3)" }}
-								>
-									<div>
-										<div
-											className="font-display uppercase"
-											style={{
-												fontSize: 9,
-												letterSpacing: "0.2em",
-												color: "#888",
-											}}
-										>
-											Food Cost %
-										</div>
-										<div className="flex items-center gap-2 mt-1">
-											<span
-												className="font-kds"
-												style={{
-													fontSize: 22,
-													color: foodPct <= 30 ? "#22c55e" : "#ef4444",
-												}}
-											>
-												{foodPct.toFixed(1)}%
-											</span>
-											<span
-												className="font-body"
-												style={{ fontSize: 10, color: "#666" }}
-											>
-												target &lt;30%
-											</span>
-										</div>
-									</div>
-									<div>
-										<div
-											className="font-display uppercase"
-											style={{
-												fontSize: 9,
-												letterSpacing: "0.2em",
-												color: "#888",
-											}}
-										>
-											Prime Cost %
-										</div>
-										<div className="flex items-center gap-2 mt-1">
-											<span
-												className="font-kds"
-												style={{
-													fontSize: 22,
-													color: primePct <= 60 ? "#22c55e" : "#ef4444",
-												}}
-											>
-												{primePct.toFixed(1)}%
-											</span>
-											<span
-												className="font-body"
-												style={{ fontSize: 10, color: "#666" }}
-											>
-												target &lt;60%
-											</span>
-										</div>
-									</div>
-								</div>
+										{p}
+									</button>
+								))}
 							</div>
+							<span
+								className="font-body"
+								style={{ fontSize: 11, color: "#555" }}
+							>
+								{cnt} pedidos cerrados
+							</span>
 						</div>
-					</SectionCard>
+						<div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+							<Kpi
+								label="Ventas Hoy"
+								value={formatCurrency(rev)}
+								Icon={DollarSign}
+								color="#f59e0b"
+							/>
+							<Kpi
+								label="Pedidos Hoy"
+								value={String(cnt)}
+								Icon={ShoppingBag}
+								color="#22c55e"
+							/>
+							<Kpi
+								label="Ticket Promedio"
+								value={formatCurrency(avg)}
+								Icon={Receipt}
+								color="#8b5cf6"
+							/>
+							<Kpi
+								label="Delivery Hoy"
+								value={String(dels.length)}
+								Icon={Truck}
+								color="#06b6d4"
+							/>
+						</div>
 
-					{/* Payment Methods */}
-					{pmBreak.length > 0 && (
-						<SectionCard title="Ingresos por Metodo de Pago" Icon={CreditCard}>
-							<div style={{ padding: "6px 20px 8px" }}>
-								<div
-									className="font-body"
-									style={{ fontSize: 11, color: "#666", marginBottom: 16 }}
-								>
-									Desglose de pedidos cerrados
-								</div>
-								<div
-									style={{ display: "flex", flexDirection: "column", gap: 12 }}
-								>
-									{pmBreak.map((pm) => {
-										const pct =
-											pmTotal > 0 ? ((pm.amt / pmTotal) * 100).toFixed(1) : "0";
+						{pmB.length > 0 && (
+							<SC title="Ingresos por Metodo de Pago" Icon={CreditCard}>
+								<div style={{ padding: "12px 20px 16px" }}>
+									{(() => {
+										const tot = pmB.reduce((a, p) => a + p.amt, 0);
+										const mx = Math.max(...pmB.map((p) => p.amt), 1);
 										return (
-											<div key={pm.k}>
-												<div
-													className="flex items-center justify-between"
-													style={{ marginBottom: 6 }}
-												>
-													<div className="flex items-center gap-2">
-														<div
-															style={{
-																width: 10,
-																height: 10,
-																borderRadius: "50%",
-																background: pm.color,
-																flexShrink: 0,
-															}}
-														/>
-														<span
-															className="font-body"
-															style={{ fontSize: 13, color: "#ddd" }}
-														>
-															{pm.label}
-														</span>
-														<span
-															className="font-body"
-															style={{ fontSize: 11, color: "#666" }}
-														>
-															({pm.n} {pm.n === 1 ? "pedido" : "pedidos"})
-														</span>
-													</div>
-													<div className="flex items-center gap-3">
-														<span
-															className="font-display"
-															style={{
-																fontSize: 11,
-																fontWeight: 700,
-																color: "#bbb",
-															}}
-														>
-															{pct}%
-														</span>
-														<span
-															className="font-body"
-															style={{
-																fontSize: 13,
-																fontFamily: "monospace",
-																color: "#bbb",
-																minWidth: 100,
-																textAlign: "right" as const,
-															}}
-														>
-															{formatCurrency(pm.amt)}
-														</span>
-													</div>
-												</div>
-												<div
-													style={{
-														width: "100%",
-														height: 8,
-														borderRadius: 4,
-														background: "var(--s3)",
-														overflow: "hidden",
-													}}
-												>
-													<div
-														style={{
-															width: `${pmTotal > 0 ? (pm.amt / pmTotal) * 100 : 0}%`,
-															height: "100%",
-															borderRadius: 4,
-															background: pm.color,
-															boxShadow: `0 0 8px ${pm.color}40`,
-															transition: "width .3s",
-														}}
-													/>
-												</div>
-											</div>
-										);
-									})}
-								</div>
-							</div>
-						</SectionCard>
-					)}
-
-					{/* Revenue by Product */}
-					{prodBreak.length > 0 && (
-						<HBar
-							title="Ingresos por Producto"
-							sub="Top 10 productos por monto vendido"
-							Icon={Package}
-							items={prodBreak.map((p, i) => ({
-								l: p.n,
-								v: p.v,
-								c: COLORS[i % COLORS.length],
-							}))}
-						/>
-					)}
-
-					{/* Expense Breakdown */}
-					{expBreak.length > 0 && (
-						<HBar
-							title="Desglose de Gastos"
-							sub="Gastos agrupados por categoria"
-							Icon={FolderOpen}
-							items={expBreak.map((e, i) => ({
-								l: e.n,
-								v: e.v,
-								c: COLORS[i % COLORS.length],
-							}))}
-						/>
-					)}
-
-					{/* Hourly Revenue */}
-					{period === "Hoy" &&
-						hourly.length > 0 &&
-						(() => {
-							const mx = Math.max(...hourly.map((h) => h.v), 1);
-							const nowHr = new Date().getHours();
-							return (
-								<SectionCard
-									title="Ingresos por Hora"
-									Icon={Clock}
-									rightHeader={
-										<div style={{ textAlign: "right" }}>
-											<span
-												className="font-kds"
+											<div
 												style={{
-													fontSize: 18,
-													lineHeight: 1,
-													color: "var(--gold)",
+													display: "flex",
+													flexDirection: "column",
+													gap: 12,
 												}}
 											>
-												{formatCurrency(revenue)}
-											</span>
-											<span
-												className="font-body"
-												style={{ fontSize: 10, color: "#666", marginLeft: 6 }}
-											>
-												total hoy
-											</span>
-										</div>
-									}
-								>
-									<div style={{ padding: "20px 20px 16px" }}>
-										<div
-											className="flex items-end gap-2"
-											style={{ height: 200 }}
-										>
-											{hourly.map((h) => {
-												const cur = h.hr === nowHr;
-												return (
-													<div
-														key={h.hr}
-														className="flex-1 flex flex-col items-center gap-1.5 h-full"
-													>
-														<div className="flex-1 w-full flex flex-col items-center justify-end gap-1">
+												{pmB.map((pm) => (
+													<div key={pm.k}>
+														<div
+															className="flex items-center justify-between"
+															style={{ marginBottom: 5 }}
+														>
+															<div className="flex items-center gap-2">
+																<div
+																	style={{
+																		width: 10,
+																		height: 10,
+																		borderRadius: "50%",
+																		background: pm.c,
+																	}}
+																/>
+																<span
+																	className="font-body"
+																	style={{ fontSize: 13, color: "#ddd" }}
+																>
+																	{pm.l}
+																</span>
+																<span
+																	className="font-body"
+																	style={{ fontSize: 11, color: "#666" }}
+																>
+																	({pm.n})
+																</span>
+															</div>
 															<span
 																className="font-body"
 																style={{
-																	fontSize: 9,
+																	fontSize: 13,
+																	fontFamily: "monospace",
+																	color: "#bbb",
+																}}
+															>
+																{formatCurrency(pm.amt)}{" "}
+																<span style={{ fontSize: 11, color: "#666" }}>
+																	(
+																	{tot > 0
+																		? ((pm.amt / tot) * 100).toFixed(1)
+																		: "0"}
+																	%)
+																</span>
+															</span>
+														</div>
+														<Bar w={`${(pm.amt / mx) * 100}%`} c={pm.c} />
+													</div>
+												))}
+											</div>
+										);
+									})()}
+								</div>
+							</SC>
+						)}
+
+						{period === "Hoy" &&
+							hourly.length > 0 &&
+							(() => {
+								const mx = Math.max(...hourly.map((h) => h.v), 1);
+								const now = new Date().getHours();
+								return (
+									<SC
+										title="Pedidos por Hora"
+										Icon={Clock}
+										rh={
+											<span
+												className="font-kds"
+												style={{ fontSize: 18, color: "var(--gold)" }}
+											>
+												{formatCurrency(rev)}
+											</span>
+										}
+									>
+										<div style={{ padding: "20px 20px 16px" }}>
+											<div
+												className="flex items-end gap-2"
+												style={{ height: 200 }}
+											>
+												{hourly.map((h) => {
+													const cur = h.hr === now;
+													return (
+														<div
+															key={h.hr}
+															className="flex-1 flex flex-col items-center gap-1.5 h-full"
+														>
+															<div className="flex-1 w-full flex flex-col items-center justify-end gap-1">
+																<span
+																	className="font-body"
+																	style={{
+																		fontSize: 9,
+																		color: cur ? "#f59e0b" : "#555",
+																		fontFamily: "monospace",
+																	}}
+																>
+																	{Math.round(h.v / 1000)}k
+																</span>
+																<div
+																	style={{
+																		width: "100%",
+																		height: `${(h.v / mx) * 100}%`,
+																		minHeight: 2,
+																		borderRadius: "4px 4px 0 0",
+																		background: cur ? "#f59e0b" : "var(--s4)",
+																		boxShadow: cur
+																			? "0 0 12px rgba(245,158,11,0.4)"
+																			: "none",
+																		transition: "all .3s",
+																	}}
+																/>
+															</div>
+															<span
+																className="font-body"
+																style={{
+																	fontSize: 10,
 																	color: cur ? "#f59e0b" : "#555",
 																	fontFamily: "monospace",
 																}}
 															>
-																{Math.round(h.v / 1000)}k
+																{String(h.hr).padStart(2, "0")}
 															</span>
-															<div
-																style={{
-																	width: "100%",
-																	height: `${(h.v / mx) * 100}%`,
-																	minHeight: 2,
-																	borderRadius: "4px 4px 0 0",
-																	background: cur ? "#f59e0b" : "var(--s4)",
-																	boxShadow: cur
-																		? "0 0 12px rgba(245,158,11,0.4)"
-																		: "none",
-																	transition: "all .3s",
-																}}
-															/>
 														</div>
-														<span
-															className="font-body flex-shrink-0"
+													);
+												})}
+											</div>
+										</div>
+									</SC>
+								);
+							})()}
+
+						{top10.length > 0 && (
+							<SC title="Top 10 Productos" Icon={Package}>
+								<div style={{ padding: "12px 20px 16px" }}>
+									{(() => {
+										const mx = Math.max(...top10.map((p) => p.rev), 1);
+										return (
+											<div
+												style={{
+													display: "flex",
+													flexDirection: "column",
+													gap: 10,
+												}}
+											>
+												{top10.map((p, i) => (
+													<div key={p.name}>
+														<div
+															className="flex items-center justify-between"
+															style={{ marginBottom: 4 }}
+														>
+															<div className="flex items-center gap-2">
+																<span
+																	className="font-kds"
+																	style={{
+																		fontSize: 14,
+																		color: CL[i % CL.length],
+																		minWidth: 20,
+																	}}
+																>
+																	#{i + 1}
+																</span>
+																<span
+																	className="font-body"
+																	style={{ fontSize: 12, color: "#bbb" }}
+																>
+																	{p.name}
+																</span>
+																<span
+																	className="font-body"
+																	style={{ fontSize: 10, color: "#555" }}
+																>
+																	x{p.qty}
+																</span>
+															</div>
+															<span
+																className="font-body"
+																style={{
+																	fontSize: 12,
+																	fontFamily: "monospace",
+																	color: "#888",
+																}}
+															>
+																{formatCurrency(p.rev)}
+															</span>
+														</div>
+														<Bar
+															w={`${(p.rev / mx) * 100}%`}
+															c={CL[i % CL.length]}
+														/>
+													</div>
+												))}
+											</div>
+										);
+									})()}
+								</div>
+							</SC>
+						)}
+
+						{orders &&
+							(() => {
+								const active = orders.filter(
+									(o) => o.status !== "closed",
+								).length;
+								return (
+									<div
+										style={{
+											background: "var(--s1)",
+											border: "1px solid var(--s4)",
+											borderRadius: 16,
+											padding: "16px 20px",
+											display: "flex",
+											alignItems: "center",
+											justifyContent: "space-between",
+										}}
+									>
+										<div className="flex items-center gap-2">
+											<TrendingUp size={14} style={{ color: "#22c55e" }} />
+											<span
+												className="font-body"
+												style={{ fontSize: 13, color: "#bbb" }}
+											>
+												Pedidos activos ahora
+											</span>
+										</div>
+										<span
+											className="font-kds"
+											style={{
+												fontSize: 28,
+												color: active > 0 ? "#22c55e" : "#555",
+											}}
+										>
+											{active}
+										</span>
+									</div>
+								);
+							})()}
+
+						{cnt === 0 && (
+							<div
+								style={{
+									background: "var(--s1)",
+									border: "1px solid var(--s4)",
+									borderRadius: 16,
+									padding: 40,
+									textAlign: "center",
+								}}
+							>
+								<TrendingUp
+									size={32}
+									style={{ color: "#555", margin: "0 auto 12px" }}
+								/>
+								<p
+									className="font-body"
+									style={{ fontSize: 13, color: "#666" }}
+								>
+									No hay datos para este periodo
+								</p>
+							</div>
+						)}
+					</div>
+				)}
+
+				{/* ═══ COSTOS & GANANCIAS ═══ */}
+				{tab === "costos" && (
+					<div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+						{lc ? (
+							<div
+								className="flex items-center justify-center"
+								style={{ padding: 60 }}
+							>
+								<Loader2
+									size={28}
+									className="animate-spin"
+									style={{ color: "var(--gold)" }}
+								/>
+							</div>
+						) : cd ? (
+							<>
+								<div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+									<Kpi
+										label="Margen Promedio"
+										value={`${cd.summary.avgMargin}%`}
+										Icon={Percent}
+										color={mc(cd.summary.avgMargin)}
+									/>
+									<Kpi
+										label="Con Receta"
+										value={String(cd.summary.withRecipe)}
+										Icon={ChefHat}
+										color="#22c55e"
+									/>
+									<Kpi
+										label="Sin Receta"
+										value={String(cd.summary.withoutRecipe)}
+										Icon={AlertCircle}
+										color={cd.summary.withoutRecipe > 0 ? "#f59e0b" : "#555"}
+									/>
+									<Kpi
+										label="Ganancia Estimada"
+										value={formatCurrency(estP)}
+										Icon={DollarSign}
+										color="#22c55e"
+									/>
+								</div>
+
+								<SC title="Analisis de Costos por Producto" Icon={BarChart3}>
+									<div style={{ overflowX: "auto" }}>
+										<table
+											style={{ width: "100%", borderCollapse: "collapse" }}
+										>
+											<thead>
+												<tr>
+													{(
+														[
+															["name", "Producto"],
+															["category", "Categoria"],
+															["salePrice", "Precio"],
+															["costPrice", "Costo"],
+															["profit", "Ganancia"],
+															["marginPercent", "Margen %"],
+														] as [SK, string][]
+													).map(([k, l]) => (
+														<th
+															key={k}
+															onClick={() => togSort(k)}
 															style={{
+																padding: "12px 14px",
+																textAlign:
+																	k === "name" || k === "category"
+																		? "left"
+																		: "right",
 																fontSize: 10,
-																color: cur ? "#f59e0b" : "#555",
-																fontFamily: "monospace",
+																fontWeight: 600,
+																letterSpacing: "0.15em",
+																color: sk === k ? "#f59e0b" : "#888",
+																borderBottom: "1px solid var(--s3)",
+																cursor: "pointer",
+																userSelect: "none",
+																fontFamily: "var(--font-syne)",
+																textTransform: "uppercase",
+																whiteSpace: "nowrap",
 															}}
 														>
-															{String(h.hr).padStart(2, "0")}:00
-														</span>
-													</div>
-												);
-											})}
-										</div>
+															<span
+																className="flex items-center gap-1"
+																style={{
+																	justifyContent:
+																		k === "name" || k === "category"
+																			? "flex-start"
+																			: "flex-end",
+																}}
+															>
+																{l}
+																<ArrowUpDown
+																	size={10}
+																	style={{ opacity: sk === k ? 1 : 0.3 }}
+																/>
+															</span>
+														</th>
+													))}
+												</tr>
+											</thead>
+											<tbody>
+												{sorted.map((p) => (
+													<tr
+														key={p.id}
+														style={{
+															borderBottom: "1px solid var(--s3)",
+															background: !p.hasRecipe
+																? "rgba(245,158,11,0.05)"
+																: "transparent",
+														}}
+													>
+														<td
+															style={{
+																padding: "10px 14px",
+																fontSize: 12,
+																color: "#ddd",
+															}}
+														>
+															<div className="flex items-center gap-2">
+																{!p.hasRecipe && (
+																	<AlertTriangle
+																		size={12}
+																		style={{ color: "#f59e0b", flexShrink: 0 }}
+																	/>
+																)}
+																{p.name}
+															</div>
+														</td>
+														<td
+															style={{
+																padding: "10px 14px",
+																fontSize: 11,
+																color: "#888",
+															}}
+														>
+															{p.category}
+														</td>
+														<td
+															style={{
+																padding: "10px 14px",
+																fontSize: 12,
+																fontFamily: "monospace",
+																color: "#bbb",
+																textAlign: "right",
+															}}
+														>
+															{formatCurrency(p.salePrice)}
+														</td>
+														<td
+															style={{
+																padding: "10px 14px",
+																fontSize: 12,
+																fontFamily: "monospace",
+																color: p.hasRecipe ? "#ef4444" : "#555",
+																textAlign: "right",
+															}}
+														>
+															{p.hasRecipe ? formatCurrency(p.costPrice) : "—"}
+														</td>
+														<td
+															style={{
+																padding: "10px 14px",
+																fontSize: 12,
+																fontFamily: "monospace",
+																color: p.hasRecipe ? "#22c55e" : "#555",
+																textAlign: "right",
+															}}
+														>
+															{p.hasRecipe ? formatCurrency(p.profit) : "—"}
+														</td>
+														<td
+															style={{
+																padding: "10px 14px",
+																textAlign: "right",
+															}}
+														>
+															{p.hasRecipe ? (
+																<span
+																	style={{
+																		display: "inline-block",
+																		padding: "2px 10px",
+																		borderRadius: 6,
+																		fontSize: 11,
+																		fontWeight: 700,
+																		fontFamily: "monospace",
+																		color: mc(p.marginPercent),
+																		background: `${mc(p.marginPercent)}15`,
+																	}}
+																>
+																	{p.marginPercent}%
+																</span>
+															) : (
+																<span
+																	style={{ fontSize: 11, color: "#f59e0b" }}
+																>
+																	Sin receta
+																</span>
+															)}
+														</td>
+													</tr>
+												))}
+											</tbody>
+										</table>
 									</div>
-								</SectionCard>
-							);
-						})()}
+								</SC>
 
-					{/* AFIP + Cash Register */}
-					<div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-						<SectionCard title="AFIP - Facturacion" Icon={FileText}>
-							<div style={{ padding: "16px 20px" }}>
-								<div
-									style={{ display: "flex", flexDirection: "column", gap: 12 }}
-								>
-									<div className="flex items-center justify-between">
-										<span
-											className="font-body"
-											style={{ fontSize: 12, color: "#bbb" }}
+								<SC title="Resumen & Recomendaciones" Icon={TrendingUp}>
+									<div style={{ padding: "20px 24px" }}>
+										<div
+											className="flex items-center justify-between"
+											style={{ marginBottom: 14 }}
 										>
-											Facturas autorizadas
-										</span>
-										<span
-											className="font-kds"
-											style={{ fontSize: 24, color: "#22c55e" }}
-										>
-											{afipAuth.length}
-										</span>
-									</div>
-									<div className="flex items-center justify-between">
-										<span
-											className="font-body"
-											style={{ fontSize: 12, color: "#bbb" }}
-										>
-											Total facturado
-										</span>
-										<span
-											className="font-body"
+											<span
+												className="font-body"
+												style={{ fontSize: 13, color: "#bbb" }}
+											>
+												Ganancia potencial total
+											</span>
+											<span
+												className="font-kds"
+												style={{ fontSize: 24, color: "#22c55e" }}
+											>
+												{formatCurrency(estP)}
+											</span>
+										</div>
+										<div
 											style={{
-												fontSize: 14,
-												fontFamily: "monospace",
-												color: "#e5e5e5",
+												borderTop: "1px solid var(--s3)",
+												paddingTop: 14,
 											}}
 										>
-											{formatCurrency(
-												afipAuth.reduce((s, i) => s + i.total, 0),
-											)}
-										</span>
-									</div>
-									<div className="flex items-center justify-between">
-										<span
-											className="font-body"
-											style={{ fontSize: 12, color: "#bbb" }}
-										>
-											Pendientes (borrador)
-										</span>
-										<span
-											className="font-kds"
-											style={{
-												fontSize: 24,
-												color: afipPend > 0 ? "#f59e0b" : "#666",
-											}}
-										>
-											{afipPend}
-										</span>
-									</div>
-								</div>
-							</div>
-						</SectionCard>
-
-						<SectionCard title="Caja Registradora" Icon={Landmark}>
-							<div style={{ padding: "16px 20px" }}>
-								{todayReg ? (
-									<div
-										style={{
-											display: "flex",
-											flexDirection: "column",
-											gap: 12,
-										}}
-									>
-										<div className="flex items-center justify-between">
-											<span
-												className="font-body"
-												style={{ fontSize: 12, color: "#bbb" }}
-											>
-												Estado
-											</span>
-											<span
+											<div
+												className="font-display uppercase"
 												style={{
-													background:
-														todayReg.status === "open"
-															? "rgba(34,197,94,0.15)"
-															: "rgba(100,116,139,0.15)",
-													color:
-														todayReg.status === "open" ? "#22c55e" : "#94a3b8",
-													fontSize: 11,
-													padding: "3px 10px",
-													borderRadius: 6,
-													fontWeight: 600,
+													fontSize: 10,
+													letterSpacing: "0.15em",
+													color: "#888",
+													marginBottom: 10,
 												}}
 											>
-												{todayReg.status === "open" ? "Abierta" : "Cerrada"}
-											</span>
-										</div>
-										<div className="flex items-center justify-between">
-											<span
-												className="font-body"
-												style={{ fontSize: 12, color: "#bbb" }}
-											>
-												Saldo apertura
-											</span>
-											<span
-												className="font-body"
-												style={{
-													fontSize: 14,
-													fontFamily: "monospace",
-													color: "#e5e5e5",
-												}}
-											>
-												{formatCurrency(todayReg.openingBalance)}
-											</span>
-										</div>
-										{todayReg.closingBalance != null && (
-											<div className="flex items-center justify-between">
-												<span
-													className="font-body"
-													style={{ fontSize: 12, color: "#bbb" }}
-												>
-													Saldo cierre
-												</span>
-												<span
-													className="font-kds"
-													style={{ fontSize: 24, color: "var(--gold)" }}
-												>
-													{formatCurrency(todayReg.closingBalance)}
-												</span>
+												Recomendaciones
 											</div>
-										)}
+											{cd.summary.withoutRecipe > 0 && (
+												<div
+													className="flex items-start gap-2"
+													style={{ marginBottom: 8 }}
+												>
+													<AlertTriangle
+														size={14}
+														style={{
+															color: "#f59e0b",
+															flexShrink: 0,
+															marginTop: 2,
+														}}
+													/>
+													<span
+														className="font-body"
+														style={{ fontSize: 12, color: "#bbb" }}
+													>
+														<strong style={{ color: "#f59e0b" }}>
+															{cd.summary.withoutRecipe} productos
+														</strong>{" "}
+														sin receta. Agrega recetas para analisis completo.
+													</span>
+												</div>
+											)}
+											{cd.products.filter(
+												(p) => p.hasRecipe && p.marginPercent < 30,
+											).length > 0 && (
+												<div
+													className="flex items-start gap-2"
+													style={{ marginBottom: 8 }}
+												>
+													<AlertCircle
+														size={14}
+														style={{
+															color: "#ef4444",
+															flexShrink: 0,
+															marginTop: 2,
+														}}
+													/>
+													<span
+														className="font-body"
+														style={{ fontSize: 12, color: "#bbb" }}
+													>
+														<strong style={{ color: "#ef4444" }}>
+															{
+																cd.products.filter(
+																	(p) => p.hasRecipe && p.marginPercent < 30,
+																).length
+															}{" "}
+															productos
+														</strong>{" "}
+														con margen &lt;30%. Ajustar precios o costos.
+													</span>
+												</div>
+											)}
+											{cd.summary.avgMargin >= 50 && (
+												<div className="flex items-start gap-2">
+													<TrendingUp
+														size={14}
+														style={{
+															color: "#22c55e",
+															flexShrink: 0,
+															marginTop: 2,
+														}}
+													/>
+													<span
+														className="font-body"
+														style={{ fontSize: 12, color: "#bbb" }}
+													>
+														Margen promedio saludable:{" "}
+														<strong style={{ color: "#22c55e" }}>
+															{cd.summary.avgMargin}%
+														</strong>
+													</span>
+												</div>
+											)}
+										</div>
 									</div>
-								) : lastClosed ? (
+								</SC>
+							</>
+						) : (
+							<div
+								style={{
+									background: "var(--s1)",
+									border: "1px solid var(--s4)",
+									borderRadius: 16,
+									padding: 40,
+									textAlign: "center",
+								}}
+							>
+								<AlertTriangle
+									size={32}
+									style={{ color: "#ef4444", margin: "0 auto 12px" }}
+								/>
+								<p
+									className="font-body"
+									style={{ fontSize: 13, color: "#666" }}
+								>
+									Error cargando datos de costos
+								</p>
+							</div>
+						)}
+					</div>
+				)}
+
+				{/* ═══ REPORTES ═══ */}
+				{tab === "reportes" && (
+					<div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+						<div className="no-print flex items-center gap-4 flex-wrap">
+							<div className="flex items-center gap-2">
+								<Calendar size={14} style={{ color: "#888" }} />
+								<input
+									type="date"
+									value={rDate}
+									onChange={(e) => setRDate(e.target.value)}
+									style={{
+										background: "var(--s2)",
+										border: "1px solid var(--s4)",
+										borderRadius: 10,
+										padding: "8px 14px",
+										color: "#ddd",
+										fontSize: 13,
+										fontFamily: "var(--font-dm-sans)",
+										outline: "none",
+									}}
+								/>
+							</div>
+							<button
+								onClick={genRpt}
+								disabled={gen}
+								style={{
+									display: "flex",
+									alignItems: "center",
+									gap: 8,
+									padding: "8px 22px",
+									borderRadius: 10,
+									background: "#f59e0b",
+									color: "#0a0a0a",
+									fontFamily: "var(--font-syne)",
+									fontWeight: 700,
+									fontSize: 12,
+									letterSpacing: "0.1em",
+									border: "none",
+									cursor: gen ? "wait" : "pointer",
+									opacity: gen ? 0.7 : 1,
+									boxShadow: "0 0 12px rgba(245,158,11,0.3)",
+								}}
+							>
+								{gen ? (
+									<Loader2 size={14} className="animate-spin" />
+								) : (
+									<FileText size={14} />
+								)}
+								GENERAR REPORTE
+							</button>
+							{rpt && (
+								<button
+									onClick={() => window.print()}
+									style={{
+										display: "flex",
+										alignItems: "center",
+										gap: 8,
+										padding: "8px 22px",
+										borderRadius: 10,
+										background: "transparent",
+										color: "#bbb",
+										fontFamily: "var(--font-syne)",
+										fontWeight: 700,
+										fontSize: 12,
+										letterSpacing: "0.1em",
+										border: "1px solid var(--s4)",
+										cursor: "pointer",
+									}}
+								>
+									<Printer size={14} />
+									IMPRIMIR
+								</button>
+							)}
+						</div>
+
+						{rpt ? (
+							<div
+								style={{ display: "flex", flexDirection: "column", gap: 20 }}
+							>
+								<div className="ph" style={{ display: "none" }}>
+									MY WAY OLIVOS — Reporte Diario
+								</div>
+								<div className="ps" style={{ display: "none" }}>
+									{fD(rpt.date)}
+								</div>
+								<div
+									style={{
+										background: "var(--s1)",
+										border: "1px solid var(--s4)",
+										borderRadius: 16,
+										padding: "24px 28px",
+										textAlign: "center",
+									}}
+								>
 									<div
+										className="font-display"
 										style={{
-											display: "flex",
-											flexDirection: "column",
-											gap: 12,
+											fontSize: 18,
+											fontWeight: 700,
+											color: "#f5f5f5",
+											letterSpacing: "0.1em",
 										}}
 									>
-										<div
-											className="font-body"
-											style={{ fontSize: 12, color: "#666" }}
-										>
-											No hay caja abierta hoy
-										</div>
-										<div className="flex items-center justify-between">
-											<span
-												className="font-body"
-												style={{ fontSize: 12, color: "#bbb" }}
-											>
-												Ultimo cierre
-											</span>
-											<span
-												className="font-body"
-												style={{
-													fontSize: 13,
-													fontFamily: "monospace",
-													color: "#e5e5e5",
-												}}
-											>
-												{formatCurrency(lastClosed.closingBalance ?? 0)}
-											</span>
-										</div>
-										<div
-											className="font-body"
-											style={{ fontSize: 10, color: "#666" }}
-										>
-											{new Date(
-												lastClosed.closedAt ?? lastClosed.date,
-											).toLocaleDateString("es-AR")}
-										</div>
+										MY WAY OLIVOS
 									</div>
-								) : (
 									<div
 										className="font-body"
-										style={{ fontSize: 12, color: "#666" }}
+										style={{ fontSize: 13, color: "#888", marginTop: 4 }}
 									>
-										Sin registros de caja
+										Reporte Diario — {fD(rpt.date)}
 									</div>
-								)}
-							</div>
-						</SectionCard>
-					</div>
+								</div>
+								<div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+									<Kpi
+										label="Ingresos Totales"
+										value={formatCurrency(rpt.totalRevenue)}
+										Icon={DollarSign}
+										color="#f59e0b"
+									/>
+									<Kpi
+										label="Pedidos"
+										value={String(rpt.ordersCount)}
+										Icon={ShoppingBag}
+										color="#22c55e"
+									/>
+									<Kpi
+										label="Delivery"
+										value={String(rpt.deliveryCount)}
+										Icon={Truck}
+										color="#06b6d4"
+									/>
+									<Kpi
+										label="Ticket Promedio"
+										value={formatCurrency(rpt.avgTicket)}
+										Icon={Receipt}
+										color="#8b5cf6"
+									/>
+								</div>
+								<SC title="Desglose de Ingresos" Icon={DollarSign}>
+									<div style={{ padding: "16px 24px" }}>
+										<RR
+											l="Ingresos totales"
+											v={formatCurrency(rpt.totalRevenue)}
+											c="#22c55e"
+										/>
+										<RR
+											l="- Costo de mercaderia"
+											v={formatCurrency(rpt.totalCost)}
+											c="#ef4444"
+										/>
+										<div
+											className="flex items-center justify-between"
+											style={{
+												borderTop: "1px solid var(--s4)",
+												padding: "10px 0",
+											}}
+										>
+											<span
+												className="font-display"
+												style={{
+													fontSize: 13,
+													fontWeight: 700,
+													color: "#f5f5f5",
+												}}
+											>
+												= Ganancia Bruta
+											</span>
+											<span
+												className="font-kds"
+												style={{
+													fontSize: 24,
+													color: rpt.grossProfit >= 0 ? "#22c55e" : "#ef4444",
+												}}
+											>
+												{formatCurrency(rpt.grossProfit)}
+											</span>
+										</div>
+										<RR
+											l="- Gastos operativos"
+											v={formatCurrency(rpt.totalExpenses)}
+											c="#ef4444"
+										/>
+										<div
+											className="flex items-center justify-between"
+											style={{
+												borderTop: "2px solid var(--gold)",
+												padding: "12px 0 0",
+											}}
+										>
+											<span
+												className="font-display"
+												style={{
+													fontSize: 14,
+													fontWeight: 700,
+													color: "#f5f5f5",
+												}}
+											>
+												= Ganancia Neta
+											</span>
+											<span
+												className="font-kds"
+												style={{
+													fontSize: 32,
+													color: rpt.netProfit >= 0 ? "#22c55e" : "#ef4444",
+												}}
+											>
+												{formatCurrency(rpt.netProfit)}
+											</span>
+										</div>
+									</div>
+								</SC>
 
-					{cnt === 0 && totExp === 0 && pInv.length === 0 && (
-						<div
-							style={{
-								background: "var(--s1)",
-								border: "1px solid var(--s4)",
-								borderRadius: 16,
-								padding: 40,
-								textAlign: "center",
-								boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-							}}
-						>
-							<TrendingUp
-								size={32}
-								style={{ color: "#555", margin: "0 auto 12px" }}
-							/>
-							<p className="font-body" style={{ fontSize: 13, color: "#666" }}>
-								No hay datos para este periodo
-							</p>
-						</div>
-					)}
-				</div>
+								{rpt.paymentBreakdown &&
+									(() => {
+										const pb: Record<string, number> = JSON.parse(
+											rpt.paymentBreakdown,
+										);
+										const en = Object.entries(pb).sort((a, b) => b[1] - a[1]);
+										const tot = en.reduce((a, [, v]) => a + v, 0);
+										return en.length > 0 ? (
+											<SC title="Metodos de Pago" Icon={CreditCard}>
+												<div style={{ padding: "12px 24px 16px" }}>
+													{en.map(([m, amt]) => (
+														<div
+															key={m}
+															className="flex items-center justify-between pr"
+															style={{
+																padding: "8px 0",
+																borderBottom: "1px solid var(--s3)",
+															}}
+														>
+															<div className="flex items-center gap-2">
+																<div
+																	style={{
+																		width: 10,
+																		height: 10,
+																		borderRadius: "50%",
+																		background: PC[m] || "#64748b",
+																	}}
+																/>
+																<span
+																	className="font-body"
+																	style={{ fontSize: 13, color: "#bbb" }}
+																>
+																	{PL[m] || m}
+																</span>
+															</div>
+															<span
+																className="font-body"
+																style={{
+																	fontSize: 13,
+																	fontFamily: "monospace",
+																	color: "#ddd",
+																}}
+															>
+																{formatCurrency(amt)}
+																<span
+																	style={{
+																		fontSize: 11,
+																		color: "#666",
+																		marginLeft: 8,
+																	}}
+																>
+																	(
+																	{tot > 0
+																		? ((amt / tot) * 100).toFixed(1)
+																		: "0"}
+																	%)
+																</span>
+															</span>
+														</div>
+													))}
+												</div>
+											</SC>
+										) : null;
+									})()}
+
+								{rpt.topProducts &&
+									(() => {
+										const tp: { name: string; qty: number }[] = JSON.parse(
+											rpt.topProducts,
+										);
+										return tp.length > 0 ? (
+											<SC title="Top Productos del Dia" Icon={Package}>
+												<div style={{ padding: "12px 24px 16px" }}>
+													{tp.map((p, i) => (
+														<div
+															key={p.name}
+															className="flex items-center justify-between pr"
+															style={{
+																padding: "8px 0",
+																borderBottom: "1px solid var(--s3)",
+															}}
+														>
+															<div className="flex items-center gap-3">
+																<span
+																	className="font-kds"
+																	style={{
+																		fontSize: 16,
+																		color: CL[i % CL.length],
+																		minWidth: 24,
+																	}}
+																>
+																	#{i + 1}
+																</span>
+																<span
+																	className="font-body"
+																	style={{ fontSize: 13, color: "#bbb" }}
+																>
+																	{p.name}
+																</span>
+															</div>
+															<span
+																className="font-kds"
+																style={{ fontSize: 18, color: "#ddd" }}
+															>
+																{p.qty}
+															</span>
+														</div>
+													))}
+												</div>
+											</SC>
+										) : null;
+									})()}
+
+								<SC title="Indicadores Clave" Icon={TrendingUp}>
+									<div style={{ padding: "20px 24px" }}>
+										<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+											{[
+												{
+													l: "Margen Bruto",
+													v:
+														rpt.totalRevenue > 0
+															? `${((rpt.grossProfit / rpt.totalRevenue) * 100).toFixed(1)}%`
+															: "—",
+													c: rpt.grossProfit >= 0 ? "#22c55e" : "#ef4444",
+												},
+												{
+													l: "Margen Neto",
+													v:
+														rpt.totalRevenue > 0
+															? `${((rpt.netProfit / rpt.totalRevenue) * 100).toFixed(1)}%`
+															: "—",
+													c: rpt.netProfit >= 0 ? "#22c55e" : "#ef4444",
+												},
+												{
+													l: "Food Cost %",
+													v:
+														rpt.totalRevenue > 0
+															? `${((rpt.totalCost / rpt.totalRevenue) * 100).toFixed(1)}%`
+															: "—",
+													c:
+														rpt.totalRevenue > 0 &&
+														rpt.totalCost / rpt.totalRevenue <= 0.3
+															? "#22c55e"
+															: "#ef4444",
+												},
+												{
+													l: "Pedidos Totales",
+													v: String(rpt.ordersCount + rpt.deliveryCount),
+													c: "#f59e0b",
+												},
+											].map((it) => (
+												<div key={it.l} style={{ textAlign: "center" }}>
+													<div
+														className="font-kds"
+														style={{ fontSize: 28, color: it.c, lineHeight: 1 }}
+													>
+														{it.v}
+													</div>
+													<div
+														className="font-display uppercase"
+														style={{
+															fontSize: 9,
+															letterSpacing: "0.15em",
+															color: "#888",
+															marginTop: 6,
+														}}
+													>
+														{it.l}
+													</div>
+												</div>
+											))}
+										</div>
+									</div>
+								</SC>
+							</div>
+						) : (
+							<div
+								style={{
+									background: "var(--s1)",
+									border: "1px solid var(--s4)",
+									borderRadius: 16,
+									padding: 60,
+									textAlign: "center",
+								}}
+							>
+								<FileText
+									size={40}
+									style={{ color: "#333", margin: "0 auto 16px" }}
+								/>
+								<p
+									className="font-display"
+									style={{
+										fontSize: 14,
+										color: "#666",
+										letterSpacing: "0.1em",
+									}}
+								>
+									Selecciona una fecha y genera el reporte
+								</p>
+								<p
+									className="font-body"
+									style={{ fontSize: 12, color: "#444", marginTop: 8 }}
+								>
+									El reporte incluye ingresos, costos, gastos, y ganancia neta
+									del dia
+								</p>
+							</div>
+						)}
+					</div>
+				)}
 			</div>
 		</div>
 	);

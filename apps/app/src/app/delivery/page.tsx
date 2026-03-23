@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 interface Category {
 	id: string;
@@ -520,6 +521,7 @@ function QtyControl({
 
 export default function PublicDeliveryPage() {
 	const router = useRouter();
+	const { data: session, status } = useSession();
 
 	const [name, setName] = useState("");
 	const [address, setAddress] = useState("");
@@ -536,6 +538,13 @@ export default function PublicDeliveryPage() {
 	const [submitting, setSubmitting] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [showCheckout, setShowCheckout] = useState(false);
+
+	// Pre-fill customer name from session
+	useEffect(() => {
+		if (session?.user?.name && !name) {
+			setName(session.user.name);
+		}
+	}, [session]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => {
 		Promise.all([
@@ -604,6 +613,7 @@ export default function PublicDeliveryPage() {
 					total: cartTotal,
 					paymentMethod: payment,
 					notes: notes.trim() || null,
+					userId: session?.user?.id ?? null,
 					items: cart.map((i) => ({
 						name: i.name,
 						qty: i.qty,
@@ -666,6 +676,125 @@ export default function PublicDeliveryPage() {
 			}))
 			.filter((g) => g.items.length > 0);
 	}, [products, categories, activeCategory]);
+
+	// ── Auth gate ────────────────────────────────────────────────────────
+	if (status === "loading") {
+		return (
+			<div
+				style={{
+					minHeight: "100vh",
+					background: "#080808",
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+				}}
+			>
+				<div
+					style={{
+						width: 32,
+						height: 32,
+						border: "3px solid #1e1e1e",
+						borderTopColor: "#f59e0b",
+						borderRadius: "50%",
+						animation: "spin 0.8s linear infinite",
+					}}
+				/>
+				<style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+			</div>
+		);
+	}
+
+	if (status === "unauthenticated") {
+		return (
+			<div
+				style={{
+					minHeight: "100vh",
+					background: "#080808",
+					display: "flex",
+					flexDirection: "column",
+					alignItems: "center",
+					justifyContent: "center",
+					fontFamily: '"DM Sans", system-ui, sans-serif',
+					padding: 24,
+					textAlign: "center",
+				}}
+			>
+				<h1
+					style={{
+						fontSize: 42,
+						fontWeight: 800,
+						color: "#f59e0b",
+						margin: 0,
+						letterSpacing: "-0.03em",
+						fontFamily: '"Bebas Neue", var(--font-bebas), sans-serif',
+					}}
+				>
+					MY WAY
+				</h1>
+				<p
+					style={{
+						fontSize: 13,
+						color: "#555",
+						marginTop: 4,
+						letterSpacing: "0.15em",
+						textTransform: "uppercase",
+					}}
+				>
+					Delivery
+				</p>
+				<div
+					style={{
+						width: "100%",
+						maxWidth: 400,
+						height: 1,
+						background:
+							"linear-gradient(90deg, transparent, #1e1e1e, transparent)",
+						margin: "28px 0",
+					}}
+				/>
+				<p
+					style={{ fontSize: 16, fontWeight: 600, color: "#f5f5f5", margin: 0 }}
+				>
+					Necesitás iniciar sesión para pedir
+				</p>
+				<p
+					style={{ fontSize: 13, color: "#666", marginTop: 8, lineHeight: 1.5 }}
+				>
+					Usá tu cuenta de Google para hacer pedidos de delivery
+				</p>
+				<a
+					href="/login"
+					style={{
+						marginTop: 24,
+						display: "inline-flex",
+						alignItems: "center",
+						gap: 10,
+						padding: "14px 32px",
+						borderRadius: 12,
+						background: "#f59e0b",
+						color: "#080808",
+						fontSize: 15,
+						fontWeight: 700,
+						textDecoration: "none",
+						letterSpacing: "0.02em",
+					}}
+				>
+					Iniciar sesión →
+				</a>
+				<a
+					href="/"
+					style={{
+						marginTop: 16,
+						fontSize: 13,
+						color: "#555",
+						textDecoration: "none",
+					}}
+				>
+					← Volver al inicio
+				</a>
+			</div>
+		);
+	}
 
 	return (
 		<>

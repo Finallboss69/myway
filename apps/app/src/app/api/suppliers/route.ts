@@ -5,7 +5,10 @@ export async function GET() {
 	try {
 		const suppliers = await db.supplier.findMany({
 			orderBy: { name: "asc" },
-			include: { _count: { select: { invoices: true } } },
+			include: {
+				category: true,
+				_count: { select: { invoices: true, ingredients: true } },
+			},
 		});
 		return NextResponse.json(suppliers);
 	} catch (e) {
@@ -16,7 +19,7 @@ export async function GET() {
 export async function POST(req: Request) {
 	try {
 		const body = await req.json();
-		const { name, cuit, address, phone, email, notes } = body;
+		const { name, cuit, address, phone, email, notes, categoryId } = body;
 		if (!name?.trim()) {
 			return NextResponse.json({ error: "name required" }, { status: 400 });
 		}
@@ -28,6 +31,7 @@ export async function POST(req: Request) {
 				phone: phone?.trim() || null,
 				email: email?.trim() || null,
 				notes: notes?.trim() || null,
+				categoryId: categoryId || null,
 			},
 		});
 		return NextResponse.json(supplier, { status: 201 });

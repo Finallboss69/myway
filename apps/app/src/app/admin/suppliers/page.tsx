@@ -1,32 +1,37 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import useSWR from "swr";
 import {
 	Truck,
-	FileText,
+	Package,
+	Tags,
+	TrendingUp,
 	Plus,
 	X,
 	Trash2,
+	Edit3,
+	Search,
 	Phone,
 	Mail,
-	MapPin,
-	CheckCircle,
-	AlertCircle,
-	Clock,
-	ChevronDown,
-	ChevronUp,
-	Edit3,
-	Printer,
+	FileText,
+	AlertTriangle,
 	DollarSign,
-	Package,
-	Search,
+	Clock,
+	Filter,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
-import { printDocument, printCurrency } from "@/lib/print";
 
-// --- Types ---
+/* ── Types ─────────────────────────────────────────────────── */
 
+interface SupplierCategory {
+	id: string;
+	name: string;
+	icon: string;
+	order: number;
+	suppliers: { id: string; name: string }[];
+}
 interface Supplier {
 	id: string;
 	name: string;
@@ -35,71 +40,74 @@ interface Supplier {
 	phone: string | null;
 	email: string | null;
 	notes: string | null;
+	categoryId: string | null;
+	category: SupplierCategory | null;
 	createdAt: string;
-	_count?: { invoices: number };
+	_count?: { invoices: number; ingredients: number };
 }
-
-interface InvoiceItem {
-	id?: string;
-	description: string;
-	quantity: number;
-	unitPrice: number;
-	ivaRate: number;
-	subtotal: number;
+interface IngredientCategory {
+	id: string;
+	name: string;
+	icon: string;
+	order: number;
+	ingredients: { id: string; name: string; unit: string }[];
 }
-
+interface Ingredient {
+	id: string;
+	name: string;
+	unit: string;
+	stockCurrent: number;
+	alertThreshold: number;
+	costPerUnit: number;
+	categoryId: string | null;
+	category: IngredientCategory | null;
+	supplierId: string | null;
+	supplier: { id: string; name: string } | null;
+	recipeIngredients: { id: string }[];
+}
+interface PriceHistory {
+	id: string;
+	ingredientId: string;
+	ingredient: { name: string; unit: string };
+	costPerUnit: number;
+	supplierId: string | null;
+	date: string;
+	notes: string | null;
+}
 interface SupplierInvoice {
 	id: string;
 	supplierId: string;
-	supplier: Supplier;
-	number: string;
-	date: string;
-	dueDate: string | null;
-	subtotal: number;
-	iva: number;
-	iibb: number;
-	otherTaxes: number;
-	total: number;
-	photoUrl: string | null;
 	status: string;
-	paidAt: string | null;
-	paymentMethod: string | null;
-	notes: string | null;
-	items: InvoiceItem[];
+	total: number;
 }
 
-type Tab = "suppliers" | "invoices";
+type Tab = "proveedores" | "categorias" | "ingredientes" | "historial";
+const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
+	{ key: "proveedores", label: "PROVEEDORES", icon: Truck },
+	{ key: "categorias", label: "CATEGORÍAS", icon: Tags },
+	{ key: "ingredientes", label: "INGREDIENTES", icon: Package },
+	{ key: "historial", label: "HISTORIAL PRECIOS", icon: TrendingUp },
+];
 
-const EMPTY_SUPPLIER = {
-	name: "",
-	cuit: "",
-	address: "",
-	phone: "",
-	email: "",
-	notes: "",
-};
-const EMPTY_LINE: InvoiceItem = {
-	description: "",
-	quantity: 1,
-	unitPrice: 0,
-	ivaRate: 21,
-	subtotal: 0,
-};
-
+const fetcher = (u: string) => fetch(u).then((r) => r.json());
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("es-AR");
 
-// --- KPI Card ---
+/* ── Shared Components ─────────────────────────────────────── */
 
 function KpiCard({
-	icon: Icon,
-	color,
-	value,
 	label,
+	value,
+	sub,
+	color,
+	icon: Icon,
+	idx,
 }: {
-	icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>;
-	color: string;
-	value: string | number;
 	label: string;
+	value: string | number;
+	sub?: string;
+	color: string;
+	icon: React.ElementType;
+	idx: number;
 }) {
 	return (
 		<div
@@ -110,6 +118,7 @@ function KpiCard({
 				padding: "24px 22px 20px",
 				position: "relative",
 				overflow: "hidden",
+				animation: `slideUp 0.5s cubic-bezier(0.16,1,0.3,1) ${idx * 80}ms both`,
 			}}
 		>
 			<div
@@ -129,137 +138,167 @@ function KpiCard({
 					right: 0,
 					width: 120,
 					height: 120,
-					background: `radial-gradient(circle at 100% 0%, ${color}12 0%, transparent 70%)`,
-					pointerEvents: "none",
+					background: `radial-gradient(circle at top right, ${color}08, transparent 70%)`,
 				}}
 			/>
-			<div style={{ position: "relative", zIndex: 1 }}>
+			<div
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: 14,
+					marginBottom: 14,
+				}}
+			>
 				<div
-					className="flex items-center justify-between"
-					style={{ marginBottom: 16 }}
+					style={{
+						width: 40,
+						height: 40,
+						borderRadius: 10,
+						background: `${color}15`,
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+					}}
 				>
-					<div
-						className="font-display uppercase"
-						style={{
-							fontSize: 10,
-							letterSpacing: "0.2em",
-							color: "#888",
-							fontWeight: 600,
-						}}
-					>
-						{label}
-					</div>
-					<div
-						style={{
-							width: 34,
-							height: 34,
-							borderRadius: 10,
-							background: `${color}15`,
-							border: `1px solid ${color}30`,
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-						}}
-					>
-						<Icon size={16} style={{ color }} />
-					</div>
+					<Icon size={20} style={{ color }} />
 				</div>
-				<div
-					className="font-kds"
-					style={{ fontSize: 36, lineHeight: 1, color }}
+				<span
+					style={{
+						fontSize: 12,
+						color: "#999",
+						textTransform: "uppercase",
+						letterSpacing: 1.2,
+						fontFamily: "var(--font-syne)",
+					}}
 				>
-					{value}
-				</div>
+					{label}
+				</span>
 			</div>
+			<div
+				style={{
+					fontSize: 32,
+					fontWeight: 700,
+					fontFamily: "var(--font-bebas)",
+					letterSpacing: 1,
+					color: "#fff",
+				}}
+			>
+				{value}
+			</div>
+			{sub && (
+				<div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>{sub}</div>
+			)}
 		</div>
 	);
 }
 
-// --- Status badge ---
-
-function StatusBadge({ status }: { status: string }) {
-	const map: Record<string, { label: string; color: string; bg: string }> = {
-		pending: {
-			label: "Pendiente",
-			color: "#f59e0b",
-			bg: "rgba(245,158,11,0.12)",
-		},
-		paid: { label: "Pagada", color: "#10b981", bg: "rgba(16,185,129,0.12)" },
-		overdue: { label: "Vencida", color: "#ef4444", bg: "rgba(239,68,68,0.12)" },
-	};
-	const s = map[status] ?? {
-		label: "Pendiente",
-		color: "#888",
-		bg: "rgba(136,136,136,0.12)",
-	};
-	return (
-		<span
-			style={{
-				background: s.bg,
-				color: s.color,
-				border: `1px solid ${s.color}33`,
-				borderRadius: 99,
-				fontSize: 9,
-				fontFamily: "var(--font-syne)",
-				fontWeight: 700,
-				letterSpacing: "0.15em",
-				padding: "2px 8px",
-				textTransform: "uppercase",
-			}}
-		>
-			{s.label}
-		</span>
-	);
-}
-
-// --- Field label ---
-
-function FieldLabel({ children }: { children: React.ReactNode }) {
-	return (
-		<label
-			className="font-display uppercase"
-			style={{
-				fontSize: 9,
-				letterSpacing: "0.2em",
-				color: "#888",
-				fontWeight: 600,
-				display: "block",
-				marginBottom: 6,
-			}}
-		>
-			{children}
-		</label>
-	);
-}
-
-// --- Modal shell ---
-
-function Modal({
-	open,
-	onClose,
+function SectionCard({
 	title,
-	wide,
+	icon: Icon,
 	children,
 }: {
-	open: boolean;
-	onClose: () => void;
 	title: string;
-	wide?: boolean;
+	icon: React.ElementType;
 	children: React.ReactNode;
 }) {
-	if (!open) return null;
+	return (
+		<div
+			style={{
+				background: "var(--s1)",
+				border: "1px solid var(--s4)",
+				borderRadius: 16,
+				overflow: "hidden",
+			}}
+		>
+			<div
+				style={{
+					background: "var(--s2)",
+					padding: "14px 20px",
+					display: "flex",
+					alignItems: "center",
+					gap: 10,
+					borderBottom: "1px solid var(--s3)",
+				}}
+			>
+				<Icon size={16} style={{ color: "#f59e0b" }} />
+				<span
+					style={{
+						fontSize: 13,
+						fontWeight: 600,
+						textTransform: "uppercase",
+						letterSpacing: 1,
+						fontFamily: "var(--font-syne)",
+						color: "#ccc",
+					}}
+				>
+					{title}
+				</span>
+			</div>
+			<div style={{ padding: 20 }}>{children}</div>
+		</div>
+	);
+}
+
+const inputStyle: React.CSSProperties = {
+	width: "100%",
+	padding: "10px 14px",
+	background: "var(--s3)",
+	border: "1px solid var(--s5)",
+	borderRadius: 8,
+	color: "#fff",
+	fontSize: 14,
+	fontFamily: "var(--font-dm-sans)",
+	outline: "none",
+};
+const selectStyle: React.CSSProperties = {
+	...inputStyle,
+	appearance: "none" as const,
+};
+const btnPrimary: React.CSSProperties = {
+	padding: "10px 20px",
+	background: "#f59e0b",
+	color: "#000",
+	border: "none",
+	borderRadius: 8,
+	fontWeight: 600,
+	cursor: "pointer",
+	fontSize: 13,
+	fontFamily: "var(--font-syne)",
+};
+const btnDanger: React.CSSProperties = {
+	...btnPrimary,
+	background: "#ef4444",
+	color: "#fff",
+};
+const btnGhost: React.CSSProperties = {
+	padding: "8px 14px",
+	background: "transparent",
+	border: "1px solid var(--s5)",
+	borderRadius: 8,
+	color: "#999",
+	cursor: "pointer",
+	fontSize: 13,
+};
+
+function Modal({
+	title,
+	onClose,
+	children,
+}: {
+	title: string;
+	onClose: () => void;
+	children: React.ReactNode;
+}) {
 	return (
 		<div
 			style={{
 				position: "fixed",
 				inset: 0,
-				zIndex: 50,
+				background: "rgba(0,0,0,0.7)",
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				padding: 16,
-				background: "rgba(0,0,0,0.7)",
-				backdropFilter: "blur(8px)",
+				zIndex: 1000,
 			}}
 			onClick={onClose}
 		>
@@ -269,1470 +308,1354 @@ function Modal({
 					border: "1px solid var(--s4)",
 					borderRadius: 16,
 					width: "100%",
-					maxWidth: wide ? 680 : 560,
-					maxHeight: "90vh",
-					overflowY: "auto",
-					boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+					maxWidth: 520,
+					maxHeight: "85vh",
+					overflow: "auto",
+					padding: 28,
 				}}
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div
-					className="flex items-center justify-between"
 					style={{
-						padding: "16px 20px",
-						borderBottom: "1px solid var(--s3)",
-						background: "var(--s2)",
+						display: "flex",
+						justifyContent: "space-between",
+						alignItems: "center",
+						marginBottom: 24,
 					}}
 				>
-					<h2
-						className="font-display"
-						style={{ fontSize: 16, fontWeight: 700, color: "#f5f5f5" }}
+					<span
+						style={{
+							fontSize: 18,
+							fontWeight: 700,
+							fontFamily: "var(--font-syne)",
+							color: "#fff",
+						}}
 					>
 						{title}
-					</h2>
+					</span>
 					<button
-						className="btn-ghost"
-						style={{ padding: 6 }}
+						style={{
+							background: "none",
+							border: "none",
+							cursor: "pointer",
+							color: "#666",
+						}}
 						onClick={onClose}
 					>
-						<X size={16} style={{ color: "#666" }} />
+						<X size={20} />
 					</button>
 				</div>
-				<div style={{ padding: 20 }}>{children}</div>
+				{children}
 			</div>
 		</div>
 	);
 }
 
-// --- Confirm dialog ---
-
-function ConfirmDialog({
-	open,
-	message,
-	onConfirm,
-	onCancel,
-}: {
-	open: boolean;
-	message: string;
-	onConfirm: () => void;
-	onCancel: () => void;
-}) {
-	if (!open) return null;
-	return (
-		<div
-			style={{
-				position: "fixed",
-				inset: 0,
-				zIndex: 60,
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				padding: 16,
-				background: "rgba(0,0,0,0.7)",
-				backdropFilter: "blur(8px)",
-			}}
-			onClick={onCancel}
-		>
-			<div
-				style={{
-					background: "var(--s1)",
-					border: "1px solid var(--s4)",
-					borderRadius: 16,
-					width: "100%",
-					maxWidth: 400,
-					boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
-					padding: 20,
-				}}
-				onClick={(e) => e.stopPropagation()}
-			>
-				<div className="flex items-start gap-3" style={{ marginBottom: 20 }}>
-					<div
-						style={{
-							width: 40,
-							height: 40,
-							borderRadius: 12,
-							background: "rgba(239,68,68,0.12)",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-							flexShrink: 0,
-						}}
-					>
-						<AlertCircle size={20} style={{ color: "#ef4444" }} />
-					</div>
-					<p
-						className="font-body"
-						style={{
-							fontSize: 13,
-							color: "#aaa",
-							lineHeight: 1.5,
-							paddingTop: 8,
-						}}
-					>
-						{message}
-					</p>
-				</div>
-				<div className="flex gap-3 justify-end">
-					<button
-						className="btn-ghost"
-						style={{ fontSize: 13 }}
-						onClick={onCancel}
-					>
-						Cancelar
-					</button>
-					<button
-						className="btn-primary"
-						style={{ fontSize: 13, background: "#ef4444" }}
-						onClick={onConfirm}
-					>
-						Confirmar
-					</button>
-				</div>
-			</div>
-		</div>
-	);
-}
-
-// --- Main page ---
+/* ── Main Page ─────────────────────────────────────────────── */
 
 export default function SuppliersPage() {
-	const [tab, setTab] = useState<Tab>("suppliers");
-	const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-	const [invoices, setInvoices] = useState<SupplierInvoice[]>([]);
-	const [loading, setLoading] = useState(true);
+	const [tab, setTab] = useState<Tab>("proveedores");
 
-	// supplier modal
-	const [showSupplierModal, setShowSupplierModal] = useState(false);
-	const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-	const [supplierForm, setSupplierForm] = useState(EMPTY_SUPPLIER);
-	const [expandedSupplierId, setExpandedSupplierId] = useState<string | null>(
-		null,
-	);
-
-	// invoice modal
-	const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-	const [invForm, setInvForm] = useState({
-		supplierId: "",
-		number: "",
-		date: "",
-		dueDate: "",
-		photoUrl: "",
-		notes: "",
-	});
-	const [invLines, setInvLines] = useState<InvoiceItem[]>([{ ...EMPTY_LINE }]);
-
-	// filters
-	const [filterSupplier, setFilterSupplier] = useState("");
-	const [filterStatus, setFilterStatus] = useState("");
-
-	// confirm
-	const [confirm, setConfirm] = useState<{
-		message: string;
-		action: () => void;
-	} | null>(null);
-
-	// pay modal
-	const [payInvoiceId, setPayInvoiceId] = useState<string | null>(null);
-	const [payMethod, setPayMethod] = useState("efectivo");
-
-	// --- Fetchers ---
-
-	const fetchSuppliers = useCallback(async () => {
-		try {
-			const data = await apiFetch<Supplier[]>("/api/suppliers");
-			setSuppliers(data);
-		} catch {
-			/* silent */
-		}
-	}, []);
-
-	const fetchInvoices = useCallback(async () => {
-		try {
-			const params = new URLSearchParams();
-			if (filterSupplier) params.set("supplierId", filterSupplier);
-			if (filterStatus) params.set("status", filterStatus);
-			const qs = params.toString();
-			const data = await apiFetch<SupplierInvoice[]>(
-				`/api/supplier-invoices${qs ? `?${qs}` : ""}`,
-			);
-			setInvoices(data);
-		} catch {
-			/* silent */
-		}
-	}, [filterSupplier, filterStatus]);
-
-	useEffect(() => {
-		Promise.all([fetchSuppliers(), fetchInvoices()]).finally(() =>
-			setLoading(false),
-		);
-	}, [fetchSuppliers, fetchInvoices]);
-
-	// --- Stats ---
-
-	const pendingInvoices = invoices.filter(
-		(i) => i.status === "pending" || i.status === "overdue",
-	);
-	const totalOwed = pendingInvoices.reduce((s, i) => s + i.total, 0);
-
-	const handlePrint = () => {
-		const rows = suppliers
-			.map((s) => {
-				const sInvoices = invoices.filter(
-					(i) =>
-						i.supplier?.id === s.id &&
-						(i.status === "pending" || i.status === "overdue"),
-				);
-				const owed = sInvoices.reduce((sum, i) => sum + i.total, 0);
-				return `<tr>
-					<td>${s.name}</td>
-					<td>${s.cuit ?? "\u2014"}</td>
-					<td class="amount">${s._count?.invoices ?? 0}</td>
-					<td class="amount">${printCurrency(owed)}</td>
-				</tr>`;
-			})
-			.join("");
-		printDocument({
-			title: "Proveedores",
-			subtitle: `${suppliers.length} proveedores \u2014 Deuda total: ${printCurrency(totalOwed)}`,
-			content: `<table>
-				<thead><tr><th>Proveedor</th><th>CUIT</th><th style="text-align:right">Facturas</th><th style="text-align:right">Deuda</th></tr></thead>
-				<tbody>${rows}
-				<tr class="total-row"><td colspan="3">Total</td><td class="amount">${printCurrency(totalOwed)}</td></tr>
-				</tbody></table>`,
-		});
-	};
-
-	// --- Supplier CRUD ---
-
-	const openNewSupplier = () => {
-		setEditingSupplier(null);
-		setSupplierForm(EMPTY_SUPPLIER);
-		setShowSupplierModal(true);
-	};
-
-	const openEditSupplier = (s: Supplier) => {
-		setEditingSupplier(s);
-		setSupplierForm({
-			name: s.name,
-			cuit: s.cuit ?? "",
-			address: s.address ?? "",
-			phone: s.phone ?? "",
-			email: s.email ?? "",
-			notes: s.notes ?? "",
-		});
-		setShowSupplierModal(true);
-	};
-
-	const saveSupplier = async () => {
-		if (!supplierForm.name.trim()) return;
-		try {
-			if (editingSupplier) {
-				await apiFetch(`/api/suppliers/${editingSupplier.id}`, {
-					method: "PATCH",
-					body: JSON.stringify(supplierForm),
-				});
-			} else {
-				await apiFetch("/api/suppliers", {
-					method: "POST",
-					body: JSON.stringify(supplierForm),
-				});
-			}
-			setShowSupplierModal(false);
-			await fetchSuppliers();
-		} catch {
-			/* silent */
-		}
-	};
-
-	const deleteSupplier = (s: Supplier) => {
-		setConfirm({
-			message: `Eliminar proveedor "${s.name}"? Se borran todas sus facturas.`,
-			action: async () => {
-				try {
-					await apiFetch(`/api/suppliers/${s.id}`, { method: "DELETE" });
-					setConfirm(null);
-					await Promise.all([fetchSuppliers(), fetchInvoices()]);
-				} catch {
-					setConfirm(null);
-				}
-			},
-		});
-	};
-
-	// --- Invoice CRUD ---
-
-	const openNewInvoice = () => {
-		setInvForm({
-			supplierId: suppliers[0]?.id ?? "",
-			number: "",
-			date: new Date().toISOString().slice(0, 10),
-			dueDate: "",
-			photoUrl: "",
-			notes: "",
-		});
-		setInvLines([{ ...EMPTY_LINE }]);
-		setShowInvoiceModal(true);
-	};
-
-	const updateLine = (
-		idx: number,
-		field: keyof InvoiceItem,
-		value: string | number,
-	) => {
-		setInvLines((prev) => {
-			const next = prev.map((l, i) => {
-				if (i !== idx) return l;
-				const updated = { ...l, [field]: value };
-				updated.subtotal = updated.quantity * updated.unitPrice;
-				return updated;
-			});
-			return next;
-		});
-	};
-
-	const addLine = () => setInvLines((prev) => [...prev, { ...EMPTY_LINE }]);
-	const removeLine = (idx: number) =>
-		setInvLines((prev) => prev.filter((_, i) => i !== idx));
-
-	const invSubtotal = invLines.reduce((s, l) => s + l.subtotal, 0);
-	const invIva = invLines.reduce(
-		(s, l) => s + l.subtotal * (l.ivaRate / 100),
-		0,
-	);
-	const invTotal = invSubtotal + invIva;
-
-	const saveInvoice = async () => {
-		if (!invForm.supplierId || !invForm.number || !invForm.date) return;
-		const validLines = invLines.filter(
-			(l) => l.description.trim() && l.quantity > 0,
-		);
-		try {
-			await apiFetch("/api/supplier-invoices", {
-				method: "POST",
-				body: JSON.stringify({
-					...invForm,
-					subtotal: invSubtotal,
-					iva: invIva,
-					total: invTotal,
-					items: validLines,
-				}),
-			});
-			setShowInvoiceModal(false);
-			await fetchInvoices();
-		} catch {
-			/* silent */
-		}
-	};
-
-	const markPaid = async () => {
-		if (!payInvoiceId) return;
-		try {
-			await apiFetch(`/api/supplier-invoices/${payInvoiceId}`, {
-				method: "PATCH",
-				body: JSON.stringify({
-					status: "paid",
-					paidAt: new Date().toISOString(),
-					paymentMethod: payMethod,
-				}),
-			});
-			setPayInvoiceId(null);
-			await fetchInvoices();
-		} catch {
-			/* silent */
-		}
-	};
-
-	const deleteInvoice = (inv: SupplierInvoice) => {
-		setConfirm({
-			message: `Eliminar factura ${inv.number}?`,
-			action: async () => {
-				try {
-					await apiFetch(`/api/supplier-invoices/${inv.id}`, {
-						method: "DELETE",
-					});
-					setConfirm(null);
-					await fetchInvoices();
-				} catch {
-					setConfirm(null);
-				}
-			},
-		});
-	};
-
-	// --- Render ---
-
-	if (loading) {
-		return (
+	return (
+		<div style={{ padding: "28px 32px", maxWidth: 1400, margin: "0 auto" }}>
+			<div style={{ marginBottom: 28 }}>
+				<h1
+					style={{
+						fontSize: 28,
+						fontWeight: 700,
+						fontFamily: "var(--font-syne)",
+						color: "#fff",
+						margin: 0,
+					}}
+				>
+					Proveedores & Stock
+				</h1>
+				<p
+					style={{
+						color: "#666",
+						fontSize: 13,
+						marginTop: 4,
+						fontFamily: "var(--font-dm-sans)",
+					}}
+				>
+					Gestion integral de proveedores, ingredientes y costos
+				</p>
+			</div>
 			<div
 				style={{
-					minHeight: "100vh",
-					background: "var(--s0)",
 					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
+					gap: 4,
+					marginBottom: 28,
+					background: "var(--s2)",
+					borderRadius: 12,
+					padding: 4,
 				}}
 			>
-				<div className="flex flex-col items-center gap-3 animate-fade-in">
-					<div
+				{TABS.map((t) => (
+					<button
+						key={t.key}
+						onClick={() => setTab(t.key)}
 						style={{
-							width: 48,
-							height: 48,
-							borderRadius: 99,
-							background: "rgba(245,158,11,0.1)",
+							flex: 1,
 							display: "flex",
 							alignItems: "center",
 							justifyContent: "center",
+							gap: 8,
+							padding: "12px 16px",
+							borderRadius: 8,
+							border: "none",
+							cursor: "pointer",
+							fontSize: 12,
+							fontWeight: 600,
+							letterSpacing: 1,
+							fontFamily: "var(--font-syne)",
+							transition: "all 0.2s",
+							background: tab === t.key ? "#f59e0b" : "transparent",
+							color: tab === t.key ? "#000" : "#888",
 						}}
-						className="animate-pulse"
 					>
-						<Truck size={22} style={{ color: "#666" }} />
-					</div>
-					<p className="font-body" style={{ fontSize: 13, color: "#555" }}>
-						Cargando proveedores...
-					</p>
-				</div>
+						<t.icon size={15} />
+						{t.label}
+					</button>
+				))}
 			</div>
-		);
-	}
+			{tab === "proveedores" && <TabProveedores />}
+			{tab === "categorias" && <TabCategorias />}
+			{tab === "ingredientes" && <TabIngredientes />}
+			{tab === "historial" && <TabHistorial />}
+		</div>
+	);
+}
+
+/* ── Tab 1: Proveedores ────────────────────────────────────── */
+
+function TabProveedores() {
+	const { data: suppliers = [], mutate: mutS } = useSWR<Supplier[]>(
+		"/api/suppliers",
+		fetcher,
+	);
+	const { data: categories = [] } = useSWR<SupplierCategory[]>(
+		"/api/supplier-categories",
+		fetcher,
+	);
+	const { data: invoices = [] } = useSWR<SupplierInvoice[]>(
+		"/api/supplier-invoices",
+		fetcher,
+	);
+	const [search, setSearch] = useState("");
+	const [filterCat, setFilterCat] = useState("");
+	const [modal, setModal] = useState<Supplier | null | "new">(null);
+	const [hovered, setHovered] = useState("");
+
+	const pendingInvoices = invoices.filter((i) => i.status === "pending");
+	const deudaTotal = pendingInvoices.reduce((s, i) => s + i.total, 0);
+	const totalIngredients = suppliers.reduce(
+		(s, sup) => s + (sup._count?.ingredients ?? 0),
+		0,
+	);
+
+	const filtered = suppliers.filter((s) => {
+		if (filterCat && s.categoryId !== filterCat) return false;
+		if (
+			search &&
+			!s.name.toLowerCase().includes(search.toLowerCase()) &&
+			!(s.cuit ?? "").includes(search)
+		)
+			return false;
+		return true;
+	});
+
+	const save = useCallback(
+		async (form: Record<string, string>) => {
+			if (modal === "new") {
+				await apiFetch("/api/suppliers", {
+					method: "POST",
+					body: JSON.stringify(form),
+				});
+			} else if (modal && typeof modal === "object") {
+				await apiFetch(`/api/suppliers/${modal.id}`, {
+					method: "PATCH",
+					body: JSON.stringify(form),
+				});
+			}
+			setModal(null);
+			mutS();
+		},
+		[modal, mutS],
+	);
+
+	const del = useCallback(
+		async (id: string) => {
+			if (!confirm("Eliminar proveedor?")) return;
+			await apiFetch(`/api/suppliers/${id}`, { method: "DELETE" });
+			mutS();
+		},
+		[mutS],
+	);
 
 	return (
-		<div style={{ minHeight: "100vh", background: "var(--s0)" }}>
+		<>
 			<div
-				style={{ padding: "28px 24px 48px", maxWidth: 1200, margin: "0 auto" }}
+				style={{
+					display: "grid",
+					gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+					gap: 16,
+					marginBottom: 24,
+				}}
 			>
-				{/* --- Header --- */}
-				<div
-					className="flex items-center justify-between animate-fade-in"
-					style={{ marginBottom: 8 }}
-				>
-					<div className="flex items-center gap-3">
-						<div
-							style={{
-								width: 3,
-								height: 24,
-								borderRadius: 2,
-								background: "var(--gold)",
-							}}
-						/>
-						<div>
-							<h1
-								className="font-display"
-								style={{
-									fontSize: 22,
-									fontWeight: 700,
-									color: "#f5f5f5",
-									lineHeight: 1.1,
-								}}
-							>
-								PROVEEDORES
-							</h1>
-							<p
-								className="font-body"
-								style={{ fontSize: 12, color: "#666", marginTop: 2 }}
-							>
-								Gestion de proveedores y cuentas por pagar
-							</p>
-						</div>
-					</div>
-					<button
-						className="btn-ghost flex items-center gap-2"
-						style={{ fontSize: 12 }}
-						onClick={handlePrint}
-					>
-						<Printer size={14} />
-						Imprimir reporte
-					</button>
-				</div>
-				<div className="divider-gold" style={{ marginBottom: 28 }} />
-
-				{/* --- KPI Cards --- */}
+				<KpiCard
+					label="Total Proveedores"
+					value={suppliers.length}
+					icon={Truck}
+					color="#f59e0b"
+					idx={0}
+				/>
+				<KpiCard
+					label="Facturas Pendientes"
+					value={pendingInvoices.length}
+					icon={FileText}
+					color="#3b82f6"
+					idx={1}
+				/>
+				<KpiCard
+					label="Deuda Total"
+					value={formatCurrency(deudaTotal)}
+					icon={DollarSign}
+					color="#ef4444"
+					idx={2}
+				/>
+				<KpiCard
+					label="Ingredientes Registrados"
+					value={totalIngredients}
+					icon={Package}
+					color="#10b981"
+					idx={3}
+				/>
+			</div>
+			<SectionCard title="Listado de Proveedores" icon={Truck}>
 				<div
 					style={{
-						display: "grid",
-						gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-						gap: 16,
-						marginBottom: 28,
+						display: "flex",
+						gap: 12,
+						marginBottom: 16,
+						flexWrap: "wrap",
 					}}
 				>
-					<KpiCard
-						icon={Truck}
-						color="#f59e0b"
-						value={suppliers.length}
-						label="Proveedores"
-					/>
-					<KpiCard
-						icon={FileText}
-						color="#3b82f6"
-						value={invoices.length}
-						label="Facturas"
-					/>
-					<KpiCard
-						icon={Clock}
-						color="#f59e0b"
-						value={pendingInvoices.length}
-						label="Pendientes"
-					/>
-					<KpiCard
-						icon={DollarSign}
-						color="#ef4444"
-						value={formatCurrency(totalOwed)}
-						label="Deuda total"
-					/>
-				</div>
-
-				{/* --- Tabs --- */}
-				<div
-					className="flex gap-0"
-					style={{ borderBottom: "1px solid var(--s3)", marginBottom: 24 }}
-				>
-					{(
-						[
-							["suppliers", "Proveedores", Truck],
-							["invoices", "Facturas", FileText],
-						] as const
-					).map(([key, label, Icon]) => {
-						const active = tab === key;
-						return (
-							<button
-								key={key}
-								style={{
-									position: "relative",
-									padding: "12px 20px",
-									background: "transparent",
-									border: "none",
-									cursor: "pointer",
-									color: active ? "var(--gold)" : "#555",
-									letterSpacing: "0.08em",
-									fontSize: 12,
-									fontFamily: "var(--font-syne)",
-									fontWeight: 600,
-								}}
-								onClick={() => setTab(key)}
-							>
-								<span className="flex items-center gap-2">
-									<Icon size={14} />
-									{label}
-								</span>
-								{active && (
-									<span
-										style={{
-											position: "absolute",
-											bottom: 0,
-											left: 0,
-											right: 0,
-											height: 2,
-											background: "var(--gold)",
-										}}
-									/>
-								)}
-							</button>
-						);
-					})}
-				</div>
-
-				{/* --- Suppliers tab --- */}
-				{tab === "suppliers" && (
-					<div className="animate-fade-in">
-						<div className="flex justify-end" style={{ marginBottom: 16 }}>
-							<button
-								className="btn-primary flex items-center gap-2"
-								style={{ fontSize: 12 }}
-								onClick={openNewSupplier}
-							>
-								<Plus size={14} /> Nuevo Proveedor
-							</button>
-						</div>
-
-						{suppliers.length === 0 ? (
-							<div
-								style={{
-									background: "var(--s1)",
-									border: "1px solid var(--s4)",
-									borderRadius: 16,
-									padding: "60px 32px",
-									textAlign: "center",
-								}}
-							>
-								<div
-									style={{
-										width: 64,
-										height: 64,
-										borderRadius: 16,
-										background: "rgba(255,255,255,0.03)",
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "center",
-										margin: "0 auto 16px",
-									}}
-								>
-									<Package size={28} style={{ color: "#444" }} />
-								</div>
-								<p
-									className="font-display"
-									style={{ fontSize: 13, color: "#888" }}
-								>
-									No hay proveedores registrados
-								</p>
-								<p
-									className="font-body"
-									style={{ fontSize: 12, color: "#555", marginTop: 4 }}
-								>
-									Agrega tu primer proveedor para comenzar
-								</p>
-							</div>
-						) : (
-							<div
-								style={{
-									display: "grid",
-									gap: 12,
-									gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-								}}
-							>
-								{suppliers.map((s) => {
-									const isExpanded = expandedSupplierId === s.id;
-									const supplierInvoices = invoices.filter(
-										(i) =>
-											i.supplier?.id === s.id &&
-											(i.status === "pending" || i.status === "overdue"),
-									);
-									const owed = supplierInvoices.reduce(
-										(sum, i) => sum + i.total,
-										0,
-									);
-									return (
-										<div
-											key={s.id}
-											style={{
-												background: "var(--s1)",
-												border: "1px solid var(--s4)",
-												borderRadius: 16,
-												overflow: "hidden",
-												boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-											}}
-										>
-											<div
-												style={{
-													padding: "16px 20px",
-													cursor: "pointer",
-													transition: "background 0.15s",
-												}}
-												onClick={() =>
-													setExpandedSupplierId(isExpanded ? null : s.id)
-												}
-												onMouseEnter={(e) =>
-													(e.currentTarget.style.background = "var(--s2)")
-												}
-												onMouseLeave={(e) =>
-													(e.currentTarget.style.background = "transparent")
-												}
-											>
-												<div className="flex items-start justify-between">
-													<div className="flex items-center gap-3">
-														<div
-															style={{
-																width: 38,
-																height: 38,
-																borderRadius: 10,
-																background:
-																	"linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.04))",
-																display: "flex",
-																alignItems: "center",
-																justifyContent: "center",
-																flexShrink: 0,
-															}}
-														>
-															<Truck
-																size={16}
-																style={{ color: "var(--gold)" }}
-															/>
-														</div>
-														<div>
-															<h3
-																className="font-display"
-																style={{
-																	fontSize: 14,
-																	fontWeight: 600,
-																	color: "#f5f5f5",
-																}}
-															>
-																{s.name}
-															</h3>
-															{s.cuit && (
-																<span
-																	className="font-body"
-																	style={{ fontSize: 11, color: "#555" }}
-																>
-																	CUIT: {s.cuit}
-																</span>
-															)}
-														</div>
-													</div>
-													{isExpanded ? (
-														<ChevronUp size={14} style={{ color: "#555" }} />
-													) : (
-														<ChevronDown size={14} style={{ color: "#555" }} />
-													)}
-												</div>
-
-												<div className="flex gap-5" style={{ marginTop: 14 }}>
-													<div>
-														<p
-															className="font-display uppercase"
-															style={{
-																fontSize: 9,
-																letterSpacing: "0.2em",
-																color: "#555",
-															}}
-														>
-															Facturas
-														</p>
-														<p
-															className="font-kds"
-															style={{ fontSize: 18, color: "#f5f5f5" }}
-														>
-															{s._count?.invoices ?? 0}
-														</p>
-													</div>
-													<div>
-														<p
-															className="font-display uppercase"
-															style={{
-																fontSize: 9,
-																letterSpacing: "0.2em",
-																color: "#555",
-															}}
-														>
-															Deuda
-														</p>
-														<p
-															className="font-kds"
-															style={{
-																fontSize: 18,
-																color: owed > 0 ? "#f59e0b" : "#10b981",
-															}}
-														>
-															{formatCurrency(owed)}
-														</p>
-													</div>
-												</div>
-											</div>
-
-											{isExpanded && (
-												<div
-													style={{
-														padding: "0 20px 16px",
-														borderTop: "1px solid var(--s3)",
-													}}
-												>
-													<div
-														style={{
-															paddingTop: 12,
-															display: "flex",
-															flexDirection: "column",
-															gap: 8,
-														}}
-													>
-														{s.phone && (
-															<div
-																className="flex items-center gap-2.5 font-body"
-																style={{ fontSize: 12, color: "#aaa" }}
-															>
-																<Phone size={13} style={{ color: "#555" }} />
-																{s.phone}
-															</div>
-														)}
-														{s.email && (
-															<div
-																className="flex items-center gap-2.5 font-body"
-																style={{ fontSize: 12, color: "#aaa" }}
-															>
-																<Mail size={13} style={{ color: "#555" }} />
-																{s.email}
-															</div>
-														)}
-														{s.address && (
-															<div
-																className="flex items-center gap-2.5 font-body"
-																style={{ fontSize: 12, color: "#aaa" }}
-															>
-																<MapPin size={13} style={{ color: "#555" }} />
-																{s.address}
-															</div>
-														)}
-														{s.notes && (
-															<p
-																className="font-body"
-																style={{
-																	fontSize: 11,
-																	color: "#555",
-																	fontStyle: "italic",
-																	paddingLeft: 25,
-																}}
-															>
-																{s.notes}
-															</p>
-														)}
-													</div>
-													<div
-														style={{
-															height: 1,
-															background: "var(--s3)",
-															margin: "12px 0",
-														}}
-													/>
-													<div className="flex gap-2">
-														<button
-															className="btn-ghost flex items-center gap-1.5"
-															style={{ fontSize: 11 }}
-															onClick={() => openEditSupplier(s)}
-														>
-															<Edit3 size={12} /> Editar
-														</button>
-														<button
-															className="btn-ghost flex items-center gap-1.5"
-															style={{ fontSize: 11, color: "#ef4444" }}
-															onClick={() => deleteSupplier(s)}
-														>
-															<Trash2 size={12} /> Eliminar
-														</button>
-													</div>
-												</div>
-											)}
-										</div>
-									);
-								})}
-							</div>
-						)}
+					<div style={{ flex: 1, minWidth: 200, position: "relative" }}>
+						<Search
+							size={14}
+							style={{ position: "absolute", left: 12, top: 12, color: "#666" }}
+						/>
+						<input
+							placeholder="Buscar por nombre o CUIT..."
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							style={{ ...inputStyle, paddingLeft: 34 }}
+						/>
 					</div>
-				)}
-
-				{/* --- Invoices tab --- */}
-				{tab === "invoices" && (
-					<div className="animate-fade-in">
-						<div
-							className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between"
-							style={{ marginBottom: 16 }}
-						>
-							<div className="flex gap-3 flex-wrap">
-								<div style={{ position: "relative" }}>
-									<Search
-										size={14}
+					<select
+						value={filterCat}
+						onChange={(e) => setFilterCat(e.target.value)}
+						style={{ ...selectStyle, width: 200, flex: "none" }}
+					>
+						<option value="">Todas las categorias</option>
+						{categories.map((c) => (
+							<option key={c.id} value={c.id}>
+								{c.icon} {c.name}
+							</option>
+						))}
+					</select>
+					<button style={btnPrimary} onClick={() => setModal("new")}>
+						<Plus size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+						Nuevo Proveedor
+					</button>
+				</div>
+				<div style={{ overflowX: "auto" }}>
+					<table style={{ width: "100%", borderCollapse: "collapse" }}>
+						<thead>
+							<tr style={{ borderBottom: "1px solid var(--s4)" }}>
+								{[
+									"Nombre",
+									"Categoría",
+									"CUIT",
+									"Teléfono",
+									"Email",
+									"Facturas",
+									"Ingredientes",
+									"",
+								].map((h) => (
+									<th
+										key={h}
 										style={{
-											position: "absolute",
-											left: 12,
-											top: "50%",
-											transform: "translateY(-50%)",
-											color: "#555",
-											pointerEvents: "none",
-										}}
-									/>
-									<select
-										className="input-base"
-										value={filterSupplier}
-										onChange={(e) => setFilterSupplier(e.target.value)}
-										style={{ minWidth: 200, fontSize: 12, paddingLeft: 34 }}
-									>
-										<option value="">Todos los proveedores</option>
-										{suppliers.map((s) => (
-											<option key={s.id} value={s.id}>
-												{s.name}
-											</option>
-										))}
-									</select>
-								</div>
-								<select
-									className="input-base"
-									value={filterStatus}
-									onChange={(e) => setFilterStatus(e.target.value)}
-									style={{ minWidth: 160, fontSize: 12 }}
-								>
-									<option value="">Todos los estados</option>
-									<option value="pending">Pendiente</option>
-									<option value="paid">Pagada</option>
-									<option value="overdue">Vencida</option>
-								</select>
-							</div>
-							<button
-								className="btn-primary flex items-center gap-2"
-								style={{ fontSize: 12 }}
-								onClick={openNewInvoice}
-							>
-								<Plus size={14} /> Nueva Factura
-							</button>
-						</div>
-
-						{invoices.length === 0 ? (
-							<div
-								style={{
-									background: "var(--s1)",
-									border: "1px solid var(--s4)",
-									borderRadius: 16,
-									padding: "60px 32px",
-									textAlign: "center",
-								}}
-							>
-								<div
-									style={{
-										width: 64,
-										height: 64,
-										borderRadius: 16,
-										background: "rgba(255,255,255,0.03)",
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "center",
-										margin: "0 auto 16px",
-									}}
-								>
-									<FileText size={28} style={{ color: "#444" }} />
-								</div>
-								<p
-									className="font-display"
-									style={{ fontSize: 13, color: "#888" }}
-								>
-									No hay facturas registradas
-								</p>
-								<p
-									className="font-body"
-									style={{ fontSize: 12, color: "#555", marginTop: 4 }}
-								>
-									Crea una factura desde el boton superior
-								</p>
-							</div>
-						) : (
-							<div
-								style={{
-									background: "var(--s1)",
-									border: "1px solid var(--s4)",
-									borderRadius: 16,
-									overflow: "hidden",
-									boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-								}}
-							>
-								{/* Section header */}
-								<div
-									className="flex items-center gap-2.5"
-									style={{
-										padding: "14px 20px",
-										borderBottom: "1px solid var(--s3)",
-										background: "var(--s2)",
-									}}
-								>
-									<FileText size={14} style={{ color: "var(--gold)" }} />
-									<span
-										className="font-display uppercase"
-										style={{
+											padding: "10px 12px",
 											fontSize: 11,
-											letterSpacing: "0.15em",
-											color: "#ccc",
+											color: "#666",
+											textTransform: "uppercase",
+											letterSpacing: 1,
+											fontFamily: "var(--font-syne)",
+											textAlign: "left",
 											fontWeight: 600,
 										}}
 									>
-										LISTADO DE FACTURAS
-									</span>
-								</div>
-
-								{/* Table header - desktop */}
-								<div
-									className="hidden md:grid font-display uppercase"
+										{h}
+									</th>
+								))}
+							</tr>
+						</thead>
+						<tbody>
+							{filtered.map((s) => (
+								<tr
+									key={s.id}
 									style={{
-										gridTemplateColumns:
-											"1.5fr 1fr 0.8fr 0.8fr 1fr 0.7fr 0.8fr",
-										padding: "10px 20px",
-										fontSize: 9,
-										letterSpacing: "0.2em",
-										color: "#555",
-										fontWeight: 600,
 										borderBottom: "1px solid var(--s3)",
+										cursor: "pointer",
+										background: hovered === s.id ? "var(--s2)" : "transparent",
+										transition: "background 0.15s",
 									}}
+									onMouseEnter={() => setHovered(s.id)}
+									onMouseLeave={() => setHovered("")}
+									onClick={() => setModal(s)}
 								>
-									<span>Proveedor</span>
-									<span>Nro Factura</span>
-									<span>Fecha</span>
-									<span>Vencimiento</span>
-									<span style={{ textAlign: "right" }}>Total</span>
-									<span style={{ textAlign: "center" }}>Estado</span>
-									<span />
-								</div>
-
-								{/* Rows */}
-								{invoices.map((inv) => (
-									<div
-										key={inv.id}
+									<td
 										style={{
-											padding: "12px 20px",
-											borderBottom: "1px solid var(--s3)",
-											transition: "background 0.15s",
+											padding: "12px",
+											fontSize: 14,
+											color: "#fff",
+											fontWeight: 600,
 										}}
-										onMouseEnter={(e) =>
-											(e.currentTarget.style.background = "var(--s2)")
-										}
-										onMouseLeave={(e) =>
-											(e.currentTarget.style.background = "transparent")
-										}
 									>
-										<div
-											className="md:grid md:items-center"
+										{s.name}
+									</td>
+									<td style={{ padding: "12px", fontSize: 13, color: "#999" }}>
+										{s.category ? `${s.category.icon} ${s.category.name}` : "—"}
+									</td>
+									<td
+										style={{
+											padding: "12px",
+											fontSize: 13,
+											color: "#999",
+											fontFamily: "var(--font-geist-mono)",
+										}}
+									>
+										{s.cuit || "—"}
+									</td>
+									<td style={{ padding: "12px", fontSize: 13, color: "#999" }}>
+										{s.phone ? (
+											<span>
+												<Phone
+													size={12}
+													style={{ marginRight: 4, verticalAlign: -1 }}
+												/>
+												{s.phone}
+											</span>
+										) : (
+											"—"
+										)}
+									</td>
+									<td style={{ padding: "12px", fontSize: 13, color: "#999" }}>
+										{s.email ? (
+											<span>
+												<Mail
+													size={12}
+													style={{ marginRight: 4, verticalAlign: -1 }}
+												/>
+												{s.email}
+											</span>
+										) : (
+											"—"
+										)}
+									</td>
+									<td
+										style={{
+											padding: "12px",
+											fontSize: 13,
+											color: "#f59e0b",
+											fontWeight: 600,
+										}}
+									>
+										{s._count?.invoices ?? 0}
+									</td>
+									<td
+										style={{
+											padding: "12px",
+											fontSize: 13,
+											color: "#10b981",
+											fontWeight: 600,
+										}}
+									>
+										{s._count?.ingredients ?? 0}
+									</td>
+									<td style={{ padding: "12px", textAlign: "right" }}>
+										<button
 											style={{
-												gridTemplateColumns:
-													"1.5fr 1fr 0.8fr 0.8fr 1fr 0.7fr 0.8fr",
+												background: "none",
+												border: "none",
+												cursor: "pointer",
+												color: "#666",
+												padding: 4,
+											}}
+											onClick={(e) => {
+												e.stopPropagation();
+												del(s.id);
 											}}
 										>
-											<span
-												className="font-body"
-												style={{
-													fontSize: 13,
-													fontWeight: 500,
-													color: "#f5f5f5",
-												}}
-											>
-												{inv.supplier?.name ?? "\u2014"}
-											</span>
-											<span
-												className="font-body"
-												style={{ fontSize: 13, color: "#aaa" }}
-											>
-												{inv.number}
-											</span>
-											<span
-												className="font-body"
-												style={{ fontSize: 11, color: "#666" }}
-											>
-												{fmtDate(inv.date)}
-											</span>
-											<span
-												className="font-body"
-												style={{ fontSize: 11, color: "#666" }}
-											>
-												{inv.dueDate ? fmtDate(inv.dueDate) : "\u2014"}
-											</span>
-											<span
-												className="font-kds"
-												style={{
-													fontSize: 14,
-													textAlign: "right",
-													color: "var(--gold)",
-												}}
-											>
-												{formatCurrency(inv.total)}
-											</span>
-											<span style={{ textAlign: "center" }}>
-												<StatusBadge status={inv.status} />
-											</span>
-											<div
-												className="flex gap-1 justify-end"
-												style={{ marginTop: 0 }}
-											>
-												{inv.status !== "paid" && (
-													<button
-														className="btn-ghost flex items-center gap-1"
-														style={{ fontSize: 11, color: "#10b981" }}
-														onClick={() => {
-															setPayInvoiceId(inv.id);
-															setPayMethod("efectivo");
-														}}
-													>
-														<CheckCircle size={13} /> Pagar
-													</button>
-												)}
-												<button
-													className="btn-ghost"
-													style={{ padding: 6, color: "#ef4444" }}
-													onClick={() => deleteInvoice(inv)}
-												>
-													<Trash2 size={13} />
-												</button>
-											</div>
-										</div>
-									</div>
-								))}
-							</div>
-						)}
-					</div>
-				)}
-
-				{/* --- Supplier modal --- */}
-				<Modal
-					open={showSupplierModal}
-					onClose={() => setShowSupplierModal(false)}
-					title={editingSupplier ? "Editar Proveedor" : "Nuevo Proveedor"}
-				>
-					<div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-						{(
-							[
-								["name", "Nombre *", "text"],
-								["cuit", "CUIT", "text"],
-								["address", "Direccion", "text"],
-								["phone", "Telefono", "text"],
-								["email", "Email", "email"],
-							] as const
-						).map(([key, label, type]) => (
-							<div key={key}>
-								<FieldLabel>{label}</FieldLabel>
-								<input
-									className="input-base"
-									type={type}
-									value={supplierForm[key]}
-									onChange={(e) =>
-										setSupplierForm((f) => ({ ...f, [key]: e.target.value }))
-									}
-									style={{ width: "100%", fontSize: 13 }}
-								/>
-							</div>
-						))}
-						<div>
-							<FieldLabel>Notas</FieldLabel>
-							<textarea
-								className="input-base"
-								rows={3}
-								value={supplierForm.notes}
-								onChange={(e) =>
-									setSupplierForm((f) => ({ ...f, notes: e.target.value }))
-								}
-								style={{ width: "100%", fontSize: 13 }}
-							/>
-						</div>
-						<div
-							className="flex justify-end gap-3"
-							style={{ paddingTop: 12, borderTop: "1px solid var(--s3)" }}
-						>
-							<button
-								className="btn-ghost"
-								style={{ fontSize: 13 }}
-								onClick={() => setShowSupplierModal(false)}
-							>
-								Cancelar
-							</button>
-							<button
-								className="btn-primary"
-								style={{ fontSize: 13 }}
-								onClick={saveSupplier}
-							>
-								Guardar
-							</button>
-						</div>
-					</div>
-				</Modal>
-
-				{/* --- Invoice modal --- */}
-				<Modal
-					open={showInvoiceModal}
-					onClose={() => setShowInvoiceModal(false)}
-					title="Nueva Factura Proveedor"
-					wide
-				>
-					<div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-						<div
-							style={{
-								display: "grid",
-								gridTemplateColumns: "1fr 1fr",
-								gap: 16,
-							}}
-						>
-							<div style={{ gridColumn: "1 / -1" }}>
-								<FieldLabel>Proveedor *</FieldLabel>
-								<select
-									className="input-base"
-									value={invForm.supplierId}
-									onChange={(e) =>
-										setInvForm((f) => ({ ...f, supplierId: e.target.value }))
-									}
-									style={{ width: "100%", fontSize: 13 }}
-								>
-									<option value="">Seleccionar...</option>
-									{suppliers.map((s) => (
-										<option key={s.id} value={s.id}>
-											{s.name}
-										</option>
-									))}
-								</select>
-							</div>
-							<div>
-								<FieldLabel>Nro Factura *</FieldLabel>
-								<input
-									className="input-base"
-									value={invForm.number}
-									onChange={(e) =>
-										setInvForm((f) => ({ ...f, number: e.target.value }))
-									}
-									style={{ width: "100%", fontSize: 13 }}
-								/>
-							</div>
-							<div>
-								<FieldLabel>Fecha *</FieldLabel>
-								<input
-									className="input-base"
-									type="date"
-									value={invForm.date}
-									onChange={(e) =>
-										setInvForm((f) => ({ ...f, date: e.target.value }))
-									}
-									style={{ width: "100%", fontSize: 13 }}
-								/>
-							</div>
-							<div>
-								<FieldLabel>Vencimiento</FieldLabel>
-								<input
-									className="input-base"
-									type="date"
-									value={invForm.dueDate}
-									onChange={(e) =>
-										setInvForm((f) => ({ ...f, dueDate: e.target.value }))
-									}
-									style={{ width: "100%", fontSize: 13 }}
-								/>
-							</div>
-							<div>
-								<FieldLabel>Foto URL</FieldLabel>
-								<input
-									className="input-base"
-									value={invForm.photoUrl}
-									onChange={(e) =>
-										setInvForm((f) => ({ ...f, photoUrl: e.target.value }))
-									}
-									placeholder="https://..."
-									style={{ width: "100%", fontSize: 13 }}
-								/>
-							</div>
-						</div>
-
-						{/* Line items */}
-						<div>
-							<div
-								className="flex items-center justify-between"
-								style={{ marginBottom: 12 }}
-							>
-								<FieldLabel>Items</FieldLabel>
-								<button
-									className="btn-ghost flex items-center gap-1.5"
-									style={{ fontSize: 11 }}
-									onClick={addLine}
-								>
-									<Plus size={13} /> Agregar linea
-								</button>
-							</div>
-
-							<div
-								className="hidden md:grid font-display uppercase"
-								style={{
-									gridTemplateColumns: "2fr 0.6fr 1fr 0.6fr auto",
-									gap: 8,
-									marginBottom: 8,
-									fontSize: 9,
-									letterSpacing: "0.2em",
-									color: "#555",
-									fontWeight: 600,
-									paddingLeft: 4,
-								}}
-							>
-								<span>Descripcion</span>
-								<span style={{ textAlign: "center" }}>Cant.</span>
-								<span style={{ textAlign: "right" }}>Precio unit.</span>
-								<span style={{ textAlign: "center" }}>IVA</span>
-								<span style={{ width: 28 }} />
-							</div>
-
-							<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-								{invLines.map((line, idx) => (
-									<div
-										key={idx}
+											<Trash2 size={14} />
+										</button>
+									</td>
+								</tr>
+							))}
+							{filtered.length === 0 && (
+								<tr>
+									<td
+										colSpan={8}
 										style={{
-											display: "grid",
-											gridTemplateColumns: "2fr 0.6fr 1fr 0.6fr auto",
-											gap: 8,
+											padding: 40,
+											textAlign: "center",
+											color: "#555",
+											fontSize: 14,
 										}}
 									>
-										<input
-											className="input-base"
-											placeholder="Descripcion"
-											value={line.description}
-											onChange={(e) =>
-												updateLine(idx, "description", e.target.value)
-											}
-											style={{ fontSize: 12 }}
-										/>
-										<input
-											className="input-base"
-											type="number"
-											min={0}
-											step={1}
-											value={line.quantity}
-											onChange={(e) =>
-												updateLine(idx, "quantity", Number(e.target.value))
-											}
-											style={{ fontSize: 12, textAlign: "center" }}
-										/>
-										<input
-											className="input-base"
-											type="number"
-											min={0}
-											step={0.01}
-											placeholder="Precio unit."
-											value={line.unitPrice || ""}
-											onChange={(e) =>
-												updateLine(idx, "unitPrice", Number(e.target.value))
-											}
-											style={{ fontSize: 12, textAlign: "right" }}
-										/>
-										<select
-											className="input-base"
-											value={line.ivaRate}
-											onChange={(e) =>
-												updateLine(idx, "ivaRate", Number(e.target.value))
-											}
-											style={{ fontSize: 12 }}
-										>
-											<option value={0}>0%</option>
-											<option value={10.5}>10.5%</option>
-											<option value={21}>21%</option>
-											<option value={27}>27%</option>
-										</select>
-										<button
-											className="btn-ghost"
-											style={{ padding: 6, color: "#ef4444" }}
-											onClick={() => removeLine(idx)}
-										>
-											<X size={14} />
-										</button>
-									</div>
-								))}
-							</div>
-						</div>
+										No se encontraron proveedores
+									</td>
+								</tr>
+							)}
+						</tbody>
+					</table>
+				</div>
+			</SectionCard>
+			{modal !== null && (
+				<SupplierModal
+					supplier={modal === "new" ? null : modal}
+					categories={categories}
+					onClose={() => setModal(null)}
+					onSave={save}
+				/>
+			)}
+		</>
+	);
+}
 
-						{/* Totals */}
-						<div style={{ height: 1, background: "var(--s3)" }} />
-						<div
-							style={{ textAlign: "right", fontSize: 13 }}
-							className="font-body"
-						>
-							<div className="flex justify-end gap-6">
-								<span style={{ color: "#666" }}>Subtotal:</span>
-								<span style={{ color: "#aaa", width: 112 }}>
-									{formatCurrency(invSubtotal)}
-								</span>
-							</div>
-							<div className="flex justify-end gap-6" style={{ marginTop: 4 }}>
-								<span style={{ color: "#666" }}>IVA:</span>
-								<span style={{ color: "#aaa", width: 112 }}>
-									{formatCurrency(invIva)}
-								</span>
-							</div>
-							<div className="flex justify-end gap-6" style={{ marginTop: 8 }}>
-								<span
-									className="font-display"
-									style={{ fontWeight: 700, color: "var(--gold)" }}
-								>
-									Total:
-								</span>
-								<span
-									className="font-kds"
-									style={{ fontSize: 18, color: "var(--gold)", width: 112 }}
-								>
-									{formatCurrency(invTotal)}
-								</span>
-							</div>
-						</div>
+function SupplierModal({
+	supplier,
+	categories,
+	onClose,
+	onSave,
+}: {
+	supplier: Supplier | null;
+	categories: SupplierCategory[];
+	onClose: () => void;
+	onSave: (f: Record<string, string>) => void;
+}) {
+	const [form, setForm] = useState({
+		name: supplier?.name ?? "",
+		cuit: supplier?.cuit ?? "",
+		address: supplier?.address ?? "",
+		phone: supplier?.phone ?? "",
+		email: supplier?.email ?? "",
+		notes: supplier?.notes ?? "",
+		categoryId: supplier?.categoryId ?? "",
+	});
+	const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
-						<div>
-							<FieldLabel>Notas</FieldLabel>
-							<textarea
-								className="input-base"
-								rows={2}
-								value={invForm.notes}
-								onChange={(e) =>
-									setInvForm((f) => ({ ...f, notes: e.target.value }))
-								}
-								style={{ width: "100%", fontSize: 13 }}
-							/>
-						</div>
-
-						<div
-							className="flex justify-end gap-3"
-							style={{ paddingTop: 12, borderTop: "1px solid var(--s3)" }}
-						>
-							<button
-								className="btn-ghost"
-								style={{ fontSize: 13 }}
-								onClick={() => setShowInvoiceModal(false)}
-							>
-								Cancelar
-							</button>
-							<button
-								className="btn-primary"
-								style={{ fontSize: 13 }}
-								onClick={saveInvoice}
-							>
-								Guardar Factura
-							</button>
-						</div>
-					</div>
-				</Modal>
-
-				{/* --- Pay modal --- */}
-				<Modal
-					open={!!payInvoiceId}
-					onClose={() => setPayInvoiceId(null)}
-					title="Registrar Pago"
+	return (
+		<Modal
+			title={supplier ? "Editar Proveedor" : "Nuevo Proveedor"}
+			onClose={onClose}
+		>
+			<div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+				<label style={{ fontSize: 12, color: "#999" }}>
+					Nombre *
+					<input
+						style={inputStyle}
+						value={form.name}
+						onChange={(e) => set("name", e.target.value)}
+					/>
+				</label>
+				<label style={{ fontSize: 12, color: "#999" }}>
+					CUIT
+					<input
+						style={inputStyle}
+						value={form.cuit}
+						onChange={(e) => set("cuit", e.target.value)}
+						placeholder="XX-XXXXXXXX-X"
+					/>
+				</label>
+				<label style={{ fontSize: 12, color: "#999" }}>
+					Categoría
+					<select
+						style={selectStyle}
+						value={form.categoryId}
+						onChange={(e) => set("categoryId", e.target.value)}
+					>
+						<option value="">Sin categoría</option>
+						{categories.map((c) => (
+							<option key={c.id} value={c.id}>
+								{c.icon} {c.name}
+							</option>
+						))}
+					</select>
+				</label>
+				<label style={{ fontSize: 12, color: "#999" }}>
+					Dirección
+					<input
+						style={inputStyle}
+						value={form.address}
+						onChange={(e) => set("address", e.target.value)}
+					/>
+				</label>
+				<div
+					style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
 				>
-					<div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+					<label style={{ fontSize: 12, color: "#999" }}>
+						Teléfono
+						<input
+							style={inputStyle}
+							value={form.phone}
+							onChange={(e) => set("phone", e.target.value)}
+						/>
+					</label>
+					<label style={{ fontSize: 12, color: "#999" }}>
+						Email
+						<input
+							style={inputStyle}
+							value={form.email}
+							onChange={(e) => set("email", e.target.value)}
+						/>
+					</label>
+				</div>
+				<label style={{ fontSize: 12, color: "#999" }}>
+					Notas
+					<textarea
+						style={{ ...inputStyle, minHeight: 60, resize: "vertical" }}
+						value={form.notes}
+						onChange={(e) => set("notes", e.target.value)}
+					/>
+				</label>
+				<div
+					style={{
+						display: "flex",
+						gap: 12,
+						justifyContent: "flex-end",
+						marginTop: 8,
+					}}
+				>
+					<button style={btnGhost} onClick={onClose}>
+						Cancelar
+					</button>
+					<button
+						style={btnPrimary}
+						onClick={() => {
+							if (!form.name.trim()) return;
+							onSave(form);
+						}}
+					>
+						Guardar
+					</button>
+				</div>
+			</div>
+		</Modal>
+	);
+}
+
+/* ── Tab 2: Categorías ─────────────────────────────────────── */
+
+function TabCategorias() {
+	const { data: categories = [], mutate } = useSWR<SupplierCategory[]>(
+		"/api/supplier-categories",
+		fetcher,
+	);
+	const [modal, setModal] = useState<SupplierCategory | null | "new">(null);
+
+	const save = useCallback(
+		async (form: { name: string; icon: string; order: number }) => {
+			if (modal === "new") {
+				await apiFetch("/api/supplier-categories", {
+					method: "POST",
+					body: JSON.stringify(form),
+				});
+			} else if (modal && typeof modal === "object") {
+				await apiFetch(`/api/supplier-categories/${modal.id}`, {
+					method: "PUT",
+					body: JSON.stringify(form),
+				});
+			}
+			setModal(null);
+			mutate();
+		},
+		[modal, mutate],
+	);
+
+	const del = useCallback(
+		async (id: string) => {
+			if (!confirm("Eliminar categoría?")) return;
+			await apiFetch(`/api/supplier-categories/${id}`, { method: "DELETE" });
+			mutate();
+		},
+		[mutate],
+	);
+
+	return (
+		<SectionCard title="Categorías de Proveedores" icon={Tags}>
+			<div
+				style={{
+					display: "flex",
+					justifyContent: "flex-end",
+					marginBottom: 16,
+				}}
+			>
+				<button style={btnPrimary} onClick={() => setModal("new")}>
+					<Plus size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+					Nueva Categoría
+				</button>
+			</div>
+			<div
+				style={{
+					display: "grid",
+					gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+					gap: 14,
+				}}
+			>
+				{categories.map((c, i) => (
+					<div
+						key={c.id}
+						style={{
+							background: "var(--s2)",
+							border: "1px solid var(--s4)",
+							borderRadius: 12,
+							padding: 20,
+							position: "relative",
+							animation: `slideUp 0.4s ease ${i * 60}ms both`,
+						}}
+					>
+						<div style={{ fontSize: 32, marginBottom: 8 }}>{c.icon}</div>
 						<div
 							style={{
-								width: 52,
-								height: 52,
-								borderRadius: 12,
-								background: "rgba(16,185,129,0.1)",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-								margin: "0 auto",
+								fontSize: 15,
+								fontWeight: 700,
+								color: "#fff",
+								fontFamily: "var(--font-syne)",
+								marginBottom: 4,
 							}}
 						>
-							<CheckCircle size={24} style={{ color: "#10b981" }} />
+							{c.name}
 						</div>
-						<div>
-							<FieldLabel>Metodo de pago</FieldLabel>
-							<select
-								className="input-base"
-								value={payMethod}
-								onChange={(e) => setPayMethod(e.target.value)}
-								style={{ width: "100%", fontSize: 13 }}
-							>
-								<option value="efectivo">Efectivo</option>
-								<option value="transferencia">Transferencia</option>
-								<option value="cheque">Cheque</option>
-								<option value="mercadopago">MercadoPago</option>
-								<option value="tarjeta">Tarjeta</option>
-							</select>
+						<div style={{ fontSize: 12, color: "#666" }}>
+							{c.suppliers.length} proveedor
+							{c.suppliers.length !== 1 ? "es" : ""}
 						</div>
 						<div
-							className="flex justify-end gap-3"
-							style={{ paddingTop: 12, borderTop: "1px solid var(--s3)" }}
+							style={{
+								position: "absolute",
+								top: 12,
+								right: 12,
+								display: "flex",
+								gap: 6,
+							}}
 						>
 							<button
-								className="btn-ghost"
-								style={{ fontSize: 13 }}
-								onClick={() => setPayInvoiceId(null)}
+								style={{
+									background: "none",
+									border: "none",
+									cursor: "pointer",
+									color: "#888",
+								}}
+								onClick={() => setModal(c)}
 							>
-								Cancelar
+								<Edit3 size={14} />
 							</button>
 							<button
-								className="btn-primary"
-								style={{ fontSize: 13 }}
-								onClick={markPaid}
+								style={{
+									background: "none",
+									border: "none",
+									cursor: "pointer",
+									color: "#666",
+								}}
+								onClick={() => del(c.id)}
 							>
-								Confirmar Pago
+								<Trash2 size={14} />
 							</button>
 						</div>
 					</div>
-				</Modal>
+				))}
+				{categories.length === 0 && (
+					<div style={{ color: "#555", fontSize: 14, padding: 20 }}>
+						No hay categorías creadas
+					</div>
+				)}
+			</div>
+			{modal !== null && (
+				<CategoryModal
+					cat={modal === "new" ? null : modal}
+					onClose={() => setModal(null)}
+					onSave={save}
+				/>
+			)}
+		</SectionCard>
+	);
+}
 
-				{/* --- Confirm dialog --- */}
-				<ConfirmDialog
-					open={!!confirm}
-					message={confirm?.message ?? ""}
-					onConfirm={() => confirm?.action()}
-					onCancel={() => setConfirm(null)}
+function CategoryModal({
+	cat,
+	onClose,
+	onSave,
+}: {
+	cat: SupplierCategory | null;
+	onClose: () => void;
+	onSave: (f: { name: string; icon: string; order: number }) => void;
+}) {
+	const [name, setName] = useState(cat?.name ?? "");
+	const [icon, setIcon] = useState(cat?.icon ?? "📦");
+	const [order, setOrder] = useState(cat?.order ?? 0);
+
+	return (
+		<Modal
+			title={cat ? "Editar Categoría" : "Nueva Categoría"}
+			onClose={onClose}
+		>
+			<div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+				<label style={{ fontSize: 12, color: "#999" }}>
+					Nombre *
+					<input
+						style={inputStyle}
+						value={name}
+						onChange={(e) => setName(e.target.value)}
+					/>
+				</label>
+				<div
+					style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+				>
+					<label style={{ fontSize: 12, color: "#999" }}>
+						Icono Emoji
+						<input
+							style={inputStyle}
+							value={icon}
+							onChange={(e) => setIcon(e.target.value)}
+						/>
+					</label>
+					<label style={{ fontSize: 12, color: "#999" }}>
+						Orden
+						<input
+							style={inputStyle}
+							type="number"
+							value={order}
+							onChange={(e) => setOrder(Number(e.target.value))}
+						/>
+					</label>
+				</div>
+				<div
+					style={{
+						display: "flex",
+						gap: 12,
+						justifyContent: "flex-end",
+						marginTop: 8,
+					}}
+				>
+					<button style={btnGhost} onClick={onClose}>
+						Cancelar
+					</button>
+					<button
+						style={btnPrimary}
+						onClick={() => {
+							if (!name.trim()) return;
+							onSave({ name, icon, order });
+						}}
+					>
+						Guardar
+					</button>
+				</div>
+			</div>
+		</Modal>
+	);
+}
+
+/* ── Tab 3: Ingredientes ───────────────────────────────────── */
+
+function TabIngredientes() {
+	const { data: ingredients = [], mutate: mutI } = useSWR<Ingredient[]>(
+		"/api/ingredients",
+		fetcher,
+	);
+	const { data: categories = [] } = useSWR<IngredientCategory[]>(
+		"/api/ingredient-categories",
+		fetcher,
+	);
+	const { data: suppliers = [] } = useSWR<Supplier[]>(
+		"/api/suppliers",
+		fetcher,
+	);
+	const [search, setSearch] = useState("");
+	const [filterCat, setFilterCat] = useState("");
+	const [modal, setModal] = useState<Ingredient | null | "new">(null);
+	const [hovered, setHovered] = useState("");
+
+	const lowStock = ingredients.filter(
+		(i) => i.stockCurrent <= i.alertThreshold,
+	);
+	const avgCost = ingredients.length
+		? ingredients.reduce((s, i) => s + i.costPerUnit, 0) / ingredients.length
+		: 0;
+	const noSupplier = ingredients.filter((i) => !i.supplierId).length;
+
+	const filtered = ingredients.filter((i) => {
+		if (filterCat && i.categoryId !== filterCat) return false;
+		if (search && !i.name.toLowerCase().includes(search.toLowerCase()))
+			return false;
+		return true;
+	});
+
+	const save = useCallback(
+		async (form: Record<string, unknown>) => {
+			if (modal === "new") {
+				await apiFetch("/api/ingredients", {
+					method: "POST",
+					body: JSON.stringify(form),
+				});
+			} else if (modal && typeof modal === "object") {
+				await apiFetch(`/api/ingredients/${modal.id}`, {
+					method: "PATCH",
+					body: JSON.stringify(form),
+				});
+			}
+			setModal(null);
+			mutI();
+		},
+		[modal, mutI],
+	);
+
+	const del = useCallback(
+		async (id: string) => {
+			if (!confirm("Eliminar ingrediente?")) return;
+			await apiFetch(`/api/ingredients/${id}`, { method: "DELETE" });
+			mutI();
+		},
+		[mutI],
+	);
+
+	const stockColor = (i: Ingredient) =>
+		i.stockCurrent <= i.alertThreshold
+			? "#ef4444"
+			: i.stockCurrent <= i.alertThreshold * 2
+				? "#f59e0b"
+				: "#10b981";
+
+	return (
+		<>
+			<div
+				style={{
+					display: "grid",
+					gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+					gap: 16,
+					marginBottom: 24,
+				}}
+			>
+				<KpiCard
+					label="Total Ingredientes"
+					value={ingredients.length}
+					icon={Package}
+					color="#f59e0b"
+					idx={0}
+				/>
+				<KpiCard
+					label="Stock Bajo"
+					value={lowStock.length}
+					sub={lowStock.length > 0 ? "Requieren reposicion" : "Todo en orden"}
+					icon={AlertTriangle}
+					color="#ef4444"
+					idx={1}
+				/>
+				<KpiCard
+					label="Costo Promedio"
+					value={formatCurrency(avgCost)}
+					icon={DollarSign}
+					color="#3b82f6"
+					idx={2}
+				/>
+				<KpiCard
+					label="Sin Proveedor"
+					value={noSupplier}
+					icon={Truck}
+					color="#8b5cf6"
+					idx={3}
 				/>
 			</div>
-		</div>
+			<SectionCard title="Ingredientes" icon={Package}>
+				<div
+					style={{
+						display: "flex",
+						gap: 12,
+						marginBottom: 16,
+						flexWrap: "wrap",
+					}}
+				>
+					<div style={{ flex: 1, minWidth: 200, position: "relative" }}>
+						<Search
+							size={14}
+							style={{ position: "absolute", left: 12, top: 12, color: "#666" }}
+						/>
+						<input
+							placeholder="Buscar ingrediente..."
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							style={{ ...inputStyle, paddingLeft: 34 }}
+						/>
+					</div>
+					<select
+						value={filterCat}
+						onChange={(e) => setFilterCat(e.target.value)}
+						style={{ ...selectStyle, width: 200, flex: "none" }}
+					>
+						<option value="">Todas las categorias</option>
+						{categories.map((c) => (
+							<option key={c.id} value={c.id}>
+								{c.icon} {c.name}
+							</option>
+						))}
+					</select>
+					<button style={btnPrimary} onClick={() => setModal("new")}>
+						<Plus size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+						Nuevo Ingrediente
+					</button>
+				</div>
+				<div style={{ overflowX: "auto" }}>
+					<table style={{ width: "100%", borderCollapse: "collapse" }}>
+						<thead>
+							<tr style={{ borderBottom: "1px solid var(--s4)" }}>
+								{[
+									"Nombre",
+									"Unidad",
+									"Stock",
+									"Alerta",
+									"Costo/U",
+									"Categoría",
+									"Proveedor",
+									"",
+								].map((h) => (
+									<th
+										key={h}
+										style={{
+											padding: "10px 12px",
+											fontSize: 11,
+											color: "#666",
+											textTransform: "uppercase",
+											letterSpacing: 1,
+											fontFamily: "var(--font-syne)",
+											textAlign: "left",
+											fontWeight: 600,
+										}}
+									>
+										{h}
+									</th>
+								))}
+							</tr>
+						</thead>
+						<tbody>
+							{filtered.map((ing) => (
+								<tr
+									key={ing.id}
+									style={{
+										borderBottom: "1px solid var(--s3)",
+										cursor: "pointer",
+										background:
+											hovered === ing.id ? "var(--s2)" : "transparent",
+										transition: "background 0.15s",
+									}}
+									onMouseEnter={() => setHovered(ing.id)}
+									onMouseLeave={() => setHovered("")}
+									onClick={() => setModal(ing)}
+								>
+									<td
+										style={{
+											padding: "12px",
+											fontSize: 14,
+											color: "#fff",
+											fontWeight: 600,
+										}}
+									>
+										{ing.name}
+									</td>
+									<td style={{ padding: "12px", fontSize: 13, color: "#999" }}>
+										{ing.unit}
+									</td>
+									<td
+										style={{
+											padding: "12px",
+											fontSize: 14,
+											fontWeight: 700,
+											color: stockColor(ing),
+											fontFamily: "var(--font-bebas)",
+											letterSpacing: 0.5,
+										}}
+									>
+										{ing.stockCurrent.toFixed(1)}
+									</td>
+									<td style={{ padding: "12px", fontSize: 13, color: "#666" }}>
+										{ing.alertThreshold}
+									</td>
+									<td
+										style={{
+											padding: "12px",
+											fontSize: 13,
+											color: "#f59e0b",
+											fontWeight: 600,
+										}}
+									>
+										{formatCurrency(ing.costPerUnit)}
+									</td>
+									<td style={{ padding: "12px", fontSize: 13, color: "#999" }}>
+										{ing.category
+											? `${ing.category.icon} ${ing.category.name}`
+											: "—"}
+									</td>
+									<td style={{ padding: "12px", fontSize: 13, color: "#999" }}>
+										{ing.supplier?.name ?? "—"}
+									</td>
+									<td style={{ padding: "12px", textAlign: "right" }}>
+										<button
+											style={{
+												background: "none",
+												border: "none",
+												cursor: "pointer",
+												color: "#666",
+												padding: 4,
+											}}
+											onClick={(e) => {
+												e.stopPropagation();
+												del(ing.id);
+											}}
+										>
+											<Trash2 size={14} />
+										</button>
+									</td>
+								</tr>
+							))}
+							{filtered.length === 0 && (
+								<tr>
+									<td
+										colSpan={8}
+										style={{
+											padding: 40,
+											textAlign: "center",
+											color: "#555",
+											fontSize: 14,
+										}}
+									>
+										No se encontraron ingredientes
+									</td>
+								</tr>
+							)}
+						</tbody>
+					</table>
+				</div>
+			</SectionCard>
+			{modal !== null && (
+				<IngredientModal
+					ingredient={modal === "new" ? null : modal}
+					categories={categories}
+					suppliers={suppliers}
+					onClose={() => setModal(null)}
+					onSave={save}
+				/>
+			)}
+		</>
+	);
+}
+
+function IngredientModal({
+	ingredient,
+	categories,
+	suppliers,
+	onClose,
+	onSave,
+}: {
+	ingredient: Ingredient | null;
+	categories: IngredientCategory[];
+	suppliers: Supplier[];
+	onClose: () => void;
+	onSave: (f: Record<string, unknown>) => void;
+}) {
+	const [form, setForm] = useState({
+		name: ingredient?.name ?? "",
+		unit: ingredient?.unit ?? "unidad",
+		stockCurrent: String(ingredient?.stockCurrent ?? 0),
+		alertThreshold: String(ingredient?.alertThreshold ?? 0),
+		costPerUnit: String(ingredient?.costPerUnit ?? 0),
+		categoryId: ingredient?.categoryId ?? "",
+		supplierId: ingredient?.supplierId ?? "",
+	});
+	const set = (k: string, v: string) => setForm((p) => ({ ...p, [k]: v }));
+
+	const handleSave = () => {
+		if (!form.name.trim()) return;
+		onSave({
+			name: form.name,
+			unit: form.unit,
+			stockCurrent: Number(form.stockCurrent),
+			alertThreshold: Number(form.alertThreshold),
+			costPerUnit: Number(form.costPerUnit),
+			categoryId: form.categoryId || null,
+			supplierId: form.supplierId || null,
+		});
+	};
+
+	return (
+		<Modal
+			title={ingredient ? "Editar Ingrediente" : "Nuevo Ingrediente"}
+			onClose={onClose}
+		>
+			<div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+				<label style={{ fontSize: 12, color: "#999" }}>
+					Nombre *
+					<input
+						style={inputStyle}
+						value={form.name}
+						onChange={(e) => set("name", e.target.value)}
+					/>
+				</label>
+				<div
+					style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+				>
+					<label style={{ fontSize: 12, color: "#999" }}>
+						Unidad
+						<select
+							style={selectStyle}
+							value={form.unit}
+							onChange={(e) => set("unit", e.target.value)}
+						>
+							{["unidad", "ml", "gr", "kg", "lt"].map((u) => (
+								<option key={u} value={u}>
+									{u}
+								</option>
+							))}
+						</select>
+					</label>
+					<label style={{ fontSize: 12, color: "#999" }}>
+						Costo por Unidad
+						<input
+							style={inputStyle}
+							type="number"
+							step="0.01"
+							value={form.costPerUnit}
+							onChange={(e) => set("costPerUnit", e.target.value)}
+						/>
+					</label>
+				</div>
+				<div
+					style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+				>
+					<label style={{ fontSize: 12, color: "#999" }}>
+						Stock Actual
+						<input
+							style={inputStyle}
+							type="number"
+							step="0.1"
+							value={form.stockCurrent}
+							onChange={(e) => set("stockCurrent", e.target.value)}
+						/>
+					</label>
+					<label style={{ fontSize: 12, color: "#999" }}>
+						Umbral Alerta
+						<input
+							style={inputStyle}
+							type="number"
+							step="0.1"
+							value={form.alertThreshold}
+							onChange={(e) => set("alertThreshold", e.target.value)}
+						/>
+					</label>
+				</div>
+				<label style={{ fontSize: 12, color: "#999" }}>
+					Categoría
+					<select
+						style={selectStyle}
+						value={form.categoryId}
+						onChange={(e) => set("categoryId", e.target.value)}
+					>
+						<option value="">Sin categoría</option>
+						{categories.map((c) => (
+							<option key={c.id} value={c.id}>
+								{c.icon} {c.name}
+							</option>
+						))}
+					</select>
+				</label>
+				<label style={{ fontSize: 12, color: "#999" }}>
+					Proveedor
+					<select
+						style={selectStyle}
+						value={form.supplierId}
+						onChange={(e) => set("supplierId", e.target.value)}
+					>
+						<option value="">Sin proveedor</option>
+						{suppliers.map((s) => (
+							<option key={s.id} value={s.id}>
+								{s.name}
+							</option>
+						))}
+					</select>
+				</label>
+				<div
+					style={{
+						display: "flex",
+						gap: 12,
+						justifyContent: "flex-end",
+						marginTop: 8,
+					}}
+				>
+					<button style={btnGhost} onClick={onClose}>
+						Cancelar
+					</button>
+					<button style={btnPrimary} onClick={handleSave}>
+						Guardar
+					</button>
+				</div>
+			</div>
+		</Modal>
+	);
+}
+
+/* ── Tab 4: Historial Precios ──────────────────────────────── */
+
+function TabHistorial() {
+	const { data: ingredients = [] } = useSWR<Ingredient[]>(
+		"/api/ingredients",
+		fetcher,
+	);
+	const [filterIng, setFilterIng] = useState("");
+	const url = filterIng
+		? `/api/price-history?ingredientId=${filterIng}`
+		: "/api/price-history";
+	const { data: history = [] } = useSWR<PriceHistory[]>(url, fetcher);
+
+	return (
+		<SectionCard title="Historial de Precios" icon={TrendingUp}>
+			<div
+				style={{
+					display: "flex",
+					gap: 12,
+					marginBottom: 20,
+					alignItems: "center",
+				}}
+			>
+				<Filter size={14} style={{ color: "#666" }} />
+				<select
+					value={filterIng}
+					onChange={(e) => setFilterIng(e.target.value)}
+					style={{ ...selectStyle, width: 280 }}
+				>
+					<option value="">Todos los ingredientes</option>
+					{ingredients.map((i) => (
+						<option key={i.id} value={i.id}>
+							{i.name} ({i.unit})
+						</option>
+					))}
+				</select>
+			</div>
+			{history.length === 0 ? (
+				<div
+					style={{
+						padding: 40,
+						textAlign: "center",
+						color: "#555",
+						fontSize: 14,
+					}}
+				>
+					No hay registros de precios
+				</div>
+			) : (
+				<div style={{ position: "relative", paddingLeft: 24 }}>
+					<div
+						style={{
+							position: "absolute",
+							left: 7,
+							top: 0,
+							bottom: 0,
+							width: 2,
+							background: "var(--s4)",
+						}}
+					/>
+					{history.map((h, i) => (
+						<div
+							key={h.id}
+							style={{
+								position: "relative",
+								paddingBottom: 20,
+								paddingLeft: 24,
+								animation: `slideUp 0.4s ease ${i * 40}ms both`,
+							}}
+						>
+							<div
+								style={{
+									position: "absolute",
+									left: -3,
+									top: 4,
+									width: 12,
+									height: 12,
+									borderRadius: "50%",
+									background: "#f59e0b",
+									border: "2px solid var(--s1)",
+								}}
+							/>
+							<div
+								style={{
+									background: "var(--s2)",
+									border: "1px solid var(--s4)",
+									borderRadius: 10,
+									padding: "14px 18px",
+								}}
+							>
+								<div
+									style={{
+										display: "flex",
+										justifyContent: "space-between",
+										alignItems: "center",
+										marginBottom: 6,
+									}}
+								>
+									<span
+										style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}
+									>
+										{h.ingredient.name}
+									</span>
+									<span style={{ fontSize: 11, color: "#666" }}>
+										<Clock
+											size={11}
+											style={{ marginRight: 4, verticalAlign: -1 }}
+										/>
+										{fmtDate(h.date)}
+									</span>
+								</div>
+								<div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+									<span
+										style={{
+											fontSize: 20,
+											fontWeight: 700,
+											fontFamily: "var(--font-bebas)",
+											color: "#f59e0b",
+										}}
+									>
+										{formatCurrency(h.costPerUnit)}
+									</span>
+									<span style={{ fontSize: 12, color: "#666" }}>
+										/{h.ingredient.unit}
+									</span>
+								</div>
+								{h.notes && (
+									<div
+										style={{
+											fontSize: 12,
+											color: "#888",
+											marginTop: 6,
+											fontStyle: "italic",
+										}}
+									>
+										{h.notes}
+									</div>
+								)}
+							</div>
+						</div>
+					))}
+				</div>
+			)}
+		</SectionCard>
 	);
 }

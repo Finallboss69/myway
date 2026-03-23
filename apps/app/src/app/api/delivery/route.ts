@@ -30,11 +30,20 @@ export async function POST(request: NextRequest) {
 			total: number;
 			paymentMethod: string;
 			notes?: string;
+			userId?: string;
 			items: { name: string; qty: number; price: number }[];
 		};
 
-		const { customerName, address, phone, total, paymentMethod, notes, items } =
-			body;
+		const {
+			customerName,
+			address,
+			phone,
+			total,
+			paymentMethod,
+			notes,
+			userId,
+			items,
+		} = body;
 
 		if (!customerName || !address || !paymentMethod) {
 			return NextResponse.json(
@@ -51,6 +60,7 @@ export async function POST(request: NextRequest) {
 				total: total ?? 0,
 				paymentMethod,
 				notes: notes ?? null,
+				userId: userId ?? null,
 				items: {
 					create: (items ?? []).map((item) => ({
 						name: item.name,

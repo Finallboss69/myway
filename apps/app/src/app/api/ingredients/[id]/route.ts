@@ -8,20 +8,30 @@ export async function PATCH(
 	try {
 		const { id } = await params;
 		const body = (await request.json()) as {
+			name?: string;
+			unit?: string;
 			stockCurrent?: number;
 			alertThreshold?: number;
+			costPerUnit?: number;
+			categoryId?: string | null;
+			supplierId?: string | null;
 		};
+
+		const data: Record<string, unknown> = {};
+		if (body.name !== undefined) data.name = body.name;
+		if (body.unit !== undefined) data.unit = body.unit;
+		if (body.stockCurrent !== undefined) data.stockCurrent = body.stockCurrent;
+		if (body.alertThreshold !== undefined)
+			data.alertThreshold = body.alertThreshold;
+		if (body.costPerUnit !== undefined) data.costPerUnit = body.costPerUnit;
+		if (body.categoryId !== undefined)
+			data.categoryId = body.categoryId || null;
+		if (body.supplierId !== undefined)
+			data.supplierId = body.supplierId || null;
 
 		const ingredient = await db.ingredient.update({
 			where: { id },
-			data: {
-				...(body.stockCurrent !== undefined
-					? { stockCurrent: body.stockCurrent }
-					: {}),
-				...(body.alertThreshold !== undefined
-					? { alertThreshold: body.alertThreshold }
-					: {}),
-			},
+			data,
 		});
 		return NextResponse.json(ingredient);
 	} catch (error) {
