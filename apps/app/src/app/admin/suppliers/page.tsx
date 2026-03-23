@@ -17,6 +17,9 @@ import {
 	ChevronUp,
 	Edit3,
 	Printer,
+	DollarSign,
+	Package,
+	Search,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
@@ -85,50 +88,73 @@ const EMPTY_LINE: InvoiceItem = {
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("es-AR");
 
-// ─── Section label ───────────────────────────────────────────────────────────
+// ─── KPI Card ────────────────────────────────────────────────────────────────
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function KpiCard({
+	icon: Icon,
+	color,
+	value,
+	label,
+}: {
+	icon: React.ComponentType<{ size?: number }>;
+	color: string;
+	value: string | number;
+	label: string;
+}) {
 	return (
-		<span
-			className="font-display"
-			style={{
-				fontSize: 9,
-				textTransform: "uppercase",
-				letterSpacing: "0.25em",
-				opacity: 0.5,
-			}}
-		>
-			{children}
-		</span>
+		<div className="card animate-fade-in flex items-center gap-4 px-5 py-4 min-w-[180px]">
+			<div
+				className="flex items-center justify-center rounded-xl"
+				style={{
+					width: 42,
+					height: 42,
+					background: `${color}15`,
+				}}
+			>
+				<Icon size={20} />
+			</div>
+			<div>
+				<p
+					className="font-display text-xl font-bold leading-none"
+					style={{ color }}
+				>
+					{value}
+				</p>
+				<p className="font-body text-xs text-ink-tertiary mt-0.5 uppercase tracking-wider">
+					{label}
+				</p>
+			</div>
+		</div>
 	);
 }
 
 // ─── Status badge ────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
-	const cfg: Record<string, { bg: string; text: string; label: string }> = {
-		pending: {
-			bg: "rgba(245,158,11,0.15)",
-			text: "#f59e0b",
-			label: "Pendiente",
-		},
-		paid: { bg: "rgba(34,197,94,0.15)", text: "#22c55e", label: "Pagada" },
-		overdue: { bg: "rgba(239,68,68,0.15)", text: "#ef4444", label: "Vencida" },
+	const map: Record<string, string> = {
+		pending: "badge-pending",
+		paid: "badge-available",
+		overdue: "badge-cancelled",
 	};
-	const c = cfg[status] ?? cfg.pending;
+	const labels: Record<string, string> = {
+		pending: "Pendiente",
+		paid: "Pagada",
+		overdue: "Vencida",
+	};
 	return (
-		<span
-			className="badge"
-			style={{
-				background: c.bg,
-				color: c.text,
-				fontSize: 11,
-				padding: "2px 10px",
-				borderRadius: 999,
-			}}
-		>
-			{c.label}
+		<span className={`badge ${map[status] ?? "badge-pending"}`}>
+			{labels[status] ?? "Pendiente"}
 		</span>
+	);
+}
+
+// ─── Field label ─────────────────────────────────────────────────────────────
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+	return (
+		<label className="font-body text-xs font-medium text-ink-secondary uppercase tracking-wider block mb-1.5">
+			{children}
+		</label>
 	);
 }
 
@@ -138,47 +164,46 @@ function Modal({
 	open,
 	onClose,
 	title,
+	wide,
 	children,
 }: {
 	open: boolean;
 	onClose: () => void;
 	title: string;
+	wide?: boolean;
 	children: React.ReactNode;
 }) {
 	if (!open) return null;
 	return (
 		<div
-			style={{
-				position: "fixed",
-				inset: 0,
-				zIndex: 100,
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				background: "rgba(0,0,0,0.7)",
-			}}
+			className="fixed inset-0 z-[100] flex items-center justify-center animate-fade-in"
+			style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}
 			onClick={onClose}
 		>
 			<div
-				className="card"
+				className="card animate-scale-in"
 				style={{
 					width: "100%",
-					maxWidth: 560,
+					maxWidth: wide ? 680 : 520,
 					maxHeight: "90vh",
 					overflow: "auto",
-					padding: 24,
 				}}
 				onClick={(e) => e.stopPropagation()}
 			>
-				<div className="flex items-center justify-between mb-5">
-					<h3 className="font-kds text-xl" style={{ color: "var(--gold)" }}>
+				{/* Header */}
+				<div
+					className="flex items-center justify-between px-6 py-4"
+					style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+				>
+					<h3 className="font-display text-base font-semibold text-ink-primary">
 						{title}
 					</h3>
-					<button className="btn-ghost p-1" onClick={onClose}>
-						<X size={18} />
+					<button className="btn-ghost p-1.5 rounded-lg" onClick={onClose}>
+						<X size={16} className="text-ink-tertiary" />
 					</button>
 				</div>
-				{children}
+				{/* Body */}
+				<div className="px-6 py-5">{children}</div>
 			</div>
 		</div>
 	);
@@ -200,28 +225,39 @@ function ConfirmDialog({
 	if (!open) return null;
 	return (
 		<div
-			style={{
-				position: "fixed",
-				inset: 0,
-				zIndex: 110,
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				background: "rgba(0,0,0,0.7)",
-			}}
+			className="fixed inset-0 z-[110] flex items-center justify-center animate-fade-in"
+			style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}
 			onClick={onCancel}
 		>
 			<div
-				className="card"
-				style={{ padding: 24, maxWidth: 400, width: "100%" }}
+				className="card animate-scale-in px-6 py-5"
+				style={{ maxWidth: 400, width: "100%" }}
 				onClick={(e) => e.stopPropagation()}
 			>
-				<p className="font-body text-sm mb-5">{message}</p>
+				<div className="flex items-start gap-3 mb-5">
+					<div
+						className="flex items-center justify-center rounded-xl shrink-0"
+						style={{
+							width: 40,
+							height: 40,
+							background: "rgba(239,68,68,0.12)",
+						}}
+					>
+						<AlertCircle size={20} className="text-red-400" />
+					</div>
+					<p className="font-body text-sm text-ink-secondary leading-relaxed pt-2">
+						{message}
+					</p>
+				</div>
 				<div className="flex gap-3 justify-end">
 					<button className="btn-ghost text-sm" onClick={onCancel}>
 						Cancelar
 					</button>
-					<button className="btn-primary text-sm" onClick={onConfirm}>
+					<button
+						className="btn-primary text-sm"
+						style={{ background: "#ef4444" }}
+						onClick={onConfirm}
+					>
 						Confirmar
 					</button>
 				</div>
@@ -310,7 +346,6 @@ export default function SuppliersPage() {
 		(i) => i.status === "pending" || i.status === "overdue",
 	);
 	const totalOwed = pendingInvoices.reduce((s, i) => s + i.total, 0);
-
 	const handlePrint = () => {
 		const rows = suppliers
 			.map((s) => {
@@ -322,7 +357,7 @@ export default function SuppliersPage() {
 				const owed = sInvoices.reduce((sum, i) => sum + i.total, 0);
 				return `<tr>
 					<td>${s.name}</td>
-					<td>${s.cuit ?? "—"}</td>
+					<td>${s.cuit ?? "\u2014"}</td>
 					<td class="amount">${s._count?.invoices ?? 0}</td>
 					<td class="amount">${printCurrency(owed)}</td>
 				</tr>`;
@@ -330,7 +365,7 @@ export default function SuppliersPage() {
 			.join("");
 		printDocument({
 			title: "Proveedores",
-			subtitle: `${suppliers.length} proveedores — Deuda total: ${printCurrency(totalOwed)}`,
+			subtitle: `${suppliers.length} proveedores \u2014 Deuda total: ${printCurrency(totalOwed)}`,
 			content: `<table>
 				<thead><tr><th>Proveedor</th><th>CUIT</th><th style="text-align:right">Facturas</th><th style="text-align:right">Deuda</th></tr></thead>
 				<tbody>${rows}
@@ -501,199 +536,281 @@ export default function SuppliersPage() {
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center h-screen">
-				<div className="font-body text-sm" style={{ opacity: 0.5 }}>
-					Cargando proveedores...
+				<div className="flex flex-col items-center gap-3 animate-fade-in">
+					<div
+						className="rounded-full animate-pulse"
+						style={{
+							width: 48,
+							height: 48,
+							background: "rgba(var(--gold-rgb, 212 175 55), 0.1)",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+					>
+						<Truck size={22} className="text-ink-tertiary" />
+					</div>
+					<p className="font-body text-sm text-ink-disabled">
+						Cargando proveedores...
+					</p>
 				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
+		<div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
 			{/* ── Header ──────────────────────────────────────────────────────── */}
-			<div className="flex flex-col md:flex-row md:items-end gap-4">
-				<div className="flex items-end gap-3">
-					<h1
-						className="font-kds"
-						style={{ fontSize: 40, lineHeight: 1, color: "var(--gold)" }}
-					>
-						PROVEEDORES
-					</h1>
-					<button
-						className="btn-ghost flex items-center gap-1.5"
-						onClick={handlePrint}
-					>
-						<Printer size={14} />
-						<span className="font-display" style={{ fontSize: 10 }}>
-							Imprimir
-						</span>
-					</button>
-				</div>
-				<div className="flex gap-3 flex-wrap">
-					<div className="card px-4 py-2 flex items-center gap-2">
-						<Truck size={14} style={{ color: "var(--gold)" }} />
-						<span className="font-kds text-lg" style={{ color: "var(--gold)" }}>
-							{suppliers.length}
-						</span>
-						<SectionLabel>proveedores</SectionLabel>
-					</div>
-					<div className="card px-4 py-2 flex items-center gap-2">
-						<Clock size={14} style={{ color: "#f59e0b" }} />
-						<span className="font-kds text-lg" style={{ color: "#f59e0b" }}>
-							{pendingInvoices.length}
-						</span>
-						<SectionLabel>pendientes</SectionLabel>
-					</div>
-					<div className="card px-4 py-2 flex items-center gap-2">
-						<AlertCircle size={14} style={{ color: "#ef4444" }} />
-						<span className="font-kds text-lg" style={{ color: "#ef4444" }}>
-							{formatCurrency(totalOwed)}
-						</span>
-						<SectionLabel>deuda total</SectionLabel>
+			<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+				<div className="flex items-center gap-3">
+					<div
+						className="rounded-md"
+						style={{
+							width: 4,
+							height: 28,
+							background: "var(--gold)",
+						}}
+					/>
+					<div>
+						<h1 className="font-display text-[22px] font-bold text-ink-primary leading-none">
+							Proveedores
+						</h1>
+						<p className="font-body text-xs text-ink-tertiary mt-1">
+							Gestion de proveedores y cuentas por pagar
+						</p>
 					</div>
 				</div>
+				<button
+					className="btn-ghost flex items-center gap-2 text-sm"
+					onClick={handlePrint}
+				>
+					<Printer size={15} />
+					Imprimir reporte
+				</button>
+			</div>
+
+			{/* ── KPI Cards ───────────────────────────────────────────────────── */}
+			<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+				<KpiCard
+					icon={Truck}
+					color="var(--gold)"
+					value={suppliers.length}
+					label="Proveedores"
+				/>
+				<KpiCard
+					icon={FileText}
+					color="#60a5fa"
+					value={invoices.length}
+					label="Facturas"
+				/>
+				<KpiCard
+					icon={Clock}
+					color="#f59e0b"
+					value={pendingInvoices.length}
+					label="Pendientes"
+				/>
+				<KpiCard
+					icon={DollarSign}
+					color="#ef4444"
+					value={formatCurrency(totalOwed)}
+					label="Deuda total"
+				/>
 			</div>
 
 			{/* ── Tabs ────────────────────────────────────────────────────────── */}
 			<div
-				className="flex gap-1"
+				className="flex gap-0"
 				style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
 			>
 				{(
 					[
-						["suppliers", "Proveedores"],
-						["invoices", "Facturas Proveedor"],
+						["suppliers", "Proveedores", Truck],
+						["invoices", "Facturas", FileText],
 					] as const
-				).map(([key, label]) => (
-					<button
-						key={key}
-						className="font-display px-4 py-2 text-sm transition-colors"
-						style={{
-							textTransform: "uppercase",
-							letterSpacing: "0.12em",
-							borderBottom:
-								tab === key ? "2px solid var(--gold)" : "2px solid transparent",
-							color: tab === key ? "var(--gold)" : "rgba(255,255,255,0.4)",
-						}}
-						onClick={() => setTab(key)}
-					>
-						{label}
-					</button>
-				))}
+				).map(([key, label, Icon]) => {
+					const active = tab === key;
+					return (
+						<button
+							key={key}
+							className="relative font-display text-sm px-5 py-3 transition-colors"
+							style={{
+								color: active ? "var(--gold)" : "rgba(255,255,255,0.35)",
+								letterSpacing: "0.08em",
+							}}
+							onClick={() => setTab(key)}
+						>
+							<span className="flex items-center gap-2">
+								<Icon size={14} />
+								{label}
+							</span>
+							{active && (
+								<span
+									className="absolute bottom-0 left-0 right-0 h-[2px]"
+									style={{ background: "var(--gold)" }}
+								/>
+							)}
+						</button>
+					);
+				})}
 			</div>
 
 			{/* ── Suppliers tab ────────────────────────────────────────────────── */}
 			{tab === "suppliers" && (
-				<>
+				<div className="space-y-5 animate-slide-up">
 					<div className="flex justify-end">
 						<button
 							className="btn-primary flex items-center gap-2 text-sm"
 							onClick={openNewSupplier}
 						>
-							<Plus size={14} /> Nuevo Proveedor
+							<Plus size={15} /> Nuevo Proveedor
 						</button>
 					</div>
 
 					{suppliers.length === 0 ? (
-						<div className="card p-12 text-center">
-							<Truck size={40} style={{ margin: "0 auto", opacity: 0.2 }} />
-							<p className="font-body text-sm mt-3" style={{ opacity: 0.4 }}>
+						<div className="card p-16 text-center animate-fade-in">
+							<div
+								className="mx-auto mb-4 flex items-center justify-center rounded-2xl"
+								style={{
+									width: 64,
+									height: 64,
+									background: "rgba(255,255,255,0.03)",
+								}}
+							>
+								<Package size={28} className="text-ink-disabled" />
+							</div>
+							<p className="font-display text-sm text-ink-tertiary">
 								No hay proveedores registrados
+							</p>
+							<p className="font-body text-xs text-ink-disabled mt-1">
+								Agrega tu primer proveedor para comenzar
 							</p>
 						</div>
 					) : (
-						<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+						<div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
 							{suppliers.map((s) => {
 								const isExpanded = expandedSupplierId === s.id;
+								const supplierInvoices = invoices.filter(
+									(i) =>
+										i.supplier?.id === s.id &&
+										(i.status === "pending" || i.status === "overdue"),
+								);
+								const owed = supplierInvoices.reduce(
+									(sum, i) => sum + i.total,
+									0,
+								);
 								return (
-									<div key={s.id} className="card p-0 overflow-hidden">
+									<div
+										key={s.id}
+										className="card p-0 overflow-hidden transition-all hover:ring-1 hover:ring-white/[0.06]"
+									>
 										<div
-											className="p-4 cursor-pointer hover:bg-white/[0.02] transition-colors"
+											className="p-5 cursor-pointer transition-colors hover:bg-white/[0.02]"
 											onClick={() =>
 												setExpandedSupplierId(isExpanded ? null : s.id)
 											}
 										>
 											<div className="flex items-start justify-between">
-												<div>
-													<h3 className="font-display text-sm font-semibold">
-														{s.name}
-													</h3>
-													{s.cuit && (
-														<span
-															className="font-body text-xs"
-															style={{ opacity: 0.4 }}
-														>
-															CUIT: {s.cuit}
-														</span>
-													)}
+												<div className="flex items-center gap-3">
+													<div
+														className="flex items-center justify-center rounded-lg shrink-0"
+														style={{
+															width: 38,
+															height: 38,
+															background:
+																"linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.04))",
+														}}
+													>
+														<Truck size={16} style={{ color: "var(--gold)" }} />
+													</div>
+													<div>
+														<h3 className="font-display text-sm font-semibold text-ink-primary">
+															{s.name}
+														</h3>
+														{s.cuit && (
+															<span className="font-body text-xs text-ink-disabled">
+																CUIT: {s.cuit}
+															</span>
+														)}
+													</div>
 												</div>
 												{isExpanded ? (
-													<ChevronUp size={14} style={{ opacity: 0.3 }} />
+													<ChevronUp size={14} className="text-ink-disabled" />
 												) : (
-													<ChevronDown size={14} style={{ opacity: 0.3 }} />
+													<ChevronDown
+														size={14}
+														className="text-ink-disabled"
+													/>
 												)}
 											</div>
-											<div className="flex gap-4 mt-3">
+
+											{/* Mini stats */}
+											<div className="flex gap-5 mt-4">
 												<div>
-													<SectionLabel>facturas</SectionLabel>
-													<p
-														className="font-kds text-lg"
-														style={{ color: "var(--gold)" }}
-													>
+													<p className="font-body text-[10px] text-ink-disabled uppercase tracking-wider">
+														Facturas
+													</p>
+													<p className="font-display text-sm font-bold text-ink-primary">
 														{s._count?.invoices ?? 0}
+													</p>
+												</div>
+												<div>
+													<p className="font-body text-[10px] text-ink-disabled uppercase tracking-wider">
+														Deuda
+													</p>
+													<p
+														className="font-display text-sm font-bold"
+														style={{
+															color: owed > 0 ? "#f59e0b" : "var(--green)",
+														}}
+													>
+														{formatCurrency(owed)}
 													</p>
 												</div>
 											</div>
 										</div>
+
 										{isExpanded && (
 											<div
-												className="px-4 pb-4 space-y-3"
+												className="px-5 pb-5 space-y-2.5 animate-slide-up"
 												style={{
 													borderTop: "1px solid rgba(255,255,255,0.04)",
 												}}
 											>
-												{s.phone && (
-													<div
-														className="flex items-center gap-2 text-xs font-body"
-														style={{ opacity: 0.6 }}
-													>
-														<Phone size={12} /> {s.phone}
-													</div>
-												)}
-												{s.email && (
-													<div
-														className="flex items-center gap-2 text-xs font-body"
-														style={{ opacity: 0.6 }}
-													>
-														<Mail size={12} /> {s.email}
-													</div>
-												)}
-												{s.address && (
-													<div
-														className="flex items-center gap-2 text-xs font-body"
-														style={{ opacity: 0.6 }}
-													>
-														<MapPin size={12} /> {s.address}
-													</div>
-												)}
-												{s.notes && (
-													<p
-														className="font-body text-xs"
-														style={{ opacity: 0.4, fontStyle: "italic" }}
-													>
-														{s.notes}
-													</p>
-												)}
-												<div className="flex gap-2 pt-2">
+												<div className="pt-3 space-y-2">
+													{s.phone && (
+														<div className="flex items-center gap-2.5 font-body text-xs text-ink-secondary">
+															<Phone size={13} className="text-ink-disabled" />
+															{s.phone}
+														</div>
+													)}
+													{s.email && (
+														<div className="flex items-center gap-2.5 font-body text-xs text-ink-secondary">
+															<Mail size={13} className="text-ink-disabled" />
+															{s.email}
+														</div>
+													)}
+													{s.address && (
+														<div className="flex items-center gap-2.5 font-body text-xs text-ink-secondary">
+															<MapPin size={13} className="text-ink-disabled" />
+															{s.address}
+														</div>
+													)}
+													{s.notes && (
+														<p className="font-body text-xs text-ink-disabled italic pl-[25px]">
+															{s.notes}
+														</p>
+													)}
+												</div>
+												<div className="divider" />
+												<div className="flex gap-2">
 													<button
-														className="btn-ghost text-xs flex items-center gap-1"
+														className="btn-ghost text-xs flex items-center gap-1.5"
 														onClick={() => openEditSupplier(s)}
 													>
 														<Edit3 size={12} /> Editar
 													</button>
 													<button
-														className="btn-ghost text-xs flex items-center gap-1"
-														style={{ color: "#ef4444" }}
+														className="btn-ghost text-xs flex items-center gap-1.5 text-red-400 hover:text-red-300"
 														onClick={() => deleteSupplier(s)}
 													>
 														<Trash2 size={12} /> Eliminar
@@ -706,32 +823,38 @@ export default function SuppliersPage() {
 							})}
 						</div>
 					)}
-				</>
+				</div>
 			)}
 
 			{/* ── Invoices tab ─────────────────────────────────────────────────── */}
 			{tab === "invoices" && (
-				<>
+				<div className="space-y-5 animate-slide-up">
 					<div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
 						<div className="flex gap-3 flex-wrap">
-							<select
-								className="input-base text-sm"
-								value={filterSupplier}
-								onChange={(e) => setFilterSupplier(e.target.value)}
-								style={{ minWidth: 180 }}
-							>
-								<option value="">Todos los proveedores</option>
-								{suppliers.map((s) => (
-									<option key={s.id} value={s.id}>
-										{s.name}
-									</option>
-								))}
-							</select>
+							<div className="relative">
+								<Search
+									size={14}
+									className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-disabled pointer-events-none"
+								/>
+								<select
+									className="input-base text-sm pl-9"
+									value={filterSupplier}
+									onChange={(e) => setFilterSupplier(e.target.value)}
+									style={{ minWidth: 200 }}
+								>
+									<option value="">Todos los proveedores</option>
+									{suppliers.map((s) => (
+										<option key={s.id} value={s.id}>
+											{s.name}
+										</option>
+									))}
+								</select>
+							</div>
 							<select
 								className="input-base text-sm"
 								value={filterStatus}
 								onChange={(e) => setFilterStatus(e.target.value)}
-								style={{ minWidth: 140 }}
+								style={{ minWidth: 160 }}
 							>
 								<option value="">Todos los estados</option>
 								<option value="pending">Pendiente</option>
@@ -743,27 +866,37 @@ export default function SuppliersPage() {
 							className="btn-primary flex items-center gap-2 text-sm"
 							onClick={openNewInvoice}
 						>
-							<Plus size={14} /> Nueva Factura
+							<Plus size={15} /> Nueva Factura
 						</button>
 					</div>
 
 					{invoices.length === 0 ? (
-						<div className="card p-12 text-center">
-							<FileText size={40} style={{ margin: "0 auto", opacity: 0.2 }} />
-							<p className="font-body text-sm mt-3" style={{ opacity: 0.4 }}>
+						<div className="card p-16 text-center animate-fade-in">
+							<div
+								className="mx-auto mb-4 flex items-center justify-center rounded-2xl"
+								style={{
+									width: 64,
+									height: 64,
+									background: "rgba(255,255,255,0.03)",
+								}}
+							>
+								<FileText size={28} className="text-ink-disabled" />
+							</div>
+							<p className="font-display text-sm text-ink-tertiary">
 								No hay facturas registradas
+							</p>
+							<p className="font-body text-xs text-ink-disabled mt-1">
+								Crea una factura desde el boton superior
 							</p>
 						</div>
 					) : (
-						<div className="space-y-2">
-							{/* Header row - desktop */}
+						<div className="card p-0 overflow-hidden">
+							{/* Table header - desktop */}
 							<div
-								className="hidden md:grid font-display text-xs px-4 py-2"
+								className="hidden md:grid font-body text-[10px] font-medium uppercase tracking-wider text-ink-disabled px-5 py-3"
 								style={{
 									gridTemplateColumns: "1.5fr 1fr 0.8fr 0.8fr 1fr 0.7fr 0.8fr",
-									textTransform: "uppercase",
-									letterSpacing: "0.2em",
-									opacity: 0.35,
+									borderBottom: "1px solid rgba(255,255,255,0.04)",
 								}}
 							>
 								<span>Proveedor</span>
@@ -774,38 +907,40 @@ export default function SuppliersPage() {
 								<span className="text-center">Estado</span>
 								<span />
 							</div>
-							{invoices.map((inv) => (
-								<div key={inv.id} className="card p-4 md:p-0">
+
+							{/* Rows */}
+							{invoices.map((inv, idx) => (
+								<div
+									key={inv.id}
+									className="transition-colors hover:bg-white/[0.02]"
+									style={{
+										borderBottom:
+											idx < invoices.length - 1
+												? "1px solid rgba(255,255,255,0.03)"
+												: "none",
+									}}
+								>
 									<div
-										className="md:grid md:items-center md:px-4 md:py-3"
+										className="md:grid md:items-center px-5 py-3.5"
 										style={{
 											gridTemplateColumns:
 												"1.5fr 1fr 0.8fr 0.8fr 1fr 0.7fr 0.8fr",
 										}}
 									>
-										<span className="font-body text-sm font-medium">
-											{inv.supplier?.name ?? "—"}
+										<span className="font-body text-sm font-medium text-ink-primary">
+											{inv.supplier?.name ?? "\u2014"}
 										</span>
-										<span
-											className="font-body text-sm"
-											style={{ opacity: 0.7 }}
-										>
+										<span className="font-body text-sm text-ink-secondary">
 											{inv.number}
 										</span>
-										<span
-											className="font-body text-xs"
-											style={{ opacity: 0.5 }}
-										>
+										<span className="font-body text-xs text-ink-tertiary">
 											{fmtDate(inv.date)}
 										</span>
-										<span
-											className="font-body text-xs"
-											style={{ opacity: 0.5 }}
-										>
-											{inv.dueDate ? fmtDate(inv.dueDate) : "—"}
+										<span className="font-body text-xs text-ink-tertiary">
+											{inv.dueDate ? fmtDate(inv.dueDate) : "\u2014"}
 										</span>
 										<span
-											className="font-kds text-base text-right"
+											className="font-display text-sm font-bold text-right"
 											style={{ color: "var(--gold)" }}
 										>
 											{formatCurrency(inv.total)}
@@ -816,22 +951,20 @@ export default function SuppliersPage() {
 										<div className="flex gap-1 justify-end mt-2 md:mt-0">
 											{inv.status !== "paid" && (
 												<button
-													className="btn-ghost text-xs flex items-center gap-1"
-													style={{ color: "#22c55e" }}
+													className="btn-ghost text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
 													onClick={() => {
 														setPayInvoiceId(inv.id);
 														setPayMethod("efectivo");
 													}}
 												>
-													<CheckCircle size={12} /> Pagar
+													<CheckCircle size={13} /> Pagar
 												</button>
 											)}
 											<button
-												className="btn-ghost text-xs p-1"
-												style={{ color: "#ef4444" }}
+												className="btn-ghost text-xs p-1.5 text-red-400 hover:text-red-300"
 												onClick={() => deleteInvoice(inv)}
 											>
-												<Trash2 size={12} />
+												<Trash2 size={13} />
 											</button>
 										</div>
 									</div>
@@ -839,7 +972,7 @@ export default function SuppliersPage() {
 							))}
 						</div>
 					)}
-				</>
+				</div>
 			)}
 
 			{/* ── Supplier modal ───────────────────────────────────────────────── */}
@@ -859,9 +992,9 @@ export default function SuppliersPage() {
 						] as const
 					).map(([key, label, type]) => (
 						<div key={key}>
-							<SectionLabel>{label}</SectionLabel>
+							<FieldLabel>{label}</FieldLabel>
 							<input
-								className="input-base w-full mt-1 text-sm"
+								className="input-base w-full text-sm"
 								type={type}
 								value={supplierForm[key]}
 								onChange={(e) =>
@@ -871,9 +1004,9 @@ export default function SuppliersPage() {
 						</div>
 					))}
 					<div>
-						<SectionLabel>Notas</SectionLabel>
+						<FieldLabel>Notas</FieldLabel>
 						<textarea
-							className="input-base w-full mt-1 text-sm"
+							className="input-base w-full text-sm"
 							rows={3}
 							value={supplierForm.notes}
 							onChange={(e) =>
@@ -881,7 +1014,10 @@ export default function SuppliersPage() {
 							}
 						/>
 					</div>
-					<div className="flex justify-end gap-3 pt-2">
+					<div
+						className="flex justify-end gap-3 pt-3"
+						style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
+					>
 						<button
 							className="btn-ghost text-sm"
 							onClick={() => setShowSupplierModal(false)}
@@ -900,13 +1036,14 @@ export default function SuppliersPage() {
 				open={showInvoiceModal}
 				onClose={() => setShowInvoiceModal(false)}
 				title="Nueva Factura Proveedor"
+				wide
 			>
-				<div className="space-y-4">
+				<div className="space-y-5">
 					<div className="grid grid-cols-2 gap-4">
 						<div className="col-span-2">
-							<SectionLabel>Proveedor *</SectionLabel>
+							<FieldLabel>Proveedor *</FieldLabel>
 							<select
-								className="input-base w-full mt-1 text-sm"
+								className="input-base w-full text-sm"
 								value={invForm.supplierId}
 								onChange={(e) =>
 									setInvForm((f) => ({ ...f, supplierId: e.target.value }))
@@ -921,9 +1058,9 @@ export default function SuppliersPage() {
 							</select>
 						</div>
 						<div>
-							<SectionLabel>Nro Factura *</SectionLabel>
+							<FieldLabel>Nro Factura *</FieldLabel>
 							<input
-								className="input-base w-full mt-1 text-sm"
+								className="input-base w-full text-sm"
 								value={invForm.number}
 								onChange={(e) =>
 									setInvForm((f) => ({ ...f, number: e.target.value }))
@@ -931,9 +1068,9 @@ export default function SuppliersPage() {
 							/>
 						</div>
 						<div>
-							<SectionLabel>Fecha *</SectionLabel>
+							<FieldLabel>Fecha *</FieldLabel>
 							<input
-								className="input-base w-full mt-1 text-sm"
+								className="input-base w-full text-sm"
 								type="date"
 								value={invForm.date}
 								onChange={(e) =>
@@ -942,9 +1079,9 @@ export default function SuppliersPage() {
 							/>
 						</div>
 						<div>
-							<SectionLabel>Vencimiento</SectionLabel>
+							<FieldLabel>Vencimiento</FieldLabel>
 							<input
-								className="input-base w-full mt-1 text-sm"
+								className="input-base w-full text-sm"
 								type="date"
 								value={invForm.dueDate}
 								onChange={(e) =>
@@ -953,9 +1090,9 @@ export default function SuppliersPage() {
 							/>
 						</div>
 						<div>
-							<SectionLabel>Foto URL</SectionLabel>
+							<FieldLabel>Foto URL</FieldLabel>
 							<input
-								className="input-base w-full mt-1 text-sm"
+								className="input-base w-full text-sm"
 								value={invForm.photoUrl}
 								onChange={(e) =>
 									setInvForm((f) => ({ ...f, photoUrl: e.target.value }))
@@ -967,15 +1104,28 @@ export default function SuppliersPage() {
 
 					{/* Line items */}
 					<div>
-						<div className="flex items-center justify-between mb-2">
-							<SectionLabel>Items</SectionLabel>
+						<div className="flex items-center justify-between mb-3">
+							<FieldLabel>Items</FieldLabel>
 							<button
-								className="btn-ghost text-xs flex items-center gap-1"
+								className="btn-ghost text-xs flex items-center gap-1.5"
 								onClick={addLine}
 							>
-								<Plus size={12} /> Agregar linea
+								<Plus size={13} /> Agregar linea
 							</button>
 						</div>
+
+						{/* Line header */}
+						<div
+							className="hidden md:grid gap-2 mb-2 font-body text-[10px] uppercase tracking-wider text-ink-disabled px-1"
+							style={{ gridTemplateColumns: "2fr 0.6fr 1fr 0.6fr auto" }}
+						>
+							<span>Descripcion</span>
+							<span className="text-center">Cant.</span>
+							<span className="text-right">Precio unit.</span>
+							<span className="text-center">IVA</span>
+							<span style={{ width: 28 }} />
+						</div>
+
 						<div className="space-y-2">
 							{invLines.map((line, idx) => (
 								<div
@@ -1025,9 +1175,8 @@ export default function SuppliersPage() {
 										<option value={27}>27%</option>
 									</select>
 									<button
-										className="btn-ghost p-1"
+										className="btn-ghost p-1.5 text-red-400 hover:text-red-300"
 										onClick={() => removeLine(idx)}
-										style={{ color: "#ef4444" }}
 									>
 										<X size={14} />
 									</button>
@@ -1037,25 +1186,29 @@ export default function SuppliersPage() {
 					</div>
 
 					{/* Totals */}
-					<div
-						className="space-y-1 text-right text-sm font-body"
-						style={{
-							borderTop: "1px solid rgba(255,255,255,0.06)",
-							paddingTop: 12,
-						}}
-					>
-						<div className="flex justify-end gap-4">
-							<span style={{ opacity: 0.5 }}>Subtotal:</span>
-							<span>{formatCurrency(invSubtotal)}</span>
+					<div className="divider" />
+					<div className="space-y-1.5 text-right text-sm font-body">
+						<div className="flex justify-end gap-6">
+							<span className="text-ink-tertiary">Subtotal:</span>
+							<span className="text-ink-secondary w-28">
+								{formatCurrency(invSubtotal)}
+							</span>
 						</div>
-						<div className="flex justify-end gap-4">
-							<span style={{ opacity: 0.5 }}>IVA:</span>
-							<span>{formatCurrency(invIva)}</span>
+						<div className="flex justify-end gap-6">
+							<span className="text-ink-tertiary">IVA:</span>
+							<span className="text-ink-secondary w-28">
+								{formatCurrency(invIva)}
+							</span>
 						</div>
-						<div className="flex justify-end gap-4 font-semibold">
-							<span style={{ color: "var(--gold)" }}>Total:</span>
+						<div className="flex justify-end gap-6 pt-1">
 							<span
-								className="font-kds text-lg"
+								className="font-display font-bold"
+								style={{ color: "var(--gold)" }}
+							>
+								Total:
+							</span>
+							<span
+								className="font-display text-lg font-bold w-28"
 								style={{ color: "var(--gold)" }}
 							>
 								{formatCurrency(invTotal)}
@@ -1064,9 +1217,9 @@ export default function SuppliersPage() {
 					</div>
 
 					<div>
-						<SectionLabel>Notas</SectionLabel>
+						<FieldLabel>Notas</FieldLabel>
 						<textarea
-							className="input-base w-full mt-1 text-sm"
+							className="input-base w-full text-sm"
 							rows={2}
 							value={invForm.notes}
 							onChange={(e) =>
@@ -1075,7 +1228,10 @@ export default function SuppliersPage() {
 						/>
 					</div>
 
-					<div className="flex justify-end gap-3 pt-2">
+					<div
+						className="flex justify-end gap-3 pt-3"
+						style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
+					>
 						<button
 							className="btn-ghost text-sm"
 							onClick={() => setShowInvoiceModal(false)}
@@ -1095,11 +1251,21 @@ export default function SuppliersPage() {
 				onClose={() => setPayInvoiceId(null)}
 				title="Registrar Pago"
 			>
-				<div className="space-y-4">
+				<div className="space-y-5">
+					<div
+						className="flex items-center justify-center rounded-xl mx-auto"
+						style={{
+							width: 52,
+							height: 52,
+							background: "rgba(34,197,94,0.1)",
+						}}
+					>
+						<CheckCircle size={24} className="text-green-400" />
+					</div>
 					<div>
-						<SectionLabel>Metodo de pago</SectionLabel>
+						<FieldLabel>Metodo de pago</FieldLabel>
 						<select
-							className="input-base w-full mt-1 text-sm"
+							className="input-base w-full text-sm"
 							value={payMethod}
 							onChange={(e) => setPayMethod(e.target.value)}
 						>
@@ -1110,7 +1276,10 @@ export default function SuppliersPage() {
 							<option value="tarjeta">Tarjeta</option>
 						</select>
 					</div>
-					<div className="flex justify-end gap-3">
+					<div
+						className="flex justify-end gap-3 pt-3"
+						style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
+					>
 						<button
 							className="btn-ghost text-sm"
 							onClick={() => setPayInvoiceId(null)}

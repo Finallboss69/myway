@@ -20,6 +20,9 @@ import {
 	ChevronUp,
 	ChevronDown,
 	Printer,
+	Loader2,
+	Wallet,
+	AlertCircle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
@@ -67,15 +70,8 @@ const PAYMENT_COLORS: Record<string, string> = {
 	Transferencia: "#f97316",
 };
 
-const DEFAULT_CATEGORIES: Omit<ExpenseCategory, "id">[] = [
-	{ name: "Mercadería", icon: "ShoppingCart", order: 0 },
-	{ name: "Personal", icon: "Users", order: 1 },
-	{ name: "Servicios", icon: "Zap", order: 2 },
-	{ name: "Alquiler", icon: "Home", order: 3 },
-	{ name: "Impuestos", icon: "Receipt", order: 4 },
-	{ name: "Mantenimiento", icon: "Wrench", order: 5 },
-	{ name: "Otros", icon: "MoreHorizontal", order: 6 },
-];
+// Default categories used for seeding (kept as reference)
+// const DEFAULT_CATEGORIES: Omit<ExpenseCategory, "id">[] = [...];
 
 const ICON_MAP: Record<
 	string,
@@ -92,6 +88,19 @@ const ICON_MAP: Record<
 	Tag,
 	Settings,
 };
+
+const CAT_COLORS: string[] = [
+	"#f59e0b",
+	"#3b82f6",
+	"#8b5cf6",
+	"#22c55e",
+	"#f97316",
+	"#ec4899",
+	"#06b6d4",
+	"#ef4444",
+	"#14b8a6",
+	"#64748b",
+];
 
 function CategoryIcon({
 	iconName,
@@ -160,15 +169,18 @@ function Modal({
 	onClose,
 	title,
 	children,
+	width = 520,
 }: {
 	open: boolean;
 	onClose: () => void;
 	title: string;
 	children: React.ReactNode;
+	width?: number;
 }) {
 	if (!open) return null;
 	return (
 		<div
+			className="animate-fade-in"
 			style={{
 				position: "fixed",
 				inset: 0,
@@ -176,41 +188,148 @@ function Modal({
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
-				background: "rgba(0,0,0,0.7)",
-				backdropFilter: "blur(4px)",
+				background: "rgba(0,0,0,0.75)",
+				backdropFilter: "blur(8px)",
 			}}
 			onClick={onClose}
 		>
 			<div
-				className="card"
+				className="card animate-slide-up"
 				style={{
 					width: "100%",
-					maxWidth: 520,
+					maxWidth: width,
 					maxHeight: "90vh",
 					overflow: "auto",
 					padding: 0,
+					border: "1px solid var(--s4)",
+					boxShadow: "0 24px 64px rgba(0,0,0,0.5)",
 				}}
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div
 					className="flex items-center justify-between"
-					style={{ padding: "16px 20px", borderBottom: "1px solid var(--s3)" }}
+					style={{
+						padding: "18px 24px",
+						borderBottom: "1px solid var(--s3)",
+						background: "var(--s1)",
+					}}
 				>
-					<h2
-						className="font-display text-ink-primary"
-						style={{ fontSize: 15, fontWeight: 700 }}
-					>
-						{title}
-					</h2>
+					<div className="flex items-center gap-3">
+						<div
+							style={{
+								width: 3,
+								height: 16,
+								borderRadius: 3,
+								background: "var(--gold)",
+							}}
+						/>
+						<h2
+							className="font-display text-ink-primary"
+							style={{ fontSize: 15, fontWeight: 700 }}
+						>
+							{title}
+						</h2>
+					</div>
 					<button
 						onClick={onClose}
 						className="btn-ghost"
-						style={{ padding: 6, borderRadius: 8 }}
+						style={{
+							padding: 6,
+							borderRadius: 8,
+							transition: "all 0.15s",
+						}}
 					>
 						<X size={16} />
 					</button>
 				</div>
-				<div style={{ padding: 20 }}>{children}</div>
+				<div style={{ padding: "24px" }}>{children}</div>
+			</div>
+		</div>
+	);
+}
+
+// ─── KPI Card ────────────────────────────────────────────────────────────────
+
+function Kpi({
+	label,
+	value,
+	Icon,
+	accent,
+	sub,
+}: {
+	label: string;
+	value: string;
+	Icon: React.ElementType;
+	accent?: boolean;
+	sub?: string;
+}) {
+	return (
+		<div
+			className="card p-5 animate-fade-in"
+			style={{
+				position: "relative",
+				overflow: "hidden",
+				transition: "border-color 0.2s, box-shadow 0.2s",
+				...(accent
+					? {
+							borderColor: "rgba(245,158,11,0.25)",
+							boxShadow: "0 0 24px rgba(245,158,11,0.08)",
+						}
+					: {}),
+			}}
+		>
+			{accent && (
+				<div
+					style={{
+						position: "absolute",
+						inset: 0,
+						background:
+							"radial-gradient(ellipse 300px 200px at 50% 0%, rgba(245,158,11,0.06) 0%, transparent 60%)",
+						pointerEvents: "none",
+					}}
+				/>
+			)}
+			<div
+				className="flex items-center justify-between mb-3"
+				style={{ position: "relative", zIndex: 1 }}
+			>
+				<SectionLabel>{label}</SectionLabel>
+				<div
+					style={{
+						width: 32,
+						height: 32,
+						borderRadius: 9,
+						background: accent ? "rgba(245,158,11,0.15)" : "var(--s3)",
+						border: accent
+							? "1px solid rgba(245,158,11,0.3)"
+							: "1px solid var(--s4)",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+					}}
+				>
+					<Icon size={14} style={{ color: accent ? "#f59e0b" : "#888" }} />
+				</div>
+			</div>
+			<div style={{ position: "relative", zIndex: 1 }}>
+				<div
+					className="font-kds"
+					style={{
+						fontSize: accent ? 34 : 28,
+						lineHeight: 1,
+						color: accent ? "#f59e0b" : "#e5e5e5",
+					}}
+				>
+					{value}
+				</div>
+				{sub && (
+					<div
+						className="font-body text-ink-disabled mt-1.5"
+						style={{ fontSize: 11 }}
+					>
+						{sub}
+					</div>
+				)}
 			</div>
 		</div>
 	);
@@ -266,7 +385,7 @@ function NuevoGastoModal({
 
 	const handleSubmit = async () => {
 		if (!categoryId || !description.trim() || !amount || Number(amount) <= 0) {
-			setError("Completar categoría, descripción y monto válido.");
+			setError("Completar categoria, descripcion y monto valido.");
 			return;
 		}
 		setSaving(true);
@@ -307,41 +426,88 @@ function NuevoGastoModal({
 			onClose={onClose}
 			title={editing ? "Editar Gasto" : "Nuevo Gasto"}
 		>
-			<div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-				{/* Category */}
+			<div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+				{/* Category selector as visual grid */}
 				<div>
-					<SectionLabel>Categoría</SectionLabel>
-					<select
-						className="input-base mt-1"
-						style={{ width: "100%" }}
-						value={categoryId}
-						onChange={(e) => setCategoryId(e.target.value)}
-					>
-						<option value="">Seleccionar...</option>
-						{categories.map((c) => (
-							<option key={c.id} value={c.id}>
-								{c.name}
-							</option>
-						))}
-					</select>
+					<SectionLabel>Categoria</SectionLabel>
+					<div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-2">
+						{categories
+							.sort((a, b) => a.order - b.order)
+							.map((c, idx) => {
+								const isSelected = categoryId === c.id;
+								const color = CAT_COLORS[idx % CAT_COLORS.length];
+								return (
+									<button
+										key={c.id}
+										onClick={() => setCategoryId(c.id)}
+										style={{
+											padding: "10px 8px",
+											borderRadius: 10,
+											border: isSelected
+												? `1px solid ${color}66`
+												: "1px solid var(--s3)",
+											background: isSelected ? `${color}15` : "var(--s2)",
+											cursor: "pointer",
+											display: "flex",
+											flexDirection: "column",
+											alignItems: "center",
+											gap: 6,
+											transition: "all 0.15s",
+										}}
+									>
+										<div
+											style={{
+												width: 28,
+												height: 28,
+												borderRadius: 8,
+												background: isSelected ? `${color}25` : "var(--s3)",
+												display: "flex",
+												alignItems: "center",
+												justifyContent: "center",
+											}}
+										>
+											<CategoryIcon
+												iconName={c.icon}
+												size={13}
+												style={{
+													color: isSelected ? color : "#888",
+												}}
+											/>
+										</div>
+										<span
+											className="font-body"
+											style={{
+												fontSize: 10,
+												color: isSelected ? color : "#888",
+												fontWeight: isSelected ? 600 : 400,
+											}}
+										>
+											{c.name}
+										</span>
+									</button>
+								);
+							})}
+					</div>
 				</div>
+
 				{/* Description */}
 				<div>
-					<SectionLabel>Descripción</SectionLabel>
+					<SectionLabel>Descripcion</SectionLabel>
 					<input
-						className="input-base mt-1"
+						className="input-base mt-1.5"
 						style={{ width: "100%" }}
 						value={description}
 						onChange={(e) => setDescription(e.target.value)}
 						placeholder="Ej: Compra de insumos"
 					/>
 				</div>
-				{/* Amount + Date */}
+
+				{/* Amount + Date row */}
 				<div className="grid grid-cols-2 gap-3">
 					<div>
 						<SectionLabel>Monto (ARS)</SectionLabel>
 						<input
-							className="input-base mt-1"
+							className="input-base mt-1.5"
 							style={{ width: "100%" }}
 							type="number"
 							min={0}
@@ -354,7 +520,7 @@ function NuevoGastoModal({
 					<div>
 						<SectionLabel>Fecha</SectionLabel>
 						<input
-							className="input-base mt-1"
+							className="input-base mt-1.5"
 							style={{ width: "100%" }}
 							type="date"
 							value={date}
@@ -362,11 +528,12 @@ function NuevoGastoModal({
 						/>
 					</div>
 				</div>
+
 				{/* Supplier */}
 				<div>
 					<SectionLabel>Proveedor (opcional)</SectionLabel>
 					<select
-						className="input-base mt-1"
+						className="input-base mt-1.5"
 						style={{ width: "100%" }}
 						value={supplierId}
 						onChange={(e) => setSupplierId(e.target.value)}
@@ -379,51 +546,89 @@ function NuevoGastoModal({
 						))}
 					</select>
 				</div>
-				{/* Payment method */}
+
+				{/* Payment method pills */}
 				<div>
-					<SectionLabel>Método de Pago</SectionLabel>
-					<div className="flex gap-2 mt-1 flex-wrap">
-						{PAYMENT_METHODS.map((m) => (
-							<button
-								key={m}
-								onClick={() => setPaymentMethod(m)}
-								style={{
-									padding: "5px 12px",
-									borderRadius: 8,
-									fontSize: 12,
-									fontWeight: 600,
-									border:
-										paymentMethod === m
-											? "1px solid var(--gold)"
+					<SectionLabel>Metodo de Pago</SectionLabel>
+					<div className="flex gap-2 mt-2 flex-wrap">
+						{PAYMENT_METHODS.map((m) => {
+							const isActive = paymentMethod === m;
+							const color = PAYMENT_COLORS[m] ?? "#888";
+							return (
+								<button
+									key={m}
+									onClick={() => setPaymentMethod(m)}
+									style={{
+										padding: "7px 16px",
+										borderRadius: 10,
+										fontSize: 11,
+										fontWeight: 600,
+										fontFamily: "var(--font-syne)",
+										letterSpacing: "0.05em",
+										border: isActive
+											? `1px solid ${color}66`
 											: "1px solid var(--s4)",
-									background:
-										paymentMethod === m ? "rgba(245,158,11,0.15)" : "var(--s2)",
-									color: paymentMethod === m ? "#f59e0b" : "#888",
-									cursor: "pointer",
-								}}
-							>
-								{m}
-							</button>
-						))}
+										background: isActive ? `${color}18` : "var(--s2)",
+										color: isActive ? color : "#666",
+										cursor: "pointer",
+										transition: "all 0.15s",
+										boxShadow: isActive ? `0 0 8px ${color}20` : "none",
+									}}
+								>
+									{m}
+								</button>
+							);
+						})}
 					</div>
 				</div>
+
 				{/* Notes */}
 				<div>
 					<SectionLabel>Notas (opcional)</SectionLabel>
 					<textarea
-						className="input-base mt-1"
+						className="input-base mt-1.5"
 						style={{ width: "100%", minHeight: 60, resize: "vertical" }}
 						value={notes}
 						onChange={(e) => setNotes(e.target.value)}
 						placeholder="Observaciones..."
 					/>
 				</div>
+
 				{/* Error */}
-				{error && <div style={{ color: "#ef4444", fontSize: 12 }}>{error}</div>}
+				{error && (
+					<div
+						className="flex items-center gap-2"
+						style={{
+							padding: "10px 14px",
+							borderRadius: 10,
+							background: "rgba(239,68,68,0.08)",
+							border: "1px solid rgba(239,68,68,0.2)",
+						}}
+					>
+						<AlertCircle
+							size={14}
+							style={{ color: "#ef4444", flexShrink: 0 }}
+						/>
+						<span
+							className="font-body"
+							style={{ color: "#ef4444", fontSize: 12 }}
+						>
+							{error}
+						</span>
+					</div>
+				)}
+
 				{/* Submit */}
 				<button
 					className="btn-primary"
-					style={{ width: "100%", marginTop: 4 }}
+					style={{
+						width: "100%",
+						marginTop: 4,
+						padding: "12px 0",
+						fontSize: 13,
+						fontWeight: 700,
+						letterSpacing: "0.05em",
+					}}
 					onClick={handleSubmit}
 					disabled={saving}
 				>
@@ -438,7 +643,7 @@ function NuevoGastoModal({
 	);
 }
 
-// ─── Gestionar Categorías Modal ──────────────────────────────────────────────
+// ─── Gestionar Categorias Modal ──────────────────────────────────────────────
 
 function CategoriasModal({
 	open,
@@ -496,7 +701,7 @@ function CategoriasModal({
 	};
 
 	const handleDelete = async (id: string) => {
-		if (!confirm("Eliminar esta categoría?")) return;
+		if (!confirm("Eliminar esta categoria?")) return;
 		try {
 			await apiFetch(`/api/expense-categories/${id}`, { method: "DELETE" });
 			onChanged();
@@ -514,103 +719,154 @@ function CategoriasModal({
 	const sorted = [...categories].sort((a, b) => a.order - b.order);
 
 	return (
-		<Modal open={open} onClose={onClose} title="Gestionar Categorías">
-			<div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-				{/* List */}
-				{sorted.map((cat) => (
-					<div
-						key={cat.id}
-						className="flex items-center gap-3"
-						style={{
-							padding: "10px 12px",
-							borderRadius: 10,
-							background:
-								editingId === cat.id ? "rgba(245,158,11,0.08)" : "var(--s2)",
-							border:
-								editingId === cat.id
+		<Modal
+			open={open}
+			onClose={onClose}
+			title="Gestionar Categorias"
+			width={480}
+		>
+			<div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+				{/* Category list */}
+				{sorted.map((cat, idx) => {
+					const color = CAT_COLORS[idx % CAT_COLORS.length];
+					const isEditing = editingId === cat.id;
+					return (
+						<div
+							key={cat.id}
+							className="flex items-center gap-3"
+							style={{
+								padding: "12px 14px",
+								borderRadius: 12,
+								background: isEditing ? "rgba(245,158,11,0.06)" : "var(--s2)",
+								border: isEditing
 									? "1px solid rgba(245,158,11,0.3)"
 									: "1px solid var(--s3)",
-						}}
-					>
-						<div
-							style={{
-								width: 28,
-								height: 28,
-								borderRadius: 7,
-								background: "var(--s3)",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
+								transition: "all 0.15s",
 							}}
 						>
-							<CategoryIcon
-								iconName={cat.icon}
-								size={13}
-								style={{ color: "#888" }}
-							/>
+							<div
+								style={{
+									width: 32,
+									height: 32,
+									borderRadius: 9,
+									background: `${color}18`,
+									border: `1px solid ${color}30`,
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+									flexShrink: 0,
+								}}
+							>
+								<CategoryIcon iconName={cat.icon} size={14} style={{ color }} />
+							</div>
+							<span
+								className="font-body text-ink-primary flex-1"
+								style={{ fontSize: 13, fontWeight: 500 }}
+							>
+								{cat.name}
+							</span>
+							<span
+								className="font-body text-ink-disabled"
+								style={{ fontSize: 10, fontFamily: "monospace" }}
+							>
+								#{cat.order}
+							</span>
+							<button
+								onClick={() => startEdit(cat)}
+								className="btn-ghost"
+								style={{ padding: 6, borderRadius: 8 }}
+							>
+								<Pencil size={12} style={{ color: "#888" }} />
+							</button>
+							<button
+								onClick={() => handleDelete(cat.id)}
+								className="btn-ghost"
+								style={{ padding: 6, borderRadius: 8 }}
+							>
+								<Trash2 size={12} style={{ color: "#ef4444" }} />
+							</button>
 						</div>
-						<span
-							className="font-body text-ink-primary flex-1"
-							style={{ fontSize: 13 }}
-						>
-							{cat.name}
-						</span>
+					);
+				})}
+
+				{sorted.length === 0 && (
+					<div
+						className="flex flex-col items-center justify-center"
+						style={{ padding: "32px 16px" }}
+					>
+						<Tag size={24} style={{ color: "#333", marginBottom: 8 }} />
 						<span
 							className="font-body text-ink-disabled"
-							style={{ fontSize: 10 }}
+							style={{ fontSize: 12 }}
 						>
-							#{cat.order}
+							No hay categorias definidas
 						</span>
-						<button
-							onClick={() => startEdit(cat)}
-							className="btn-ghost"
-							style={{ padding: 4 }}
-						>
-							<Pencil size={12} />
-						</button>
-						<button
-							onClick={() => handleDelete(cat.id)}
-							className="btn-ghost"
-							style={{ padding: 4, color: "#ef4444" }}
-						>
-							<Trash2 size={12} />
-						</button>
 					</div>
-				))}
+				)}
 
 				{/* Add/Edit form */}
 				<div
 					style={{
 						borderTop: "1px solid var(--s3)",
-						paddingTop: 12,
-						marginTop: 4,
+						paddingTop: 16,
+						marginTop: 8,
 					}}
 				>
 					<SectionLabel>
-						{editingId ? "Editar categoría" : "Nueva categoría"}
+						{editingId ? "Editar categoria" : "Nueva categoria"}
 					</SectionLabel>
-					<div className="flex gap-2 mt-2">
-						<select
-							className="input-base"
-							style={{ width: 80 }}
-							value={icon}
-							onChange={(e) => setIcon(e.target.value)}
+					<div className="flex gap-2 mt-2.5">
+						<div
+							style={{
+								position: "relative",
+								width: 44,
+								height: 40,
+								borderRadius: 10,
+								background: "var(--s2)",
+								border: "1px solid var(--s4)",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+								flexShrink: 0,
+							}}
 						>
-							{iconOptions.map((ic) => (
-								<option key={ic} value={ic}>
-									{ic}
-								</option>
-							))}
-						</select>
+							<CategoryIcon
+								iconName={icon}
+								size={16}
+								style={{ color: "#888" }}
+							/>
+							<select
+								className="input-base"
+								style={{
+									position: "absolute",
+									inset: 0,
+									opacity: 0,
+									cursor: "pointer",
+								}}
+								value={icon}
+								onChange={(e) => setIcon(e.target.value)}
+							>
+								{iconOptions.map((ic) => (
+									<option key={ic} value={ic}>
+										{ic}
+									</option>
+								))}
+							</select>
+						</div>
 						<input
 							className="input-base flex-1"
 							value={name}
 							onChange={(e) => setName(e.target.value)}
-							placeholder="Nombre"
+							placeholder="Nombre de la categoria"
+							style={{ fontSize: 13 }}
 						/>
 						<button
 							className="btn-primary"
-							style={{ padding: "6px 14px" }}
+							style={{
+								padding: "8px 18px",
+								fontSize: 12,
+								fontWeight: 700,
+							}}
 							onClick={handleSave}
 							disabled={busy}
 						>
@@ -619,7 +875,7 @@ function CategoriasModal({
 						{editingId && (
 							<button
 								className="btn-ghost"
-								style={{ padding: "6px 10px" }}
+								style={{ padding: "8px 12px" }}
 								onClick={resetForm}
 							>
 								<X size={14} />
@@ -627,8 +883,17 @@ function CategoriasModal({
 						)}
 					</div>
 					{error && (
-						<div style={{ color: "#ef4444", fontSize: 11, marginTop: 6 }}>
-							{error}
+						<div
+							className="flex items-center gap-2 mt-2"
+							style={{
+								padding: "8px 12px",
+								borderRadius: 8,
+								background: "rgba(239,68,68,0.08)",
+								border: "1px solid rgba(239,68,68,0.2)",
+							}}
+						>
+							<AlertCircle size={12} style={{ color: "#ef4444" }} />
+							<span style={{ color: "#ef4444", fontSize: 11 }}>{error}</span>
 						</div>
 					)}
 				</div>
@@ -660,7 +925,6 @@ export default function ExpensesPage() {
 			const data = await apiFetch<ExpenseCategory[]>("/api/expense-categories");
 			setCategories(data);
 		} catch {
-			// If API doesn't exist yet or is empty, seed defaults
 			setCategories([]);
 		}
 	}, []);
@@ -721,12 +985,13 @@ export default function ExpensesPage() {
 
 	// ── Category summaries ───────────────────────────────────────────────────
 	const catSummaries = categories
-		.map((cat) => {
+		.map((cat, idx) => {
 			const catExpenses = expenses.filter((e) => e.categoryId === cat.id);
 			return {
 				...cat,
 				total: catExpenses.reduce((s, e) => s + e.amount, 0),
 				count: catExpenses.length,
+				color: CAT_COLORS[idx % CAT_COLORS.length],
 			};
 		})
 		.filter((c) => c.count > 0)
@@ -759,9 +1024,13 @@ export default function ExpensesPage() {
 
 	// ── Category name resolver ───────────────────────────────────────────────
 	const catName = (id: string) =>
-		categories.find((c) => c.id === id)?.name ?? "—";
+		categories.find((c) => c.id === id)?.name ?? "--";
 	const catIcon = (id: string) =>
 		categories.find((c) => c.id === id)?.icon ?? "Tag";
+	const catColor = (id: string) => {
+		const idx = categories.findIndex((c) => c.id === id);
+		return idx >= 0 ? CAT_COLORS[idx % CAT_COLORS.length] : "#888";
+	};
 
 	const handlePrint = () => {
 		const rows = sortedExpenses
@@ -776,17 +1045,33 @@ export default function ExpensesPage() {
 			)
 			.join("");
 		const periodLabel =
-			period === "Custom" ? `${customFrom} — ${customTo}` : period;
+			period === "Custom" ? `${customFrom} -- ${customTo}` : period;
 		printDocument({
 			title: "Gastos",
-			subtitle: `${periodLabel} — ${sortedExpenses.length} gastos — Total: ${printCurrency(totalMes)}`,
+			subtitle: `${periodLabel} -- ${sortedExpenses.length} gastos -- Total: ${printCurrency(totalMes)}`,
 			content: `<table>
-				<thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Medio</th><th style="text-align:right">Monto</th></tr></thead>
+				<thead><tr><th>Fecha</th><th>Categoria</th><th>Descripcion</th><th>Medio</th><th style="text-align:right">Monto</th></tr></thead>
 				<tbody>${rows}
 				<tr class="total-row"><td colspan="4">Total</td><td class="amount">${printCurrency(totalMes)}</td></tr>
 				</tbody></table>`,
 		});
 	};
+
+	// ── Loading state ────────────────────────────────────────────────────────
+	if (loading) {
+		return (
+			<div
+				className="min-h-screen flex items-center justify-center"
+				style={{ background: "var(--s0)" }}
+			>
+				<Loader2
+					size={28}
+					className="animate-spin"
+					style={{ color: "var(--gold)" }}
+				/>
+			</div>
+		);
+	}
 
 	return (
 		<div
@@ -794,148 +1079,84 @@ export default function ExpensesPage() {
 			style={{ background: "var(--s0)" }}
 		>
 			{/* ── Header ──────────────────────────────────────────────────────── */}
-			<div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+			<div className="flex flex-wrap items-center justify-between gap-3 mb-6 animate-fade-in">
 				<div>
-					<div className="flex items-center gap-2 mb-1">
+					<div className="flex items-center gap-3">
 						<div
 							style={{
 								width: 3,
-								height: 20,
+								height: 22,
 								borderRadius: 3,
 								background: "var(--gold)",
 							}}
 						/>
 						<h1
-							className="font-kds"
-							style={{ fontSize: 40, lineHeight: 1, color: "#e5e5e5" }}
+							className="font-display"
+							style={{
+								fontSize: 22,
+								lineHeight: 1,
+								color: "#e5e5e5",
+								fontWeight: 700,
+							}}
 						>
-							GASTOS
+							Gastos
 						</h1>
 					</div>
-					<div className="font-body text-ink-disabled" style={{ fontSize: 12 }}>
+					<div
+						className="font-body text-ink-disabled mt-1.5"
+						style={{ fontSize: 12, paddingLeft: 15 }}
+					>
 						Control y registro de gastos operativos
 					</div>
 				</div>
-				<div className="flex gap-2">
+				<div className="flex items-center gap-2">
 					<button
 						className="btn-ghost flex items-center gap-1.5"
+						style={{ padding: "8px 14px", borderRadius: 10 }}
 						onClick={handlePrint}
 					>
-						<Printer size={14} />
-						<span className="font-display" style={{ fontSize: 10 }}>
+						<Printer size={13} />
+						<span
+							className="font-display"
+							style={{ fontSize: 10, letterSpacing: "0.1em" }}
+						>
 							Imprimir
 						</span>
 					</button>
 					<button
-						className="btn-secondary"
+						className="btn-secondary flex items-center gap-1.5"
+						style={{ padding: "8px 14px", borderRadius: 10 }}
 						onClick={() => setShowCatModal(true)}
-						style={{ display: "flex", alignItems: "center", gap: 6 }}
 					>
-						<Settings size={13} /> Categorías
+						<Settings size={13} />
+						<span
+							className="font-display"
+							style={{ fontSize: 10, letterSpacing: "0.1em" }}
+						>
+							Categorias
+						</span>
 					</button>
 					<button
-						className="btn-primary"
+						className="btn-primary flex items-center gap-1.5"
+						style={{ padding: "8px 16px", borderRadius: 10 }}
 						onClick={() => {
 							setEditingExpense(null);
 							setShowNewModal(true);
 						}}
-						style={{ display: "flex", alignItems: "center", gap: 6 }}
 					>
-						<Plus size={14} /> Nuevo Gasto
+						<Plus size={14} />
+						<span
+							className="font-display"
+							style={{ fontSize: 10, letterSpacing: "0.1em" }}
+						>
+							Nuevo Gasto
+						</span>
 					</button>
 				</div>
 			</div>
 
-			{/* ── KPI pills ───────────────────────────────────────────────────── */}
-			<div className="grid gap-4 grid-cols-3 mb-6">
-				{[
-					{
-						label: "Gasto Total Período",
-						value: formatCurrency(totalMes),
-						accent: true,
-						icon: DollarSign,
-					},
-					{
-						label: "Gastos Hoy",
-						value: formatCurrency(gastosHoy),
-						accent: false,
-						icon: CalendarDays,
-					},
-					{
-						label: "Categorías",
-						value: String(uniqueCats),
-						accent: false,
-						icon: Tag,
-					},
-				].map(({ label, value, accent, icon: Icon }) => (
-					<div
-						key={label}
-						className="card p-5"
-						style={{
-							position: "relative",
-							overflow: "hidden",
-							...(accent
-								? {
-										borderColor: "rgba(245,158,11,0.25)",
-										boxShadow: "0 0 24px rgba(245,158,11,0.08)",
-									}
-								: {}),
-						}}
-					>
-						{accent && (
-							<div
-								style={{
-									position: "absolute",
-									inset: 0,
-									background:
-										"radial-gradient(ellipse 300px 200px at 50% 0%, rgba(245,158,11,0.06) 0%, transparent 60%)",
-									pointerEvents: "none",
-								}}
-							/>
-						)}
-						<div
-							className="flex items-center justify-between mb-3"
-							style={{ position: "relative", zIndex: 1 }}
-						>
-							<SectionLabel>{label}</SectionLabel>
-							<div
-								style={{
-									width: 28,
-									height: 28,
-									borderRadius: 7,
-									background: accent ? "rgba(245,158,11,0.2)" : "var(--s3)",
-									border: accent
-										? "1px solid rgba(245,158,11,0.3)"
-										: "1px solid var(--s4)",
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-								}}
-							>
-								<Icon
-									size={13}
-									style={{ color: accent ? "#f59e0b" : "#888" }}
-								/>
-							</div>
-						</div>
-						<div
-							className="font-kds"
-							style={{
-								fontSize: accent ? 32 : 26,
-								lineHeight: 1,
-								color: accent ? "#f59e0b" : "#e5e5e5",
-								position: "relative",
-								zIndex: 1,
-							}}
-						>
-							{value}
-						</div>
-					</div>
-				))}
-			</div>
-
 			{/* ── Period Selector ──────────────────────────────────────────────── */}
-			<div className="flex flex-wrap items-center gap-3 mb-6">
+			<div className="flex flex-wrap items-center gap-3 mb-6 animate-fade-in">
 				<div
 					className="flex items-center gap-0.5 p-1 rounded-xl"
 					style={{ background: "var(--s2)", border: "1px solid var(--s3)" }}
@@ -945,19 +1166,19 @@ export default function ExpensesPage() {
 							key={p}
 							onClick={() => setPeriod(p)}
 							style={{
-								padding: "6px 14px",
+								padding: "7px 16px",
 								borderRadius: 10,
 								background: period === p ? "#f59e0b" : "transparent",
 								color: period === p ? "#0a0a0a" : "#666",
 								fontFamily: "var(--font-syne)",
-								fontWeight: 600,
+								fontWeight: 700,
 								fontSize: 11,
 								letterSpacing: "0.1em",
 								border: "none",
 								cursor: "pointer",
 								transition: "all 0.15s",
 								boxShadow:
-									period === p ? "0 0 8px rgba(245,158,11,0.3)" : "none",
+									period === p ? "0 0 10px rgba(245,158,11,0.3)" : "none",
 							}}
 						>
 							{p}
@@ -989,374 +1210,613 @@ export default function ExpensesPage() {
 
 			<div className="divider-gold mb-6" />
 
-			{loading ? (
-				<div
-					className="flex items-center justify-center"
-					style={{ minHeight: 200 }}
-				>
-					<span
-						className="font-body text-ink-disabled"
-						style={{ fontSize: 14 }}
-					>
-						Cargando...
-					</span>
-				</div>
-			) : (
-				<>
-					{/* ── Category Summary Cards ──────────────────────────────────── */}
-					{catSummaries.length > 0 && (
-						<div className="mb-6">
-							<div className="mb-3">
-								<SectionLabel>Resumen por Categoría</SectionLabel>
-							</div>
-							<div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-								{catSummaries.map((cat) => (
-									<button
-										key={cat.id}
-										onClick={() =>
-											setFilterCat(filterCat === cat.id ? "" : cat.id)
-										}
-										className="card"
+			{/* ── KPI Cards ───────────────────────────────────────────────────── */}
+			<div className="grid gap-4 grid-cols-2 md:grid-cols-3 mb-7">
+				<Kpi
+					label="Gasto Total Periodo"
+					value={formatCurrency(totalMes)}
+					Icon={DollarSign}
+					accent
+					sub={`${expenses.length} registro${expenses.length !== 1 ? "s" : ""}`}
+				/>
+				<Kpi
+					label="Gastos Hoy"
+					value={formatCurrency(gastosHoy)}
+					Icon={CalendarDays}
+				/>
+				<Kpi label="Categorias Activas" value={String(uniqueCats)} Icon={Tag} />
+			</div>
+
+			{/* ── Category Summary ────────────────────────────────────────────── */}
+			{catSummaries.length > 0 && (
+				<div className="mb-7 animate-fade-in">
+					<div className="mb-3">
+						<SectionLabel>Resumen por Categoria</SectionLabel>
+					</div>
+					<div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+						{catSummaries.map((cat) => {
+							const isActive = filterCat === cat.id;
+							const pct =
+								totalMes > 0 ? ((cat.total / totalMes) * 100).toFixed(1) : "0";
+							return (
+								<button
+									key={cat.id}
+									onClick={() => setFilterCat(isActive ? "" : cat.id)}
+									style={{
+										padding: "16px",
+										borderRadius: 14,
+										cursor: "pointer",
+										textAlign: "left",
+										border: isActive
+											? `1px solid ${cat.color}55`
+											: "1px solid var(--s3)",
+										background: isActive ? `${cat.color}08` : "var(--s1)",
+										transition: "all 0.2s",
+										position: "relative",
+										overflow: "hidden",
+									}}
+								>
+									{/* Subtle top-bar accent */}
+									<div
 										style={{
-											padding: "14px 16px",
-											cursor: "pointer",
-											textAlign: "left",
-											border:
-												filterCat === cat.id
-													? "1px solid rgba(245,158,11,0.4)"
-													: undefined,
-											background:
-												filterCat === cat.id
-													? "rgba(245,158,11,0.05)"
-													: undefined,
+											position: "absolute",
+											top: 0,
+											left: 0,
+											right: 0,
+											height: 2,
+											background: cat.color,
+											opacity: isActive ? 0.6 : 0.2,
+											transition: "opacity 0.2s",
 										}}
-									>
-										<div className="flex items-center gap-2.5 mb-2">
-											<div
-												style={{
-													width: 28,
-													height: 28,
-													borderRadius: 7,
-													background: "var(--s3)",
-													display: "flex",
-													alignItems: "center",
-													justifyContent: "center",
-												}}
-											>
-												<CategoryIcon
-													iconName={cat.icon}
-													size={13}
-													style={{ color: "#888" }}
-												/>
-											</div>
+									/>
+									<div className="flex items-center gap-2.5 mb-3">
+										<div
+											style={{
+												width: 30,
+												height: 30,
+												borderRadius: 9,
+												background: `${cat.color}18`,
+												border: `1px solid ${cat.color}30`,
+												display: "flex",
+												alignItems: "center",
+												justifyContent: "center",
+											}}
+										>
+											<CategoryIcon
+												iconName={cat.icon}
+												size={14}
+												style={{ color: cat.color }}
+											/>
+										</div>
+										<div style={{ flex: 1, minWidth: 0 }}>
 											<span
 												className="font-body text-ink-primary"
-												style={{ fontSize: 13, fontWeight: 500 }}
+												style={{
+													fontSize: 12,
+													fontWeight: 500,
+													display: "block",
+												}}
 											>
 												{cat.name}
 											</span>
+											<span
+												className="font-body text-ink-disabled"
+												style={{ fontSize: 10 }}
+											>
+												{cat.count} gasto{cat.count !== 1 ? "s" : ""} / {pct}%
+											</span>
 										</div>
+									</div>
+									<div
+										className="font-kds"
+										style={{
+											fontSize: 22,
+											lineHeight: 1,
+											color: isActive ? cat.color : "#e5e5e5",
+										}}
+									>
+										{formatCurrency(cat.total)}
+									</div>
+									{/* Mini progress bar */}
+									<div
+										style={{
+											marginTop: 8,
+											width: "100%",
+											height: 3,
+											borderRadius: 2,
+											background: "var(--s3)",
+											overflow: "hidden",
+										}}
+									>
 										<div
-											className="font-kds"
-											style={{ fontSize: 22, lineHeight: 1, color: "#e5e5e5" }}
-										>
-											{formatCurrency(cat.total)}
-										</div>
-										<div
-											className="font-body text-ink-disabled mt-1"
-											style={{ fontSize: 11 }}
-										>
-											{cat.count} gasto{cat.count !== 1 ? "s" : ""}
-										</div>
-									</button>
-								))}
-							</div>
-							{filterCat && (
-								<button
-									className="btn-ghost mt-2"
-									style={{ fontSize: 11 }}
-									onClick={() => setFilterCat("")}
-								>
-									Limpiar filtro
+											style={{
+												width: `${totalMes > 0 ? (cat.total / totalMes) * 100 : 0}%`,
+												height: "100%",
+												borderRadius: 2,
+												background: cat.color,
+												transition: "width 0.3s",
+											}}
+										/>
+									</div>
 								</button>
-							)}
+							);
+						})}
+					</div>
+					{filterCat && (
+						<button
+							className="btn-ghost mt-3 flex items-center gap-1.5"
+							style={{ fontSize: 11, padding: "6px 12px", borderRadius: 8 }}
+							onClick={() => setFilterCat("")}
+						>
+							<X size={10} />
+							Limpiar filtro
+						</button>
+					)}
+				</div>
+			)}
+
+			{/* ── Expense List ────────────────────────────────────────────────── */}
+			<div
+				className="card animate-slide-up"
+				style={{ padding: 0, overflow: "hidden" }}
+			>
+				{/* List header */}
+				<div
+					style={{
+						padding: "16px 20px",
+						borderBottom: "1px solid var(--s3)",
+						background: "var(--s1)",
+					}}
+					className="flex items-center justify-between"
+				>
+					<div>
+						<h3
+							className="font-display text-ink-primary"
+							style={{ fontSize: 14, fontWeight: 700 }}
+						>
+							Listado de Gastos
+						</h3>
+						<div
+							className="font-body text-ink-disabled mt-0.5"
+							style={{ fontSize: 11 }}
+						>
+							{expenses.length} registro{expenses.length !== 1 ? "s" : ""}
+							{filterCat ? ` -- ${catName(filterCat)}` : ""}
+						</div>
+					</div>
+					{sortedExpenses.length > 0 && (
+						<div
+							className="font-kds"
+							style={{ fontSize: 22, color: "var(--gold)" }}
+						>
+							{formatCurrency(totalMes)}
 						</div>
 					)}
+				</div>
 
-					{/* ── Expense List ────────────────────────────────────────────── */}
-					<div className="card" style={{ padding: 0, overflow: "hidden" }}>
-						<div
-							style={{
-								padding: "14px 20px",
-								borderBottom: "1px solid var(--s3)",
-							}}
-							className="flex items-center justify-between"
+				{sortedExpenses.length === 0 ? (
+					<div
+						className="flex flex-col items-center justify-center"
+						style={{ padding: "48px 20px" }}
+					>
+						<Wallet size={32} style={{ color: "#333", marginBottom: 12 }} />
+						<span
+							className="font-body text-ink-disabled"
+							style={{ fontSize: 13 }}
 						>
-							<div>
-								<h3
-									className="font-display text-ink-primary"
-									style={{ fontSize: 13, fontWeight: 700 }}
-								>
-									Listado de Gastos
-								</h3>
-								<div
-									className="font-body text-ink-disabled"
-									style={{ fontSize: 11 }}
-								>
-									{expenses.length} registro{expenses.length !== 1 ? "s" : ""}
-									{filterCat ? ` — ${catName(filterCat)}` : ""}
-								</div>
-							</div>
+							No hay gastos registrados en este periodo
+						</span>
+						<button
+							className="btn-primary mt-4 flex items-center gap-1.5"
+							style={{ padding: "8px 20px", fontSize: 12 }}
+							onClick={() => {
+								setEditingExpense(null);
+								setShowNewModal(true);
+							}}
+						>
+							<Plus size={13} />
+							Registrar gasto
+						</button>
+					</div>
+				) : (
+					<>
+						{/* Desktop table */}
+						<div className="hidden md:block" style={{ overflowX: "auto" }}>
+							<table style={{ width: "100%", borderCollapse: "collapse" }}>
+								<thead>
+									<tr style={{ borderBottom: "1px solid var(--s3)" }}>
+										{[
+											{ label: "Categoria", field: null, align: "left" },
+											{ label: "Descripcion", field: null, align: "left" },
+											{ label: "Proveedor", field: null, align: "left" },
+											{ label: "Fecha", field: "date" as const, align: "left" },
+											{
+												label: "Monto",
+												field: "amount" as const,
+												align: "right",
+											},
+											{ label: "Pago", field: null, align: "center" },
+										].map((col) => (
+											<th
+												key={col.label}
+												className="font-display text-ink-disabled uppercase"
+												style={{
+													fontSize: 9,
+													letterSpacing: "0.25em",
+													padding: "12px 16px",
+													textAlign: col.align as "left" | "right" | "center",
+													fontWeight: 600,
+													cursor: col.field ? "pointer" : "default",
+													userSelect: "none",
+												}}
+												onClick={
+													col.field ? () => toggleSort(col.field!) : undefined
+												}
+											>
+												<span
+													className="flex items-center gap-1"
+													style={{
+														justifyContent:
+															col.align === "right"
+																? "flex-end"
+																: col.align === "center"
+																	? "center"
+																	: "flex-start",
+													}}
+												>
+													{col.label}
+													{col.field && <SortIcon field={col.field} />}
+												</span>
+											</th>
+										))}
+										<th style={{ width: 72 }} />
+									</tr>
+								</thead>
+								<tbody>
+									{sortedExpenses.map((exp) => (
+										<tr
+											key={exp.id}
+											style={{
+												borderBottom: "1px solid var(--s3)",
+												transition: "background 0.1s",
+											}}
+											onMouseEnter={(e) =>
+												(e.currentTarget.style.background = "var(--s2)")
+											}
+											onMouseLeave={(e) =>
+												(e.currentTarget.style.background = "transparent")
+											}
+										>
+											{/* Category */}
+											<td style={{ padding: "14px 16px" }}>
+												<div className="flex items-center gap-2.5">
+													<div
+														style={{
+															width: 26,
+															height: 26,
+															borderRadius: 7,
+															background: `${catColor(exp.categoryId)}18`,
+															border: `1px solid ${catColor(exp.categoryId)}30`,
+															display: "flex",
+															alignItems: "center",
+															justifyContent: "center",
+															flexShrink: 0,
+														}}
+													>
+														<CategoryIcon
+															iconName={catIcon(exp.categoryId)}
+															size={11}
+															style={{
+																color: catColor(exp.categoryId),
+															}}
+														/>
+													</div>
+													<span
+														className="font-body text-ink-secondary"
+														style={{ fontSize: 12 }}
+													>
+														{catName(exp.categoryId)}
+													</span>
+												</div>
+											</td>
+											{/* Description */}
+											<td style={{ padding: "14px 16px" }}>
+												<span
+													className="font-body text-ink-primary"
+													style={{ fontSize: 13 }}
+												>
+													{exp.description}
+												</span>
+												{exp.notes && (
+													<div
+														className="font-body text-ink-disabled mt-0.5"
+														style={{ fontSize: 10 }}
+													>
+														{exp.notes}
+													</div>
+												)}
+											</td>
+											{/* Supplier */}
+											<td style={{ padding: "14px 16px" }}>
+												<span
+													className="font-body text-ink-disabled"
+													style={{ fontSize: 12 }}
+												>
+													{exp.supplier?.name ?? "--"}
+												</span>
+											</td>
+											{/* Date */}
+											<td style={{ padding: "14px 16px" }}>
+												<span
+													className="font-body text-ink-secondary"
+													style={{
+														fontSize: 12,
+														fontFamily: "monospace",
+													}}
+												>
+													{formatDate(exp.date)}
+												</span>
+											</td>
+											{/* Amount */}
+											<td
+												style={{
+													padding: "14px 16px",
+													textAlign: "right",
+												}}
+											>
+												<span
+													className="font-kds"
+													style={{ fontSize: 20, color: "#e5e5e5" }}
+												>
+													{formatCurrency(exp.amount)}
+												</span>
+											</td>
+											{/* Payment method badge */}
+											<td
+												style={{
+													padding: "14px 16px",
+													textAlign: "center",
+												}}
+											>
+												<span
+													className="badge"
+													style={{
+														fontSize: 10,
+														padding: "4px 12px",
+														borderRadius: 8,
+														background: `${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}15`,
+														color: PAYMENT_COLORS[exp.paymentMethod] ?? "#888",
+														border: `1px solid ${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}30`,
+														fontWeight: 600,
+													}}
+												>
+													{exp.paymentMethod}
+												</span>
+											</td>
+											{/* Actions */}
+											<td style={{ padding: "14px 8px" }}>
+												<div className="flex items-center gap-1">
+													<button
+														className="btn-ghost"
+														style={{ padding: 6, borderRadius: 8 }}
+														onClick={() => {
+															setEditingExpense(exp);
+															setShowNewModal(true);
+														}}
+													>
+														<Pencil size={12} style={{ color: "#888" }} />
+													</button>
+													<button
+														className="btn-ghost"
+														style={{ padding: 6, borderRadius: 8 }}
+														onClick={() => handleDelete(exp.id)}
+													>
+														<Trash2 size={12} style={{ color: "#ef4444" }} />
+													</button>
+												</div>
+											</td>
+										</tr>
+									))}
+								</tbody>
+								{/* Footer total */}
+								<tfoot>
+									<tr style={{ borderTop: "2px solid var(--s4)" }}>
+										<td
+											colSpan={4}
+											className="font-display text-ink-primary"
+											style={{
+												padding: "16px 16px",
+												fontSize: 12,
+												fontWeight: 700,
+											}}
+										>
+											Total
+										</td>
+										<td
+											style={{
+												padding: "16px 16px",
+												textAlign: "right",
+											}}
+										>
+											<span
+												className="font-kds"
+												style={{
+													fontSize: 24,
+													color: "#f59e0b",
+												}}
+											>
+												{formatCurrency(totalMes)}
+											</span>
+										</td>
+										<td colSpan={2} />
+									</tr>
+								</tfoot>
+							</table>
 						</div>
 
-						{sortedExpenses.length === 0 ? (
+						{/* Mobile card list */}
+						<div className="md:hidden" style={{ padding: "8px" }}>
 							<div
-								className="flex items-center justify-center"
-								style={{ padding: "40px 20px" }}
+								style={{
+									display: "flex",
+									flexDirection: "column",
+									gap: 6,
+								}}
 							>
-								<span
-									className="font-body text-ink-disabled"
-									style={{ fontSize: 13 }}
-								>
-									No hay gastos registrados en este período.
-								</span>
-							</div>
-						) : (
-							<div style={{ overflowX: "auto" }}>
-								<table style={{ width: "100%", borderCollapse: "collapse" }}>
-									<thead>
-										<tr style={{ borderBottom: "1px solid var(--s3)" }}>
-											<th
-												className="font-display text-ink-disabled uppercase"
+								{sortedExpenses.map((exp) => {
+									const color = catColor(exp.categoryId);
+									return (
+										<div
+											key={exp.id}
+											style={{
+												padding: "14px 16px",
+												borderRadius: 12,
+												background: "var(--s2)",
+												border: "1px solid var(--s3)",
+												position: "relative",
+												overflow: "hidden",
+											}}
+										>
+											{/* Left accent line */}
+											<div
 												style={{
-													fontSize: 9,
-													letterSpacing: "0.25em",
-													padding: "12px 16px",
-													textAlign: "left",
-													fontWeight: 600,
+													position: "absolute",
+													top: 0,
+													left: 0,
+													bottom: 0,
+													width: 3,
+													background: color,
+													borderRadius: "3px 0 0 3px",
+													opacity: 0.5,
 												}}
-											>
-												Categoría
-											</th>
-											<th
-												className="font-display text-ink-disabled uppercase"
-												style={{
-													fontSize: 9,
-													letterSpacing: "0.25em",
-													padding: "12px 16px",
-													textAlign: "left",
-													fontWeight: 600,
-												}}
-											>
-												Descripción
-											</th>
-											<th
-												className="font-display text-ink-disabled uppercase"
-												style={{
-													fontSize: 9,
-													letterSpacing: "0.25em",
-													padding: "12px 16px",
-													textAlign: "left",
-													fontWeight: 600,
-												}}
-											>
-												Proveedor
-											</th>
-											<th
-												className="font-display text-ink-disabled uppercase"
-												style={{
-													fontSize: 9,
-													letterSpacing: "0.25em",
-													padding: "12px 16px",
-													textAlign: "left",
-													fontWeight: 600,
-													cursor: "pointer",
-												}}
-												onClick={() => toggleSort("date")}
-											>
-												<span className="flex items-center gap-1">
-													Fecha <SortIcon field="date" />
-												</span>
-											</th>
-											<th
-												className="font-display text-ink-disabled uppercase"
-												style={{
-													fontSize: 9,
-													letterSpacing: "0.25em",
-													padding: "12px 16px",
-													textAlign: "right",
-													fontWeight: 600,
-													cursor: "pointer",
-												}}
-												onClick={() => toggleSort("amount")}
-											>
-												<span className="flex items-center justify-end gap-1">
-													Monto <SortIcon field="amount" />
-												</span>
-											</th>
-											<th
-												className="font-display text-ink-disabled uppercase"
-												style={{
-													fontSize: 9,
-													letterSpacing: "0.25em",
-													padding: "12px 16px",
-													textAlign: "center",
-													fontWeight: 600,
-												}}
-											>
-												Pago
-											</th>
-											<th style={{ width: 72 }} />
-										</tr>
-									</thead>
-									<tbody>
-										{sortedExpenses.map((exp) => (
-											<tr
-												key={exp.id}
-												style={{ borderBottom: "1px solid var(--s3)" }}
-											>
-												{/* Category */}
-												<td style={{ padding: "12px 16px" }}>
-													<div className="flex items-center gap-2">
-														<div
-															style={{
-																width: 24,
-																height: 24,
-																borderRadius: 6,
-																background: "var(--s3)",
-																display: "flex",
-																alignItems: "center",
-																justifyContent: "center",
-																flexShrink: 0,
-															}}
-														>
-															<CategoryIcon
-																iconName={catIcon(exp.categoryId)}
-																size={11}
-																style={{ color: "#888" }}
-															/>
-														</div>
+											/>
+											<div className="flex items-start justify-between gap-3">
+												<div style={{ flex: 1, minWidth: 0 }}>
+													<div className="flex items-center gap-2 mb-1">
+														<CategoryIcon
+															iconName={catIcon(exp.categoryId)}
+															size={12}
+															style={{ color, flexShrink: 0 }}
+														/>
 														<span
-															className="font-body text-ink-secondary"
-															style={{ fontSize: 12 }}
+															className="font-body text-ink-disabled"
+															style={{ fontSize: 10 }}
 														>
 															{catName(exp.categoryId)}
 														</span>
+														<span
+															className="badge"
+															style={{
+																fontSize: 9,
+																padding: "2px 8px",
+																borderRadius: 6,
+																background: `${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}15`,
+																color:
+																	PAYMENT_COLORS[exp.paymentMethod] ?? "#888",
+																border: `1px solid ${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}30`,
+															}}
+														>
+															{exp.paymentMethod}
+														</span>
 													</div>
-												</td>
-												{/* Description */}
-												<td style={{ padding: "12px 16px" }}>
-													<span
+													<div
 														className="font-body text-ink-primary"
-														style={{ fontSize: 13 }}
-													>
-														{exp.description}
-													</span>
-												</td>
-												{/* Supplier */}
-												<td style={{ padding: "12px 16px" }}>
-													<span
-														className="font-body text-ink-disabled"
-														style={{ fontSize: 12 }}
-													>
-														{exp.supplier?.name ?? "—"}
-													</span>
-												</td>
-												{/* Date */}
-												<td style={{ padding: "12px 16px" }}>
-													<span
-														className="font-body text-ink-secondary"
-														style={{ fontSize: 12, fontFamily: "monospace" }}
-													>
-														{formatDate(exp.date)}
-													</span>
-												</td>
-												{/* Amount */}
-												<td
-													style={{ padding: "12px 16px", textAlign: "right" }}
-												>
-													<span
-														className="font-kds"
-														style={{ fontSize: 20, color: "#e5e5e5" }}
-													>
-														{formatCurrency(exp.amount)}
-													</span>
-												</td>
-												{/* Payment method badge */}
-												<td
-													style={{ padding: "12px 16px", textAlign: "center" }}
-												>
-													<span
-														className="badge"
 														style={{
-															fontSize: 10,
-															padding: "3px 10px",
-															borderRadius: 6,
-															background: `${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}22`,
-															color:
-																PAYMENT_COLORS[exp.paymentMethod] ?? "#888",
-															border: `1px solid ${PAYMENT_COLORS[exp.paymentMethod] ?? "#555"}44`,
+															fontSize: 13,
+															fontWeight: 500,
 														}}
 													>
-														{exp.paymentMethod}
-													</span>
-												</td>
-												{/* Actions */}
-												<td style={{ padding: "12px 8px" }}>
-													<div className="flex items-center gap-1">
+														{exp.description}
+													</div>
+													<div
+														className="font-body text-ink-disabled mt-0.5"
+														style={{
+															fontSize: 11,
+															fontFamily: "monospace",
+														}}
+													>
+														{formatDate(exp.date)}
+														{exp.supplier?.name
+															? ` / ${exp.supplier.name}`
+															: ""}
+													</div>
+												</div>
+												<div
+													style={{
+														textAlign: "right",
+														flexShrink: 0,
+													}}
+												>
+													<div
+														className="font-kds"
+														style={{
+															fontSize: 20,
+															color: "#e5e5e5",
+															lineHeight: 1,
+														}}
+													>
+														{formatCurrency(exp.amount)}
+													</div>
+													<div
+														className="flex items-center gap-1 mt-2"
+														style={{ justifyContent: "flex-end" }}
+													>
 														<button
 															className="btn-ghost"
-															style={{ padding: 4 }}
+															style={{
+																padding: 4,
+																borderRadius: 6,
+															}}
 															onClick={() => {
 																setEditingExpense(exp);
 																setShowNewModal(true);
 															}}
 														>
-															<Pencil size={12} />
+															<Pencil size={11} style={{ color: "#888" }} />
 														</button>
 														<button
 															className="btn-ghost"
-															style={{ padding: 4, color: "#ef4444" }}
+															style={{
+																padding: 4,
+																borderRadius: 6,
+															}}
 															onClick={() => handleDelete(exp.id)}
 														>
-															<Trash2 size={12} />
+															<Trash2 size={11} style={{ color: "#ef4444" }} />
 														</button>
 													</div>
-												</td>
-											</tr>
-										))}
-									</tbody>
-									{/* Footer total */}
-									<tfoot>
-										<tr style={{ borderTop: "2px solid var(--s4)" }}>
-											<td
-												colSpan={4}
-												className="font-display text-ink-primary"
-												style={{
-													padding: "14px 16px",
-													fontSize: 12,
-													fontWeight: 700,
-												}}
-											>
-												Total
-											</td>
-											<td style={{ padding: "14px 16px", textAlign: "right" }}>
-												<span
-													className="font-kds"
-													style={{ fontSize: 22, color: "#f59e0b" }}
-												>
-													{formatCurrency(totalMes)}
-												</span>
-											</td>
-											<td colSpan={2} />
-										</tr>
-									</tfoot>
-								</table>
+												</div>
+											</div>
+										</div>
+									);
+								})}
 							</div>
-						)}
-					</div>
-				</>
-			)}
+							{/* Mobile total */}
+							<div
+								className="flex items-center justify-between"
+								style={{
+									padding: "16px 16px 8px",
+									borderTop: "2px solid var(--s4)",
+									marginTop: 8,
+								}}
+							>
+								<span
+									className="font-display text-ink-primary"
+									style={{ fontSize: 12, fontWeight: 700 }}
+								>
+									Total
+								</span>
+								<span
+									className="font-kds"
+									style={{ fontSize: 24, color: "#f59e0b" }}
+								>
+									{formatCurrency(totalMes)}
+								</span>
+							</div>
+						</div>
+					</>
+				)}
+			</div>
 
 			{/* ── Modals ──────────────────────────────────────────────────────── */}
 			<NuevoGastoModal
