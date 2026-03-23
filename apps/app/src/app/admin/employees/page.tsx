@@ -728,7 +728,7 @@ export default function EmployeesPage() {
 				name: editingStaff.name,
 				role: editingStaff.role,
 				avatar: editingStaff.avatar,
-				pin: editingStaff.pin ?? "0000",
+				pin: editingStaff.pin ?? "",
 			}
 		: EMPTY_FORM;
 

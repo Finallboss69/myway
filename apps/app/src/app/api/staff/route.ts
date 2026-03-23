@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 				name: body.name,
 				role: body.role,
 				avatar: body.avatar,
-				pin: body.pin ?? "0000",
+				pin: body.pin ?? String(Math.floor(1000 + Math.random() * 9000)),
 			},
 			omit: { pin: true },
 		});

@@ -38,7 +38,8 @@ interface Table {
 // --- QR URL helper ---
 
 function qrUrl(tableId: string, tableNumber: number): string {
-	return `https://myway-pi.vercel.app/customer/menu?tableId=${tableId}&table=${tableNumber}`;
+	const base = typeof window !== "undefined" ? window.location.origin : "";
+	return `${base}/customer/menu?tableId=${tableId}&table=${tableNumber}`;
 }
 
 // --- Download single QR as PNG ---

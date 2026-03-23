@@ -26,6 +26,7 @@ export type StaffRole =
 	| "kitchen"
 	| "cashier"
 	| "admin"
+	| "manager"
 	| "repartidor";
 
 export interface Zone {
