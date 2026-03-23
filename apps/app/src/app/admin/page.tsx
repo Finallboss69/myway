@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import Link from "next/link";
 import {
 	AlertTriangle,
@@ -276,6 +278,7 @@ export default function AdminDashboard() {
 							>
 								Vista general del sistema
 							</p>
+							<HelpButton {...helpContent.dashboard} />
 						</div>
 					</div>
 					<div

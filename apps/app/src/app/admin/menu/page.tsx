@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import useSWR, { mutate } from "swr";
 import {
 	UtensilsCrossed,
@@ -549,6 +551,7 @@ export default function MenuPage() {
 							<p style={{ ...dm(12, "#666"), margin: 0, marginTop: 2 }}>
 								Productos, recetas e ingredientes
 							</p>
+							<HelpButton {...helpContent.menu} />
 						</div>
 					</div>
 					<div

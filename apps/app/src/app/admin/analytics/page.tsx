@@ -1,6 +1,8 @@
 "use client";
 import { useState, useMemo, useCallback } from "react";
 import useSWR from "swr";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import {
 	DollarSign,
 	ShoppingBag,
@@ -533,6 +535,7 @@ export default function AnalyticsPage() {
 						>
 							Datos en tiempo real del sistema
 						</p>
+						<HelpButton {...helpContent.analytics} />
 					</div>
 				</div>
 				<div className="divider-gold no-print" style={{ marginBottom: 20 }} />

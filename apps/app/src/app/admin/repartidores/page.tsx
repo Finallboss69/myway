@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import { MapPin, Navigation, Radio } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { RepartidorPin } from "./AdminFleetMap";
@@ -117,6 +119,7 @@ export default function AdminRepartidoresPage() {
 							>
 								Pedidos en camino en tiempo real - actualiza cada 5s
 							</p>
+							<HelpButton {...helpContent.repartidores} />
 						</div>
 					</div>
 					<div className="flex items-center gap-3">

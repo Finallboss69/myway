@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import QRCodeSVG from "react-qr-code";
 import JSZip from "jszip";
 import {
@@ -496,6 +498,7 @@ export default function AdminTablesPage() {
 							>
 								Gestion de mesas y codigos QR para clientes
 							</p>
+							<HelpButton {...helpContent.tables} />
 						</div>
 					</div>
 

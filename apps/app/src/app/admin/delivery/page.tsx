@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import {
 	Truck,
 	Clock,
@@ -872,6 +874,7 @@ export default function DeliveryPage() {
 							>
 								{activeOrders.length} pedidos activos
 							</p>
+							<HelpButton {...helpContent.delivery} />
 						</div>
 					</div>
 					<button

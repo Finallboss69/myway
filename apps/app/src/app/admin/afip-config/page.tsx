@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import {
 	Settings,
 	Shield,
@@ -247,6 +249,7 @@ export default function AfipConfigPage() {
 							>
 								Facturacion electronica y reglas de facturacion automatica
 							</p>
+							<HelpButton {...helpContent.afipConfig} />
 						</div>
 					</div>
 					{config?.certPem === "***configured***" && (

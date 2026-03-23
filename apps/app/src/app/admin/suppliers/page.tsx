@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import useSWR from "swr";
 import {
 	Truck,
@@ -380,6 +382,7 @@ export default function SuppliersPage() {
 				>
 					Gestion integral de proveedores, ingredientes y costos
 				</p>
+				<HelpButton {...helpContent.suppliers} />
 			</div>
 			<div
 				style={{

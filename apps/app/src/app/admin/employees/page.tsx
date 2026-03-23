@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import {
 	UserPlus,
 	Eye,
@@ -767,6 +769,7 @@ export default function EmployeesPage() {
 							>
 								{staff.length} activos hoy
 							</p>
+							<HelpButton {...helpContent.employees} />
 						</div>
 					</div>
 					<button

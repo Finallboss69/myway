@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import {
 	FileText,
 	Plus,
@@ -254,6 +256,7 @@ export default function InvoicesPage() {
 						>
 							FACTURACIÓN
 						</h1>
+						<HelpButton {...helpContent.invoices} />
 						<button
 							className="btn-ghost flex items-center gap-1.5"
 							onClick={handlePrint}

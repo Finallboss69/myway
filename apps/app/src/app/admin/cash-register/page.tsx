@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import {
 	DollarSign,
 	TrendingUp,
@@ -1464,6 +1466,7 @@ export default function CashRegisterPage() {
 							>
 								Gestion de caja diaria
 							</p>
+							<HelpButton {...helpContent.cashRegister} />
 						</div>
 					</div>
 					<div className="flex items-center gap-3">

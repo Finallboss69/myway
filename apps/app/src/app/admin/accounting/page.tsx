@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import {
 	Clock,
 	Banknote,
@@ -526,6 +528,7 @@ export default function AccountingPage() {
 							>
 								Pedidos activos para cierre
 							</p>
+							<HelpButton {...helpContent.accounting} />
 						</div>
 					</div>
 				</div>

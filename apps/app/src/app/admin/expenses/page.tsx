@@ -1,6 +1,8 @@
 "use client";
 import { useState, useMemo, useCallback } from "react";
 import useSWR from "swr";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import {
 	Plus,
 	Pencil,
@@ -646,6 +648,7 @@ export default function ExpensesPage() {
 							>
 								Seguimiento completo de egresos
 							</p>
+							<HelpButton {...helpContent.expenses} />
 						</div>
 					</div>
 					{tab === "GASTOS" && (
