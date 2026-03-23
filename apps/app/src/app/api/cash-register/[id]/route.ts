@@ -52,7 +52,12 @@ export async function PATCH(
 			return NextResponse.json(updated);
 		}
 
-		const updated = await db.cashRegister.update({ where: { id }, data: body });
+		const allowed = ["closingBalance", "status", "closedAt"] as const;
+		const data: Record<string, unknown> = {};
+		for (const key of allowed) {
+			if (key in body) data[key] = body[key];
+		}
+		const updated = await db.cashRegister.update({ where: { id }, data });
 		return NextResponse.json(updated);
 	} catch (e) {
 		return NextResponse.json({ error: String(e) }, { status: 500 });

@@ -42,19 +42,6 @@ export async function POST(req: Request) {
 			);
 		}
 
-		// Get AFIP config for punto de venta
-		const config = await db.afipConfig.findUnique({
-			where: { id: "singleton" },
-		});
-		const puntoVenta = config?.puntoVenta ?? 1;
-
-		// Calculate next invoice number
-		const lastInvoice = await db.invoice.findFirst({
-			where: { type, puntoVenta },
-			orderBy: { number: "desc" },
-		});
-		const nextNumber = (lastInvoice?.number ?? 0) + 1;
-
 		// Calculate totals
 		let subtotal = 0;
 		let iva21 = 0;
@@ -66,38 +53,55 @@ export async function POST(req: Request) {
 		}
 		const total = subtotal + iva21 + iva105;
 
-		const invoice = await db.invoice.create({
-			data: {
-				number: nextNumber,
-				type,
-				puntoVenta,
-				customerCuit: customerCuit || null,
-				customerName: customerName || null,
-				subtotal,
-				iva21,
-				iva105,
-				total,
-				status: "draft",
-				items: {
-					create: items.map(
-						(it: {
-							description: string;
-							quantity: number;
-							unitPrice: number;
-							ivaRate?: number;
-							subtotal: number;
-						}) => ({
-							description: it.description,
-							quantity: it.quantity,
-							unitPrice: it.unitPrice,
-							ivaRate: it.ivaRate ?? 21,
-							subtotal: it.subtotal,
-						}),
-					),
+		// Use transaction to prevent duplicate invoice numbers
+		const invoice = await db.$transaction(async (tx) => {
+			// Get AFIP config for punto de venta
+			const config = await tx.afipConfig.findUnique({
+				where: { id: "singleton" },
+			});
+			const puntoVenta = config?.puntoVenta ?? 1;
+
+			// Calculate next invoice number atomically within transaction
+			const lastInvoice = await tx.invoice.findFirst({
+				where: { type, puntoVenta },
+				orderBy: { number: "desc" },
+			});
+			const nextNumber = (lastInvoice?.number ?? 0) + 1;
+
+			return tx.invoice.create({
+				data: {
+					number: nextNumber,
+					type,
+					puntoVenta,
+					customerCuit: customerCuit || null,
+					customerName: customerName || null,
+					subtotal,
+					iva21,
+					iva105,
+					total,
+					status: "draft",
+					items: {
+						create: items.map(
+							(it: {
+								description: string;
+								quantity: number;
+								unitPrice: number;
+								ivaRate?: number;
+								subtotal: number;
+							}) => ({
+								description: it.description,
+								quantity: it.quantity,
+								unitPrice: it.unitPrice,
+								ivaRate: it.ivaRate ?? 21,
+								subtotal: it.subtotal,
+							}),
+						),
+					},
 				},
-			},
-			include: { items: true },
+				include: { items: true },
+			});
 		});
+
 		return NextResponse.json(invoice, { status: 201 });
 	} catch (e) {
 		return NextResponse.json({ error: String(e) }, { status: 500 });

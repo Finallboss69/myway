@@ -3,7 +3,9 @@ import { db } from "@/lib/db";
 
 export async function GET() {
 	try {
-		const staff = await db.staff.findMany();
+		const staff = await db.staff.findMany({
+			omit: { pin: true },
+		});
 		return NextResponse.json(staff);
 	} catch (error) {
 		console.error("[staff GET]", error);
@@ -20,9 +22,16 @@ export async function POST(request: NextRequest) {
 			name: string;
 			role: string;
 			avatar: string;
+			pin?: string;
 		};
 		const member = await db.staff.create({
-			data: { name: body.name, role: body.role, avatar: body.avatar },
+			data: {
+				name: body.name,
+				role: body.role,
+				avatar: body.avatar,
+				pin: body.pin ?? "0000",
+			},
+			omit: { pin: true },
 		});
 		return NextResponse.json(member, { status: 201 });
 	} catch (error) {

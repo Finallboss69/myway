@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -14,6 +14,10 @@ import {
 	ShoppingCart,
 	Loader2,
 	UtensilsCrossed,
+	Search,
+	X,
+	StickyNote,
+	MessageSquare,
 } from "lucide-react";
 import clsx from "clsx";
 import { formatCurrency } from "@/lib/utils";
@@ -56,6 +60,7 @@ interface CartItem {
 	qty: number;
 	price: number;
 	target: string;
+	notes?: string;
 }
 
 interface TableInfo {
@@ -117,13 +122,21 @@ function PedidoTab({
 	tableId,
 	orders,
 	onOptimisticUpdate,
+	onOptimisticCancel,
 }: {
 	tableId: string;
 	orders: Order[];
 	onOptimisticUpdate: (orderId: string, itemId: string) => void;
+	onOptimisticCancel: (orderId: string, itemId: string) => void;
 }) {
 	const router = useRouter();
 	const [delivering, setDelivering] = useState<Set<string>>(new Set());
+	const [cancelling, setCancelling] = useState<Set<string>>(new Set());
+	const [confirmCancel, setConfirmCancel] = useState<{
+		orderId: string;
+		itemId: string;
+		name: string;
+	} | null>(null);
 
 	const activeOrders = orders.filter(
 		(o) => o.status !== "closed" && o.status !== "cancelled",
@@ -132,7 +145,11 @@ function PedidoTab({
 	const total = useMemo(
 		() =>
 			activeOrders.reduce(
-				(sum, o) => sum + o.items.reduce((s, i) => s + i.qty * i.price, 0),
+				(sum, o) =>
+					sum +
+					o.items
+						.filter((i) => i.status !== "cancelled")
+						.reduce((s, i) => s + i.qty * i.price, 0),
 				0,
 			),
 		[activeOrders],
@@ -154,6 +171,26 @@ function PedidoTab({
 				next.delete(key);
 				return next;
 			});
+		}
+	}
+
+	async function handleCancel(orderId: string, itemId: string) {
+		const key = `${orderId}-${itemId}`;
+		setCancelling((prev) => new Set(prev).add(key));
+		onOptimisticCancel(orderId, itemId);
+		try {
+			await fetch(`/api/orders/${orderId}/items/${itemId}`, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ status: "cancelled" }),
+			});
+		} finally {
+			setCancelling((prev) => {
+				const next = new Set(prev);
+				next.delete(key);
+				return next;
+			});
+			setConfirmCancel(null);
 		}
 	}
 
@@ -190,55 +227,113 @@ function PedidoTab({
 					</div>
 
 					<div className="divide-y divide-surface-3">
-						{order.items
-							.filter((i) => i.status !== "cancelled")
-							.map((item) => {
-								const key = `${order.id}-${item.id}`;
-								const isDelivering = delivering.has(key);
-								return (
-									<div
-										key={item.id}
+						{order.items.map((item) => {
+							const key = `${order.id}-${item.id}`;
+							const isDelivering = delivering.has(key);
+							const isCancelling = cancelling.has(key);
+							const isCancelled = item.status === "cancelled";
+							const canCancel =
+								item.status === "pending" || item.status === "preparing";
+
+							return (
+								<div
+									key={item.id}
+									className={clsx(
+										"flex items-center gap-3 px-4 py-3 transition-opacity",
+										item.status === "delivered" && "opacity-40",
+										isCancelled && "opacity-30",
+										item.status === "ready" && "bg-emerald-500/5",
+									)}
+								>
+									<span
 										className={clsx(
-											"flex items-center gap-3 px-4 py-3 transition-opacity",
-											item.status === "delivered" && "opacity-40",
-											item.status === "ready" && "bg-emerald-500/5",
+											"font-kds text-3xl leading-none w-8 text-center shrink-0",
+											isCancelled ? "text-ink-disabled" : "text-brand-500",
 										)}
 									>
-										<span className="font-kds text-3xl leading-none text-brand-500 w-8 text-center shrink-0">
-											{item.qty}
-										</span>
-										<div className="flex-1 min-w-0">
-											<p className="font-display text-sm font-semibold text-ink-primary truncate">
-												{item.name}
-											</p>
-											<div className="flex items-center gap-2 mt-1">
-												<ItemStatusChip status={item.status} />
-												<span className="font-display text-[10px] text-ink-tertiary">
-													{formatCurrency(item.qty * item.price)}
-												</span>
-											</div>
-										</div>
-
-										{item.status === "ready" && (
-											<button
-												onClick={() => handleDeliver(order.id, item.id)}
-												disabled={isDelivering}
-												className="shrink-0 btn-green text-[11px] px-3 rounded-xl min-h-[44px]"
-												style={{ boxShadow: "0 0 12px rgba(16,185,129,0.25)" }}
+										{item.qty}
+									</span>
+									<div className="flex-1 min-w-0">
+										<p
+											className={clsx(
+												"font-display text-sm font-semibold truncate",
+												isCancelled
+													? "text-ink-disabled line-through"
+													: "text-ink-primary",
+											)}
+										>
+											{item.name}
+										</p>
+										{item.notes && (
+											<p
+												className="font-display text-[11px] text-amber-400/80 mt-0.5 flex items-center gap-1"
+												style={{
+													fontStyle: "italic",
+												}}
 											>
-												{isDelivering ? (
-													<Loader2 className="w-3 h-3 animate-spin" />
-												) : (
-													<>
-														<UtensilsCrossed className="w-3 h-3" />
-														Entregar
-													</>
-												)}
-											</button>
+												<MessageSquare
+													className="w-2.5 h-2.5 shrink-0"
+													style={{ opacity: 0.7 }}
+												/>
+												<span className="truncate">{item.notes}</span>
+											</p>
 										)}
+										<div className="flex items-center gap-2 mt-1">
+											<ItemStatusChip status={item.status} />
+											<span className="font-display text-[10px] text-ink-tertiary">
+												{formatCurrency(item.qty * item.price)}
+											</span>
+										</div>
 									</div>
-								);
-							})}
+
+									{/* Cancel button for pending/preparing items */}
+									{canCancel && (
+										<button
+											onClick={() =>
+												setConfirmCancel({
+													orderId: order.id,
+													itemId: item.id,
+													name: item.name,
+												})
+											}
+											disabled={isCancelling}
+											className="shrink-0 rounded-xl flex items-center justify-center transition-all active:scale-90"
+											style={{
+												width: 36,
+												height: 36,
+												background: "rgba(239,68,68,0.12)",
+												border: "1px solid rgba(239,68,68,0.3)",
+											}}
+											aria-label={`Cancelar ${item.name}`}
+										>
+											{isCancelling ? (
+												<Loader2 className="w-3.5 h-3.5 text-red-400 animate-spin" />
+											) : (
+												<X className="w-3.5 h-3.5 text-red-400" />
+											)}
+										</button>
+									)}
+
+									{item.status === "ready" && (
+										<button
+											onClick={() => handleDeliver(order.id, item.id)}
+											disabled={isDelivering}
+											className="shrink-0 btn-green text-[11px] px-3 rounded-xl min-h-[44px]"
+											style={{ boxShadow: "0 0 12px rgba(16,185,129,0.25)" }}
+										>
+											{isDelivering ? (
+												<Loader2 className="w-3 h-3 animate-spin" />
+											) : (
+												<>
+													<UtensilsCrossed className="w-3 h-3" />
+													Entregar
+												</>
+											)}
+										</button>
+									)}
+								</div>
+							);
+						})}
 					</div>
 				</div>
 			))}
@@ -264,6 +359,70 @@ function PedidoTab({
 					Solicitar cuenta
 				</button>
 			</div>
+
+			{/* Cancel confirmation modal */}
+			{confirmCancel && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-0/80 backdrop-blur-md animate-fade-in">
+					<div
+						className="mx-6 w-full max-w-sm rounded-2xl p-6 flex flex-col gap-4"
+						style={{
+							background: "var(--s1)",
+							border: "1px solid rgba(239,68,68,0.3)",
+							boxShadow:
+								"0 0 32px rgba(239,68,68,0.15), 0 4px 24px rgba(0,0,0,0.5)",
+						}}
+					>
+						<div className="flex flex-col items-center gap-3">
+							<div
+								className="w-14 h-14 rounded-2xl flex items-center justify-center"
+								style={{
+									background: "rgba(239,68,68,0.12)",
+									border: "1px solid rgba(239,68,68,0.3)",
+								}}
+							>
+								<X className="w-7 h-7 text-red-400" />
+							</div>
+							<p className="font-display text-sm text-ink-primary text-center font-semibold">
+								{"¿Cancelar "}
+								<span className="text-red-400">{confirmCancel.name}</span>
+								{"?"}
+							</p>
+							<p className="font-display text-xs text-ink-tertiary text-center">
+								Esta acción no se puede deshacer
+							</p>
+						</div>
+						<div className="flex gap-3">
+							<button
+								onClick={() => setConfirmCancel(null)}
+								className="flex-1 rounded-xl font-display font-bold text-sm uppercase tracking-wider transition-all active:scale-95"
+								style={{
+									minHeight: 48,
+									background: "var(--s3)",
+									color: "#a3a3a3",
+									border: "1px solid var(--s4)",
+								}}
+							>
+								Volver
+							</button>
+							<button
+								onClick={() =>
+									handleCancel(confirmCancel.orderId, confirmCancel.itemId)
+								}
+								className="flex-1 rounded-xl font-display font-bold text-sm uppercase tracking-wider transition-all active:scale-95"
+								style={{
+									minHeight: 48,
+									background: "rgba(239,68,68,0.2)",
+									color: "#f87171",
+									border: "1px solid rgba(239,68,68,0.4)",
+									boxShadow: "0 0 12px rgba(239,68,68,0.2)",
+								}}
+							>
+								Cancelar
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 }
@@ -282,6 +441,10 @@ function AgregarTab({
 	const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 	const [cart, setCart] = useState<Map<string, CartItem>>(new Map());
 	const [sending, setSending] = useState(false);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [noteEditingId, setNoteEditingId] = useState<string | null>(null);
+	const [noteText, setNoteText] = useState("");
+	const searchInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		fetch("/api/products?available=true")
@@ -306,10 +469,16 @@ function AgregarTab({
 		return Array.from(seen.values());
 	}, [products]);
 
+	const isSearching = searchQuery.trim().length > 0;
+
 	const filteredProducts = useMemo(() => {
+		if (isSearching) {
+			const query = searchQuery.toLowerCase().trim();
+			return products.filter((p) => p.name.toLowerCase().includes(query));
+		}
 		if (!activeCategoryId) return products;
 		return products.filter((p) => p.category.id === activeCategoryId);
-	}, [products, activeCategoryId]);
+	}, [products, activeCategoryId, searchQuery, isSearching]);
 
 	function addToCart(product: Product) {
 		setCart((prev) => {
@@ -344,6 +513,31 @@ function AgregarTab({
 		});
 	}
 
+	function openNoteEditor(productId: string) {
+		const existing = cart.get(productId);
+		setNoteText(existing?.notes ?? "");
+		setNoteEditingId(productId);
+	}
+
+	function saveNote() {
+		if (noteEditingId) {
+			setCart((prev) => {
+				const next = new Map(prev);
+				const existing = next.get(noteEditingId);
+				if (existing) {
+					const trimmed = noteText.trim();
+					next.set(noteEditingId, {
+						...existing,
+						notes: trimmed.length > 0 ? trimmed : undefined,
+					});
+				}
+				return next;
+			});
+			setNoteEditingId(null);
+			setNoteText("");
+		}
+	}
+
 	const cartTotal = useMemo(
 		() => Array.from(cart.values()).reduce((s, i) => s + i.qty * i.price, 0),
 		[cart],
@@ -368,6 +562,7 @@ function AgregarTab({
 			qty: i.qty,
 			price: i.price,
 			target: i.target,
+			...(i.notes ? { notes: i.notes } : {}),
 		}));
 
 		try {
@@ -390,7 +585,7 @@ function AgregarTab({
 			<div className="flex flex-col items-center gap-3 pt-16">
 				<div className="w-8 h-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
 				<p className="font-display text-xs text-ink-disabled uppercase tracking-widest">
-					Cargando menú...
+					Cargando menu...
 				</p>
 			</div>
 		);
@@ -398,118 +593,233 @@ function AgregarTab({
 
 	return (
 		<div className="flex flex-col">
-			{/* Category grid */}
-			<div className="p-3 pb-2" style={{ borderBottom: "1px solid var(--s3)" }}>
+			{/* Sticky search bar */}
+			<div
+				className="sticky top-0 z-30 px-3 pt-3 pb-2"
+				style={{
+					background: "rgba(10,10,10,0.95)",
+					backdropFilter: "blur(16px)",
+				}}
+			>
 				<div
-					className="grid gap-2"
-					style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+					className="flex items-center gap-2 rounded-xl px-3"
+					style={{
+						background: "var(--s2)",
+						border: "1px solid var(--s4)",
+						minHeight: 44,
+					}}
 				>
-					{categories.map((cat) => (
+					<Search className="w-4 h-4 text-ink-tertiary shrink-0" />
+					<input
+						ref={searchInputRef}
+						type="text"
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+						placeholder="Buscar producto..."
+						className="flex-1 bg-transparent border-none outline-none font-display text-sm text-ink-primary placeholder:text-ink-disabled"
+						style={{ minHeight: 40 }}
+					/>
+					{searchQuery.length > 0 && (
 						<button
-							key={cat.id}
-							onClick={() => setActiveCategoryId(cat.id)}
-							className="rounded-2xl font-kds tracking-wider transition-all active:scale-95 text-center"
-							style={{
-								minHeight: 58,
-								fontSize: 13,
-								letterSpacing: "0.05em",
-								background:
-									activeCategoryId === cat.id ? "var(--gold)" : "var(--s2)",
-								color: activeCategoryId === cat.id ? "#080808" : "#a3a3a3",
-								border:
-									activeCategoryId === cat.id
-										? "1px solid rgba(245,158,11,0.7)"
-										: "1px solid var(--s4)",
-								boxShadow:
-									activeCategoryId === cat.id
-										? "0 0 20px rgba(245,158,11,0.3)"
-										: "none",
-								padding: "8px 6px",
-								wordBreak: "break-word",
-								lineHeight: 1.2,
+							onClick={() => {
+								setSearchQuery("");
+								searchInputRef.current?.focus();
 							}}
+							className="shrink-0 p-1 rounded-lg transition-all active:scale-90"
+							style={{ background: "var(--s3)" }}
 						>
-							{cat.name.toUpperCase()}
+							<X className="w-3.5 h-3.5 text-ink-tertiary" />
 						</button>
-					))}
+					)}
 				</div>
 			</div>
 
+			{/* Category grid — hidden when searching */}
+			{!isSearching && (
+				<div
+					className="p-3 pb-2"
+					style={{ borderBottom: "1px solid var(--s3)" }}
+				>
+					<div
+						className="grid gap-2"
+						style={{ gridTemplateColumns: "repeat(3, 1fr)" }}
+					>
+						{categories.map((cat) => (
+							<button
+								key={cat.id}
+								onClick={() => setActiveCategoryId(cat.id)}
+								className="rounded-2xl font-kds tracking-wider transition-all active:scale-95 text-center"
+								style={{
+									minHeight: 58,
+									fontSize: 13,
+									letterSpacing: "0.05em",
+									background:
+										activeCategoryId === cat.id ? "var(--gold)" : "var(--s2)",
+									color: activeCategoryId === cat.id ? "#080808" : "#a3a3a3",
+									border:
+										activeCategoryId === cat.id
+											? "1px solid rgba(245,158,11,0.7)"
+											: "1px solid var(--s4)",
+									boxShadow:
+										activeCategoryId === cat.id
+											? "0 0 20px rgba(245,158,11,0.3)"
+											: "none",
+									padding: "8px 6px",
+									wordBreak: "break-word",
+									lineHeight: 1.2,
+								}}
+							>
+								{cat.name.toUpperCase()}
+							</button>
+						))}
+					</div>
+				</div>
+			)}
+
+			{/* Search results header */}
+			{isSearching && (
+				<div
+					className="px-3 py-2 font-display text-[10px] text-ink-tertiary uppercase tracking-widest"
+					style={{ borderBottom: "1px solid var(--s3)" }}
+				>
+					{filteredProducts.length} resultado
+					{filteredProducts.length !== 1 ? "s" : ""} para &ldquo;{searchQuery}
+					&rdquo;
+				</div>
+			)}
+
 			{/* Product list */}
 			<div className="p-3 flex flex-col gap-2 pb-4">
+				{filteredProducts.length === 0 && isSearching && (
+					<div className="flex flex-col items-center gap-3 pt-8 pb-4">
+						<Search className="w-8 h-8 text-ink-disabled" />
+						<p className="font-display text-sm text-ink-tertiary text-center">
+							No se encontraron productos
+						</p>
+					</div>
+				)}
 				{filteredProducts.map((product) => {
 					const inCart = cart.get(product.id);
 					return (
 						<div
 							key={product.id}
 							className={clsx(
-								"flex items-center gap-3 rounded-2xl border transition-all",
+								"flex flex-col rounded-2xl border transition-all",
 								inCart
 									? "border-brand-500/50 bg-brand-500/10"
 									: "border-surface-3 bg-surface-1",
 								product.isPoolChip && "pool-chip-border",
 							)}
-							style={{ padding: "14px 16px", minHeight: 84 }}
 						>
-							<div className="flex-1 min-w-0">
-								<p
-									className={clsx(
-										"font-display font-bold leading-tight",
-										product.isPoolChip ? "pool-chip-badge" : "text-ink-primary",
+							<div
+								className="flex items-center gap-3"
+								style={{ padding: "14px 16px", minHeight: 84 }}
+							>
+								<div className="flex-1 min-w-0">
+									<p
+										className={clsx(
+											"font-display font-bold leading-tight",
+											product.isPoolChip
+												? "pool-chip-badge"
+												: "text-ink-primary",
+										)}
+										style={{ fontSize: 15 }}
+									>
+										{product.name}
+									</p>
+									<p
+										className="font-kds text-brand-500 mt-1 leading-none"
+										style={{ fontSize: 22 }}
+									>
+										{formatCurrency(product.price)}
+									</p>
+									{isSearching && (
+										<p className="font-display text-[10px] text-ink-disabled mt-1 uppercase tracking-wider">
+											{product.category.name}
+										</p>
 									)}
-									style={{ fontSize: 15 }}
-								>
-									{product.name}
-								</p>
-								<p
-									className="font-kds text-brand-500 mt-1 leading-none"
-									style={{ fontSize: 22 }}
-								>
-									{formatCurrency(product.price)}
-								</p>
-							</div>
+								</div>
 
-							{inCart ? (
-								<div className="flex items-center gap-2 shrink-0">
-									<button
-										onClick={() => removeFromCart(product.id)}
-										className="rounded-2xl bg-surface-3 border border-surface-4 flex items-center justify-center text-ink-secondary hover:bg-surface-4 transition-all active:scale-90"
-										style={{ width: 48, height: 48 }}
-									>
-										<Minus className="w-5 h-5" />
-									</button>
-									<span
-										className="font-kds text-brand-500 text-center leading-none"
-										style={{ width: 36, fontSize: 32 }}
-									>
-										{inCart.qty}
-									</span>
+								{inCart ? (
+									<div className="flex items-center gap-2 shrink-0">
+										<button
+											onClick={() => removeFromCart(product.id)}
+											className="rounded-2xl bg-surface-3 border border-surface-4 flex items-center justify-center text-ink-secondary hover:bg-surface-4 transition-all active:scale-90"
+											style={{ width: 48, height: 48 }}
+										>
+											<Minus className="w-5 h-5" />
+										</button>
+										<span
+											className="font-kds text-brand-500 text-center leading-none"
+											style={{ width: 36, fontSize: 32 }}
+										>
+											{inCart.qty}
+										</span>
+										<button
+											onClick={() => addToCart(product)}
+											className="rounded-2xl flex items-center justify-center text-surface-0 transition-all active:scale-90"
+											style={{
+												width: 48,
+												height: 48,
+												background: "var(--gold)",
+												boxShadow: "0 0 12px rgba(245,158,11,0.3)",
+											}}
+										>
+											<Plus className="w-5 h-5" />
+										</button>
+									</div>
+								) : (
 									<button
 										onClick={() => addToCart(product)}
-										className="rounded-2xl flex items-center justify-center text-surface-0 transition-all active:scale-90"
+										className="shrink-0 rounded-2xl flex items-center justify-center transition-all active:scale-90"
 										style={{
 											width: 48,
 											height: 48,
-											background: "var(--gold)",
-											boxShadow: "0 0 12px rgba(245,158,11,0.3)",
+											background: "var(--s3)",
+											border: "1px solid var(--s4)",
 										}}
 									>
-										<Plus className="w-5 h-5" />
+										<Plus className="w-5 h-5 text-ink-secondary" />
 									</button>
-								</div>
-							) : (
-								<button
-									onClick={() => addToCart(product)}
-									className="shrink-0 rounded-2xl flex items-center justify-center transition-all active:scale-90"
-									style={{
-										width: 48,
-										height: 48,
-										background: "var(--s3)",
-										border: "1px solid var(--s4)",
-									}}
+								)}
+							</div>
+
+							{/* Note section — only visible when item is in cart */}
+							{inCart && (
+								<div
+									className="flex items-center gap-2 px-4 pb-3"
+									style={{ marginTop: -4 }}
 								>
-									<Plus className="w-5 h-5 text-ink-secondary" />
-								</button>
+									{inCart.notes ? (
+										<button
+											onClick={() => openNoteEditor(product.id)}
+											className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all active:scale-95"
+											style={{
+												background: "rgba(245,158,11,0.1)",
+												border: "1px solid rgba(245,158,11,0.25)",
+											}}
+										>
+											<MessageSquare className="w-3 h-3 text-amber-400" />
+											<span className="font-display text-[11px] text-amber-400 truncate max-w-[200px]">
+												{inCart.notes}
+											</span>
+										</button>
+									) : (
+										<button
+											onClick={() => openNoteEditor(product.id)}
+											className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all active:scale-95"
+											style={{
+												background: "var(--s2)",
+												border: "1px solid var(--s3)",
+											}}
+										>
+											<StickyNote className="w-3 h-3 text-ink-disabled" />
+											<span className="font-display text-[11px] text-ink-disabled">
+												Agregar nota
+											</span>
+										</button>
+									)}
+								</div>
 							)}
 						</div>
 					);
@@ -556,6 +866,83 @@ function AgregarTab({
 								</>
 							)}
 						</button>
+					</div>
+				</div>
+			)}
+
+			{/* Note editing modal */}
+			{noteEditingId && (
+				<div className="fixed inset-0 z-50 flex items-end justify-center bg-surface-0/70 backdrop-blur-sm animate-fade-in">
+					<div
+						className="w-full max-w-lg mx-3 mb-3 rounded-2xl p-4 flex flex-col gap-3 animate-slide-up"
+						style={{
+							background: "var(--s1)",
+							border: "1px solid var(--s3)",
+							boxShadow: "0 -4px 32px rgba(0,0,0,0.5)",
+						}}
+					>
+						<div className="flex items-center justify-between">
+							<p className="font-display text-sm font-semibold text-ink-primary flex items-center gap-2">
+								<StickyNote className="w-4 h-4 text-amber-400" />
+								Nota para {cart.get(noteEditingId)?.name ?? "item"}
+							</p>
+							<button
+								onClick={() => {
+									setNoteEditingId(null);
+									setNoteText("");
+								}}
+								className="p-2 rounded-lg transition-all active:scale-90"
+								style={{ background: "var(--s3)" }}
+							>
+								<X className="w-4 h-4 text-ink-tertiary" />
+							</button>
+						</div>
+						<input
+							type="text"
+							value={noteText}
+							onChange={(e) => setNoteText(e.target.value)}
+							placeholder="Ej: sin cebolla, bien cocido..."
+							autoFocus
+							className="w-full bg-transparent rounded-xl px-3 font-display text-sm text-ink-primary placeholder:text-ink-disabled outline-none"
+							style={{
+								minHeight: 44,
+								background: "var(--s2)",
+								border: "1px solid var(--s4)",
+							}}
+							onKeyDown={(e) => {
+								if (e.key === "Enter") saveNote();
+							}}
+						/>
+						<div className="flex gap-2">
+							{noteText.trim().length > 0 && (
+								<button
+									onClick={() => {
+										setNoteText("");
+									}}
+									className="px-4 rounded-xl font-display text-xs font-bold uppercase tracking-wider transition-all active:scale-95"
+									style={{
+										minHeight: 44,
+										background: "rgba(239,68,68,0.1)",
+										color: "#f87171",
+										border: "1px solid rgba(239,68,68,0.25)",
+									}}
+								>
+									Borrar
+								</button>
+							)}
+							<button
+								onClick={saveNote}
+								className="flex-1 rounded-xl font-display text-xs font-bold uppercase tracking-wider transition-all active:scale-95"
+								style={{
+									minHeight: 44,
+									background: "var(--gold)",
+									color: "#080808",
+									boxShadow: "0 0 12px rgba(245,158,11,0.3)",
+								}}
+							>
+								Guardar nota
+							</button>
+						</div>
 					</div>
 				</div>
 			)}
@@ -639,6 +1026,24 @@ export default function TableDetailPage() {
 		[],
 	);
 
+	const handleOptimisticCancel = useCallback(
+		(orderId: string, itemId: string) => {
+			setOptimisticOrders((prev) => {
+				if (!prev) return prev;
+				return prev.map((o) => {
+					if (o.id !== orderId) return o;
+					return {
+						...o,
+						items: o.items.map((item) =>
+							item.id === itemId ? { ...item, status: "cancelled" } : item,
+						),
+					};
+				});
+			});
+		},
+		[],
+	);
+
 	function handleSendSuccess() {
 		setShowSuccess(true);
 		setTimeout(() => {
@@ -694,7 +1099,7 @@ export default function TableDetailPage() {
 						className="font-kds leading-none text-ink-primary"
 						style={{ fontSize: 44 }}
 					>
-						{tableInfo ? tableInfo.number : "—"}
+						{tableInfo ? tableInfo.number : "\u2014"}
 					</span>
 					<div className="flex flex-col gap-1 min-w-0">
 						{tableTypeIcon && (
@@ -774,6 +1179,7 @@ export default function TableDetailPage() {
 						tableId={tableId}
 						orders={displayOrders}
 						onOptimisticUpdate={handleOptimisticDeliver}
+						onOptimisticCancel={handleOptimisticCancel}
 					/>
 				) : (
 					<AgregarTab tableId={tableId} onSuccess={handleSendSuccess} />

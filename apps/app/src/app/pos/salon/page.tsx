@@ -6,7 +6,6 @@ import {
 	LayoutGrid,
 	ListOrdered,
 	LogOut,
-	Plus,
 	TrendingUp,
 	Clock,
 	Users,
@@ -18,7 +17,21 @@ import { apiFetch } from "@/lib/api";
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
-function POSSidebar({ activePath }: { activePath: string }) {
+function POSSidebar({
+	activePath,
+	staffName,
+}: {
+	activePath: string;
+	staffName?: string;
+}) {
+	const displayName = staffName || "Cajero";
+	const initials = displayName
+		.split(" ")
+		.map((w) => w[0])
+		.join("")
+		.slice(0, 2)
+		.toUpperCase();
+
 	return (
 		<nav
 			className="sidebar top-accent"
@@ -100,7 +113,7 @@ function POSSidebar({ activePath }: { activePath: string }) {
 							className="font-kds text-brand-500"
 							style={{ fontSize: 13, lineHeight: 1 }}
 						>
-							VP
+							{initials}
 						</span>
 					</div>
 					<div className="flex-1 min-w-0">
@@ -108,7 +121,7 @@ function POSSidebar({ activePath }: { activePath: string }) {
 							className="font-display text-ink-primary truncate"
 							style={{ fontSize: 12, fontWeight: 600 }}
 						>
-							Valentina Paz
+							{displayName}
 						</div>
 						<div
 							className="font-body text-ink-tertiary"
@@ -277,6 +290,19 @@ export default function SalonPage() {
 	const [zones, setZones] = useState<Zone[]>([]);
 	const [orders, setOrders] = useState<Order[]>([]);
 	const zoneInitialized = useRef(false);
+	const [staffName, setStaffName] = useState<string>("");
+
+	useEffect(() => {
+		try {
+			const stored = sessionStorage.getItem("pos-staff");
+			if (stored) {
+				const staff = JSON.parse(stored) as { name?: string };
+				if (staff.name) setStaffName(staff.name);
+			}
+		} catch {
+			/* ignore */
+		}
+	}, []);
 
 	const fetchData = useCallback(async () => {
 		try {
@@ -330,7 +356,7 @@ export default function SalonPage() {
 			className="min-h-screen bg-surface-0 noise-overlay"
 			style={{ display: "flex" }}
 		>
-			<POSSidebar activePath="salon" />
+			<POSSidebar activePath="salon" staffName={staffName} />
 
 			<div
 				className="pos-main-content flex flex-col"
@@ -549,20 +575,6 @@ export default function SalonPage() {
 
 						{/* Quick actions */}
 						<div className="flex items-center gap-3">
-							<button
-								className="btn-primary"
-								style={{
-									paddingTop: 14,
-									paddingBottom: 14,
-									paddingLeft: 22,
-									paddingRight: 22,
-									fontSize: 13,
-								}}
-								onClick={() => {}}
-							>
-								<Plus size={16} />
-								Nueva Mesa
-							</button>
 							<Link
 								href="/pos/orders"
 								className="btn-secondary"

@@ -8,10 +8,25 @@ export async function PATCH(
 	try {
 		const { id } = await params;
 		const body = await req.json();
-		if (body.date) body.date = new Date(body.date);
+		const allowed = [
+			"categoryId",
+			"supplierId",
+			"description",
+			"amount",
+			"date",
+			"paymentMethod",
+			"notes",
+			"isRecurring",
+			"recurringDay",
+		] as const;
+		const data: Record<string, unknown> = {};
+		for (const key of allowed) {
+			if (key in body) data[key] = body[key];
+		}
+		if (data.date) data.date = new Date(data.date as string);
 		const expense = await db.expense.update({
 			where: { id },
-			data: body,
+			data,
 			include: { category: true, supplier: true },
 		});
 		return NextResponse.json(expense);

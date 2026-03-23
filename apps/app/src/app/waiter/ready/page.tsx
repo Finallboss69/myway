@@ -2,7 +2,14 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { Home, CheckCircle2, CreditCard, Bell, Loader2 } from "lucide-react";
+import {
+	Home,
+	CheckCircle2,
+	CreditCard,
+	Bell,
+	Loader2,
+	PackageCheck,
+} from "lucide-react";
 import clsx from "clsx";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -125,6 +132,7 @@ export default function ReadyPage() {
 	const [optimisticOrders, setOptimisticOrders] = useState<Order[] | null>(
 		null,
 	);
+	const [deliveringAll, setDeliveringAll] = useState<Set<number>>(new Set());
 
 	useEffect(() => {
 		if (rawOrders) setOptimisticOrders(rawOrders);
@@ -132,7 +140,7 @@ export default function ReadyPage() {
 
 	const orders = optimisticOrders ?? rawOrders ?? [];
 
-	// Groups: tableNumber → { tableNumber, items: { orderId, item }[] }
+	// Groups: tableNumber -> { tableNumber, items: { orderId, item }[] }
 	const groupedByTable = useMemo(() => {
 		const activeOrders = orders.filter(
 			(o) => o.status !== "closed" && o.status !== "cancelled",
@@ -183,6 +191,44 @@ export default function ReadyPage() {
 				};
 			});
 		});
+	}
+
+	async function handleDeliverAll(
+		tableNumber: number,
+		entries: { orderId: string; item: OrderItem }[],
+	) {
+		setDeliveringAll((prev) => new Set(prev).add(tableNumber));
+
+		// Optimistic update: mark all items as delivered
+		setOptimisticOrders((prev) => {
+			if (!prev) return prev;
+			const itemIds = new Set(entries.map((e) => e.item.id));
+			return prev.map((o) => ({
+				...o,
+				items: o.items.map((item) =>
+					itemIds.has(item.id) ? { ...item, status: "delivered" } : item,
+				),
+			}));
+		});
+
+		// Fire all PATCH requests in parallel
+		try {
+			await Promise.all(
+				entries.map(({ orderId, item }) =>
+					fetch(`/api/orders/${orderId}/items/${item.id}`, {
+						method: "PATCH",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ status: "delivered" }),
+					}),
+				),
+			);
+		} finally {
+			setDeliveringAll((prev) => {
+				const next = new Set(prev);
+				next.delete(tableNumber);
+				return next;
+			});
+		}
 	}
 
 	return (
@@ -295,66 +341,101 @@ export default function ReadyPage() {
 					</div>
 				) : (
 					<div className="flex flex-col gap-4">
-						{groupedByTable.map((group) => (
-							<div
-								key={group.tableNumber}
-								className="card-green overflow-hidden animate-slide-up"
-								style={{
-									boxShadow:
-										"0 0 28px rgba(16,185,129,0.14), 0 2px 18px rgba(0,0,0,0.45)",
-								}}
-							>
-								{/* Table header */}
+						{groupedByTable.map((group) => {
+							const isDeliveringAll = deliveringAll.has(group.tableNumber);
+							return (
 								<div
-									className="flex items-center justify-between px-4 py-3 border-b border-surface-3"
-									style={{ background: "rgba(16,185,129,0.09)" }}
+									key={group.tableNumber}
+									className="card-green overflow-hidden animate-slide-up"
+									style={{
+										boxShadow:
+											"0 0 28px rgba(16,185,129,0.14), 0 2px 18px rgba(0,0,0,0.45)",
+									}}
 								>
-									<div className="flex items-center gap-3">
-										<span
-											className="font-kds leading-none"
-											style={{
-												fontSize: 56,
-												color: "#10b981",
-												textShadow: "0 0 20px rgba(16,185,129,0.5)",
-											}}
-										>
-											{group.tableNumber}
-										</span>
-										<div>
-											<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
-												Mesa
-											</p>
-											<p
-												className="font-display text-xs font-bold"
-												style={{ color: "#34d399" }}
+									{/* Table header */}
+									<div
+										className="flex items-center justify-between px-4 py-3 border-b border-surface-3"
+										style={{ background: "rgba(16,185,129,0.09)" }}
+									>
+										<div className="flex items-center gap-3">
+											<span
+												className="font-kds leading-none"
+												style={{
+													fontSize: 56,
+													color: "#10b981",
+													textShadow: "0 0 20px rgba(16,185,129,0.5)",
+												}}
 											>
-												{group.entries.length}{" "}
-												{group.entries.length === 1
-													? "item listo"
-													: "items listos"}
-											</p>
+												{group.tableNumber}
+											</span>
+											<div>
+												<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest">
+													Mesa
+												</p>
+												<p
+													className="font-display text-xs font-bold"
+													style={{ color: "#34d399" }}
+												>
+													{group.entries.length}{" "}
+													{group.entries.length === 1
+														? "item listo"
+														: "items listos"}
+												</p>
+											</div>
 										</div>
+										<span className="badge badge-ready animate-blink">
+											<span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+											Listo
+										</span>
 									</div>
-									<span className="badge badge-ready animate-blink">
-										<span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-										Listo
-									</span>
-								</div>
 
-								{/* Items */}
-								<div className="divide-y divide-surface-3">
-									{group.entries.map(({ orderId, item }) => (
-										<ReadyItemRow
-											key={`${orderId}-${item.id}`}
-											orderId={orderId}
-											tableNumber={group.tableNumber}
-											item={item}
-											onDeliver={handleOptimisticDeliver}
-										/>
-									))}
+									{/* Items */}
+									<div className="divide-y divide-surface-3">
+										{group.entries.map(({ orderId, item }) => (
+											<ReadyItemRow
+												key={`${orderId}-${item.id}`}
+												orderId={orderId}
+												tableNumber={group.tableNumber}
+												item={item}
+												onDeliver={handleOptimisticDeliver}
+											/>
+										))}
+									</div>
+
+									{/* Entregar Todo button */}
+									{group.entries.length > 1 && (
+										<div
+											className="px-4 py-3 border-t border-surface-3"
+											style={{ background: "rgba(16,185,129,0.05)" }}
+										>
+											<button
+												onClick={() =>
+													handleDeliverAll(group.tableNumber, group.entries)
+												}
+												disabled={isDeliveringAll}
+												className="w-full flex items-center justify-center gap-2 rounded-xl font-display font-bold text-sm uppercase tracking-widest transition-all active:scale-95"
+												style={{
+													minHeight: 52,
+													background: "rgba(16,185,129,0.2)",
+													color: "#34d399",
+													border: "1px solid rgba(16,185,129,0.4)",
+													boxShadow: "0 0 16px rgba(16,185,129,0.2)",
+												}}
+											>
+												{isDeliveringAll ? (
+													<Loader2 className="w-4 h-4 animate-spin" />
+												) : (
+													<>
+														<PackageCheck className="w-4 h-4" />
+														ENTREGAR TODO
+													</>
+												)}
+											</button>
+										</div>
+									)}
 								</div>
-							</div>
-						))}
+							);
+						})}
 					</div>
 				)}
 			</main>

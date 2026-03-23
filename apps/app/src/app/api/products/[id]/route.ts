@@ -26,7 +26,22 @@ export async function PATCH(
 	try {
 		const { id } = await params;
 		const body = await req.json();
-		const product = await db.product.update({ where: { id }, data: body });
+		const allowed = [
+			"name",
+			"description",
+			"price",
+			"categoryId",
+			"target",
+			"isAvailable",
+			"isPoolChip",
+			"image",
+			"costPrice",
+		] as const;
+		const data: Record<string, unknown> = {};
+		for (const key of allowed) {
+			if (key in body) data[key] = body[key];
+		}
+		const product = await db.product.update({ where: { id }, data });
 		return NextResponse.json(product);
 	} catch (e) {
 		return NextResponse.json({ error: String(e) }, { status: 500 });

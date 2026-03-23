@@ -105,6 +105,9 @@ model Product {
   isPoolChip       Boolean            @default(false)
   image            String?
   recipeIngredients RecipeIngredient[]
+
+  @@index([categoryId])
+  @@index([isAvailable])
 }
 
 model Staff {
@@ -129,6 +132,10 @@ model Order {
   createdAt     DateTime    @default(now())
   closedAt      DateTime?
   items         OrderItem[]
+
+  @@index([status])
+  @@index([tableId])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -142,6 +149,9 @@ model OrderItem {
   status    String @default("pending")
   target    String
   notes     String?
+
+  @@index([orderId])
+  @@index([status])
 }
 
 // ─── Delivery ────────────────────────────────────────────────
@@ -162,6 +172,10 @@ model DeliveryOrder {
   repartidorLng       Float?
   repartidorUpdatedAt DateTime?
   items               DeliveryOrderItem[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId])
 }
 
 model DeliveryOrderItem {
@@ -196,6 +210,9 @@ model Ingredient {
   supplier         Supplier?           @relation(fields: [supplierId], references: [id])
   recipeIngredients RecipeIngredient[]
   priceHistory     PriceHistory[]
+
+  @@index([categoryId])
+  @@index([supplierId])
 }
 
 model RecipeIngredient {
@@ -206,6 +223,9 @@ model RecipeIngredient {
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
   quantity     Float
   unit         String
+
+  @@index([productId])
+  @@index([ingredientId])
 }
 
 model PriceHistory {
@@ -216,6 +236,8 @@ model PriceHistory {
   supplierId   String?
   date         DateTime   @default(now())
   notes        String?
+
+  @@index([ingredientId])
 }
 
 // ─── Suppliers & Procurement ─────────────────────────────────
@@ -264,6 +286,9 @@ model SupplierInvoice {
   createdAt     DateTime            @default(now())
   items         SupplierInvoiceItem[]
   expense       Expense?
+
+  @@index([supplierId])
+  @@index([status])
 }
 
 model SupplierInvoiceItem {
@@ -314,6 +339,9 @@ model Invoice {
   status        String   @default("draft")
   createdAt     DateTime @default(now())
   items         InvoiceItem[]
+
+  @@index([type, puntoVenta, number])
+  @@index([createdAt])
 }
 
 model InvoiceItem {
@@ -357,6 +385,10 @@ model Expense {
   isRecurring       Boolean          @default(false)
   recurringDay      Int?
   createdAt         DateTime         @default(now())
+
+  @@index([categoryId])
+  @@index([date])
+  @@index([supplierId])
 }
 
 // ─── Cash Register ───────────────────────────────────────────
@@ -383,6 +415,8 @@ model CashMovement {
   orderId       String?
   expenseId     String?
   createdAt     DateTime     @default(now())
+
+  @@index([registerId])
 }
 
 // ─── Daily Reports ───────────────────────────────────────────

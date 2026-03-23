@@ -18,7 +18,21 @@ import { apiFetch } from "@/lib/api";
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
-function POSSidebar({ activePath }: { activePath: string }) {
+function POSSidebar({
+	activePath,
+	staffName,
+}: {
+	activePath: string;
+	staffName?: string;
+}) {
+	const displayName = staffName || "Cajero";
+	const initials = displayName
+		.split(" ")
+		.map((w) => w[0])
+		.join("")
+		.slice(0, 2)
+		.toUpperCase();
+
 	return (
 		<nav
 			className="sidebar top-accent"
@@ -98,7 +112,7 @@ function POSSidebar({ activePath }: { activePath: string }) {
 							className="font-kds text-brand-500"
 							style={{ fontSize: 13, lineHeight: 1 }}
 						>
-							VP
+							{initials}
 						</span>
 					</div>
 					<div className="flex-1 min-w-0">
@@ -106,7 +120,7 @@ function POSSidebar({ activePath }: { activePath: string }) {
 							className="font-display text-ink-primary truncate"
 							style={{ fontSize: 12, fontWeight: 600 }}
 						>
-							Valentina Paz
+							{displayName}
 						</div>
 						<div
 							className="font-body text-ink-tertiary"
@@ -467,6 +481,19 @@ function OrderCard({ order }: { order: Order }) {
 export default function OrdersPage() {
 	const [activeFilter, setActiveFilter] = useState("all");
 	const [orders, setOrders] = useState<Order[]>([]);
+	const [staffName, setStaffName] = useState<string>("");
+
+	useEffect(() => {
+		try {
+			const stored = sessionStorage.getItem("pos-staff");
+			if (stored) {
+				const staff = JSON.parse(stored) as { name?: string };
+				if (staff.name) setStaffName(staff.name);
+			}
+		} catch {
+			/* ignore */
+		}
+	}, []);
 
 	const fetchOrders = useCallback(async () => {
 		try {
@@ -520,7 +547,7 @@ export default function OrdersPage() {
 			className="min-h-screen bg-surface-0 noise-overlay"
 			style={{ display: "flex" }}
 		>
-			<POSSidebar activePath="orders" />
+			<POSSidebar activePath="orders" staffName={staffName} />
 
 			<div
 				className="flex flex-col"

@@ -8,7 +8,16 @@ export async function PATCH(
 	try {
 		const { id } = await params;
 		const body = await request.json();
-		const member = await db.staff.update({ where: { id }, data: body });
+		const allowed = ["name", "role", "avatar", "pin"] as const;
+		const data: Record<string, unknown> = {};
+		for (const key of allowed) {
+			if (key in body) data[key] = body[key];
+		}
+		const member = await db.staff.update({
+			where: { id },
+			data,
+			select: { id: true, name: true, role: true, avatar: true },
+		});
 		return NextResponse.json(member);
 	} catch (error) {
 		console.error("[staff/[id] PATCH]", error);

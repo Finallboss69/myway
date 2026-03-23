@@ -34,7 +34,21 @@ type PaymentMethod = "cash" | "mercadopago" | "card";
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
-function POSSidebar({ activePath }: { activePath: string }) {
+function POSSidebar({
+	activePath,
+	staffName,
+}: {
+	activePath: string;
+	staffName?: string;
+}) {
+	const displayName = staffName || "Cajero";
+	const initials = displayName
+		.split(" ")
+		.map((w) => w[0])
+		.join("")
+		.slice(0, 2)
+		.toUpperCase();
+
 	return (
 		<nav
 			className="sidebar top-accent"
@@ -114,7 +128,7 @@ function POSSidebar({ activePath }: { activePath: string }) {
 							className="font-kds text-brand-500"
 							style={{ fontSize: 13, lineHeight: 1 }}
 						>
-							VP
+							{initials}
 						</span>
 					</div>
 					<div className="flex-1 min-w-0">
@@ -122,7 +136,7 @@ function POSSidebar({ activePath }: { activePath: string }) {
 							className="font-display text-ink-primary truncate"
 							style={{ fontSize: 12, fontWeight: 600 }}
 						>
-							Valentina Paz
+							{displayName}
 						</div>
 						<div
 							className="font-body text-ink-tertiary"
@@ -319,6 +333,24 @@ export default function TableDetailPage({
 	const [toastMsg, setToastMsg] = useState("");
 	const [sending, setSending] = useState(false);
 	const [closing, setClosing] = useState(false);
+	const [staffName, setStaffName] = useState<string>("");
+	const [confirmDialog, setConfirmDialog] = useState<{
+		open: boolean;
+		method: PaymentMethod;
+		methodLabel: string;
+	}>({ open: false, method: "cash", methodLabel: "" });
+
+	useEffect(() => {
+		try {
+			const stored = sessionStorage.getItem("pos-staff");
+			if (stored) {
+				const staff = JSON.parse(stored) as { name?: string };
+				if (staff.name) setStaffName(staff.name);
+			}
+		} catch {
+			/* ignore */
+		}
+	}, []);
 
 	const fetchOrders = useCallback(async () => {
 		try {

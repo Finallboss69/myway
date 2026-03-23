@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { Search, X, CheckCircle } from "lucide-react";
 
 interface Category {
 	id: string;
@@ -43,11 +44,12 @@ interface CheckoutModalProps {
 	setPhone: (v: string) => void;
 	notes: string;
 	setNotes: (v: string) => void;
-	payment: "efectivo" | "transferencia";
-	setPayment: (v: "efectivo" | "transferencia") => void;
+	payment: "efectivo" | "transferencia" | "mercadopago";
+	setPayment: (v: "efectivo" | "transferencia" | "mercadopago") => void;
 	canSubmit: boolean;
 	submitting: boolean;
 	submitError: string | null;
+	phoneError: string | null;
 	handleSubmit: () => void;
 	cartTotal: number;
 	cartCount: number;
@@ -68,6 +70,7 @@ function CheckoutModal({
 	canSubmit,
 	submitting,
 	submitError,
+	phoneError,
 	handleSubmit,
 	cartTotal,
 	cartCount,
@@ -220,14 +223,28 @@ function CheckoutModal({
 							/>
 						</div>
 						<div>
-							<label style={labelStyle}>Teléfono (opcional)</label>
+							<label style={labelStyle}>Teléfono *</label>
 							<input
 								type="tel"
 								value={phone}
 								onChange={(e) => setPhone(e.target.value)}
 								placeholder="11 XXXX-XXXX"
-								style={inputStyle}
+								style={{
+									...inputStyle,
+									...(phoneError ? { borderColor: "#ef4444" } : {}),
+								}}
 							/>
+							{phoneError && (
+								<p
+									style={{
+										fontSize: 12,
+										color: "#f87171",
+										margin: "4px 0 0",
+									}}
+								>
+									{phoneError}
+								</p>
+							)}
 						</div>
 					</div>
 
@@ -247,8 +264,8 @@ function CheckoutModal({
 						<div
 							style={{
 								display: "grid",
-								gridTemplateColumns: "1fr 1fr",
-								gap: 10,
+								gridTemplateColumns: "1fr 1fr 1fr",
+								gap: 8,
 							}}
 						>
 							{(
@@ -259,13 +276,18 @@ function CheckoutModal({
 										label: "Transferencia",
 										sub: "Bancaria",
 									},
+									{
+										id: "mercadopago",
+										label: "MercadoPago",
+										sub: "Online",
+									},
 								] as const
 							).map((m) => (
 								<button
 									key={m.id}
 									onClick={() => setPayment(m.id)}
 									style={{
-										padding: "14px 12px",
+										padding: "14px 8px",
 										borderRadius: 12,
 										border: `2px solid ${payment === m.id ? "rgba(245,158,11,0.5)" : "#1e1e1e"}`,
 										background:
@@ -276,7 +298,7 @@ function CheckoutModal({
 								>
 									<div
 										style={{
-											fontSize: 13,
+											fontSize: 12,
 											fontWeight: 700,
 											color: payment === m.id ? "#f59e0b" : "#aaa",
 										}}
@@ -527,10 +549,17 @@ export default function PublicDeliveryPage() {
 	const [address, setAddress] = useState("");
 	const [phone, setPhone] = useState("");
 	const [notes, setNotes] = useState("");
-	const [payment, setPayment] = useState<"efectivo" | "transferencia">(
-		"efectivo",
-	);
-	const [cart, setCart] = useState<CartItem[]>([]);
+	const [payment, setPayment] = useState<
+		"efectivo" | "transferencia" | "mercadopago"
+	>("efectivo");
+	const [cart, setCart] = useState<CartItem[]>(() => {
+		if (typeof window === "undefined") return [];
+		try {
+			return JSON.parse(localStorage.getItem("myway-cart") || "[]");
+		} catch {
+			return [];
+		}
+	});
 	const [activeCategory, setActiveCategory] = useState("all");
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [products, setProducts] = useState<Product[]>([]);
@@ -538,6 +567,18 @@ export default function PublicDeliveryPage() {
 	const [submitting, setSubmitting] = useState(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [showCheckout, setShowCheckout] = useState(false);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [phoneError, setPhoneError] = useState<string | null>(null);
+	const [confirmationOrder, setConfirmationOrder] = useState<{
+		id: string;
+		items: CartItem[];
+		total: number;
+		payment: string;
+	} | null>(null);
+	const confirmationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+		null,
+	);
+	const [confirmationReady, setConfirmationReady] = useState(false);
 
 	// Pre-fill customer name from session
 	useEffect(() => {
@@ -545,6 +586,23 @@ export default function PublicDeliveryPage() {
 			setName(session.user.name);
 		}
 	}, [session]); // eslint-disable-line react-hooks/exhaustive-deps
+
+	// Persist cart to localStorage
+	useEffect(() => {
+		try {
+			localStorage.setItem("myway-cart", JSON.stringify(cart));
+		} catch {
+			// localStorage unavailable
+		}
+	}, [cart]);
+
+	// Cleanup confirmation timer
+	useEffect(() => {
+		return () => {
+			if (confirmationTimerRef.current)
+				clearTimeout(confirmationTimerRef.current);
+		};
+	}, []);
 
 	useEffect(() => {
 		Promise.all([
@@ -595,10 +653,27 @@ export default function PublicDeliveryPage() {
 	const canSubmit =
 		name.trim().length >= 2 &&
 		address.trim().length > 0 &&
+		phone.trim().length > 0 &&
 		cartCount > 0 &&
 		!submitting;
 
+	const clearCart = useCallback(() => {
+		setCart([]);
+		try {
+			localStorage.removeItem("myway-cart");
+		} catch {
+			// localStorage unavailable
+		}
+	}, []);
+
 	const handleSubmit = async () => {
+		// Validate phone
+		if (!phone.trim()) {
+			setPhoneError("El teléfono es obligatorio");
+			return;
+		}
+		setPhoneError(null);
+
 		if (!canSubmit) return;
 		setSubmitting(true);
 		setSubmitError(null);
@@ -609,12 +684,13 @@ export default function PublicDeliveryPage() {
 				body: JSON.stringify({
 					customerName: name.trim(),
 					address: address.trim(),
-					phone: phone.trim() || null,
+					phone: phone.trim(),
 					total: cartTotal,
 					paymentMethod: payment,
 					notes: notes.trim() || null,
 					userId: session?.user?.id ?? null,
 					items: cart.map((i) => ({
+						productId: i.productId,
 						name: i.name,
 						qty: i.qty,
 						price: i.price,
@@ -623,7 +699,21 @@ export default function PublicDeliveryPage() {
 			});
 			if (!res.ok) throw new Error("Error al enviar el pedido");
 			const order = (await res.json()) as { id: string };
-			router.push(`/track/${order.id}`);
+			// Show confirmation screen
+			setConfirmationOrder({
+				id: order.id,
+				items: [...cart],
+				total: cartTotal,
+				payment,
+			});
+			setConfirmationReady(false);
+			confirmationTimerRef.current = setTimeout(() => {
+				setConfirmationReady(true);
+			}, 3000);
+			// Clear cart and checkout
+			clearCart();
+			setShowCheckout(false);
+			setSubmitting(false);
 		} catch (e) {
 			setSubmitError(e instanceof Error ? e.message : "Error desconocido");
 			setSubmitting(false);
@@ -655,9 +745,29 @@ export default function PublicDeliveryPage() {
 		].filter((g) => g.cats.length > 0);
 	}, [categories]);
 
+	// Check operating hours (closed before 19:00 or after 03:00, or Monday)
+	const isLikelyClosed = useMemo(() => {
+		const now = new Date();
+		const day = now.getDay(); // 0=Sun, 1=Mon
+		const hour = now.getHours();
+		if (day === 1) return true; // Monday
+		// Open 19:00–03:00: closed if hour >= 3 and hour < 19
+		if (hour >= 3 && hour < 19) return true;
+		return false;
+	}, []);
+
 	// Group filtered products by category for "all" view
 	const groupedProducts = useMemo(() => {
-		const avail = products.filter((p) => p.isAvailable);
+		let avail = products.filter((p) => p.isAvailable);
+		// Apply search filter
+		if (searchQuery.trim()) {
+			const q = searchQuery.trim().toLowerCase();
+			avail = avail.filter(
+				(p) =>
+					p.name.toLowerCase().includes(q) ||
+					(p.description && p.description.toLowerCase().includes(q)),
+			);
+		}
 		if (activeCategory !== "all") {
 			const cat = categories.find((c) => c.id === activeCategory);
 			return cat
@@ -675,7 +785,7 @@ export default function PublicDeliveryPage() {
 				items: avail.filter((p) => p.categoryId === cat.id),
 			}))
 			.filter((g) => g.items.length > 0);
-	}, [products, categories, activeCategory]);
+	}, [products, categories, activeCategory, searchQuery]);
 
 	// ── Auth gate ────────────────────────────────────────────────────────
 	if (status === "loading") {
@@ -1398,6 +1508,7 @@ export default function PublicDeliveryPage() {
 					canSubmit={canSubmit}
 					submitting={submitting}
 					submitError={submitError}
+					phoneError={phoneError}
 					handleSubmit={handleSubmit}
 					cartTotal={cartTotal}
 					cartCount={cartCount}

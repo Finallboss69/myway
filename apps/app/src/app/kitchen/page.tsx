@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import clsx from "clsx";
 import {
 	Clock,
@@ -11,6 +11,8 @@ import {
 	AlertCircle,
 	Zap,
 	UtensilsCrossed,
+	Wifi,
+	WifiOff,
 } from "lucide-react";
 import { elapsedMinutes } from "@/lib/utils";
 
@@ -23,6 +25,7 @@ interface OrderItem {
 	price: number;
 	status: string;
 	target: string;
+	notes?: string;
 }
 
 interface Order {
@@ -37,17 +40,50 @@ interface Order {
 type ItemStatus = "pending" | "preparing" | "ready" | "delivered" | "cancelled";
 type FilterTab = "all" | "pending" | "preparing" | "ready";
 
+// ─── Sound notification ──────────────────────────────────────────────────────
+
+function playBeep() {
+	try {
+		const ctx = new AudioContext();
+		const osc = ctx.createOscillator();
+		const gain = ctx.createGain();
+		osc.connect(gain);
+		gain.connect(ctx.destination);
+		osc.frequency.value = 880;
+		gain.gain.value = 0.3;
+		osc.start();
+		osc.stop(ctx.currentTime + 0.15);
+	} catch {
+		/* audio not available */
+	}
+}
+
 // ─── Polling hook ─────────────────────────────────────────────────────────────
 
 function usePolling<T>(url: string, interval = 3000) {
 	const [data, setData] = useState<T | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(false);
+	const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
 	useEffect(() => {
 		let active = true;
 		const fetch_ = async () => {
-			const res = await fetch(url);
-			if (active && res.ok) setData(await res.json());
-			setLoading(false);
+			try {
+				const res = await fetch(url);
+				if (!active) return;
+				if (res.ok) {
+					setData(await res.json());
+					setError(false);
+					setLastUpdated(new Date());
+				} else {
+					setError(true);
+				}
+			} catch {
+				if (active) setError(true);
+			} finally {
+				if (active) setLoading(false);
+			}
 		};
 		fetch_();
 		const id = setInterval(fetch_, interval);
@@ -56,7 +92,8 @@ function usePolling<T>(url: string, interval = 3000) {
 			clearInterval(id);
 		};
 	}, [url, interval]);
-	return { data, loading };
+
+	return { data, loading, error, lastUpdated };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -86,6 +123,37 @@ function deriveOrderStatus(order: Order): "pending" | "preparing" | "ready" {
 		return "ready";
 	if (items.some((i) => i.status === "preparing")) return "preparing";
 	return "pending";
+}
+
+/** Sort items: pending first, then preparing, then rest */
+function sortItemsByStatus(items: OrderItem[]): OrderItem[] {
+	const priority: Record<string, number> = {
+		pending: 0,
+		preparing: 1,
+		ready: 2,
+		delivered: 3,
+		cancelled: 4,
+	};
+	return [...items].sort(
+		(a, b) => (priority[a.status] ?? 9) - (priority[b.status] ?? 9),
+	);
+}
+
+/** Sort orders: oldest pending first (by createdAt ascending) */
+function sortOrdersByUrgency<
+	T extends { createdAt: string; derivedStatus: string },
+>(orders: T[]): T[] {
+	const statusPriority: Record<string, number> = {
+		pending: 0,
+		preparing: 1,
+		ready: 2,
+	};
+	return [...orders].sort((a, b) => {
+		const pa = statusPriority[a.derivedStatus] ?? 9;
+		const pb = statusPriority[b.derivedStatus] ?? 9;
+		if (pa !== pb) return pa - pb;
+		return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+	});
 }
 
 // ─── Live clock ───────────────────────────────────────────────────────────────
@@ -175,6 +243,27 @@ function ItemStatusChip({ status }: { status: string }) {
 	);
 }
 
+// ─── Error toast ──────────────────────────────────────────────────────────────
+
+function ErrorToast({
+	message,
+	onDismiss,
+}: {
+	message: string;
+	onDismiss: () => void;
+}) {
+	useEffect(() => {
+		const t = setTimeout(onDismiss, 3000);
+		return () => clearTimeout(t);
+	}, [onDismiss]);
+
+	return (
+		<div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-red-500/90 text-white font-display text-sm font-bold shadow-lg backdrop-blur-md border border-red-400/50 animate-slide-up">
+			{message}
+		</div>
+	);
+}
+
 // ─── Order card ───────────────────────────────────────────────────────────────
 
 function OrderCard({
@@ -190,6 +279,11 @@ function OrderCard({
 	const isUrgent = mins > 10;
 	const isWarning = mins > 5 && !isUrgent;
 
+	const sortedItems = useMemo(
+		() => sortItemsByStatus(order.items),
+		[order.items],
+	);
+
 	const cardCls = clsx(
 		"flex flex-col overflow-hidden rounded-2xl border-l-[5px] bg-surface-1 transition-all duration-300 animate-slide-up",
 		{
@@ -198,7 +292,7 @@ function OrderCard({
 			"border-l-emerald-500": derived === "ready",
 		},
 		isReady && "ring-ok",
-		isUrgent && !isReady && "ring-urgent",
+		isUrgent && !isReady && "ring-urgent animate-pulse",
 		isWarning && !isReady && "ring-warning",
 	);
 
@@ -299,9 +393,9 @@ function OrderCard({
 				</div>
 			</div>
 
-			{/* Items list */}
+			{/* Items list — sorted: pending first, then preparing */}
 			<div className="flex flex-col divide-y divide-surface-3 flex-1">
-				{order.items.map((item) => (
+				{sortedItems.map((item) => (
 					<div
 						key={item.id}
 						className={clsx(
@@ -320,6 +414,17 @@ function OrderCard({
 							<p className="font-display text-sm font-bold uppercase tracking-wide text-ink-primary truncate">
 								{item.name}
 							</p>
+							{item.notes && (
+								<p
+									className="font-display text-xs mt-0.5 truncate"
+									style={{
+										color: "#fbbf24",
+										fontStyle: "italic",
+									}}
+								>
+									* {item.notes}
+								</p>
+							)}
 							<div className="mt-1">
 								<ItemStatusChip status={item.status} />
 							</div>
@@ -395,18 +500,51 @@ const FILTER_TABS: { key: FilterTab; label: string }[] = [
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function KitchenKDSPage() {
-	const { data: rawOrders } = usePolling<Order[]>("/api/orders", 3000);
+	const {
+		data: rawOrders,
+		error: pollError,
+		lastUpdated,
+	} = usePolling<Order[]>("/api/orders", 3000);
 	const [optimisticOrders, setOptimisticOrders] = useState<Order[] | null>(
 		null,
 	);
 	const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
+	const [updateError, setUpdateError] = useState<string | null>(null);
 	const currentTime = useLiveClock();
 
 	const orders = optimisticOrders ?? rawOrders ?? [];
 
+	// Track previous pending count + order IDs for sound notification
+	const prevPendingCountRef = useRef(0);
+	const prevOrderIdsRef = useRef<Set<string>>(new Set());
+	const initialLoadRef = useRef(true);
+
 	useEffect(() => {
 		if (rawOrders) setOptimisticOrders(rawOrders);
 	}, [rawOrders]);
+
+	// ─── Wake lock for KDS displays ──────────────────────────────────────
+	useEffect(() => {
+		let wakeLock: WakeLockSentinel | null = null;
+		async function requestWakeLock() {
+			try {
+				if ("wakeLock" in navigator) {
+					wakeLock = await navigator.wakeLock.request("screen");
+				}
+			} catch {
+				/* wake lock not available */
+			}
+		}
+		requestWakeLock();
+		const handleVisibility = () => {
+			if (document.visibilityState === "visible") requestWakeLock();
+		};
+		document.addEventListener("visibilitychange", handleVisibility);
+		return () => {
+			wakeLock?.release();
+			document.removeEventListener("visibilitychange", handleVisibility);
+		};
+	}, []);
 
 	const [kitchenStaff, setKitchenStaff] = useState<{
 		name: string;
@@ -418,6 +556,9 @@ export default function KitchenKDSPage() {
 			.then((staff: Array<{ role: string; name: string; avatar: string }>) => {
 				const found = staff.find((s) => s.role === "kitchen");
 				if (found) setKitchenStaff(found);
+			})
+			.catch(() => {
+				/* staff fetch failed, non-critical */
 			});
 	}, []);
 
@@ -447,10 +588,16 @@ export default function KitchenKDSPage() {
 		(o) => o.derivedStatus !== ("delivered" as string),
 	);
 
+	// ─── Sort orders by urgency: oldest pending first ─────────────────────
+	const sortedVisibleOrders = useMemo(
+		() => sortOrdersByUrgency(visibleOrders),
+		[visibleOrders],
+	);
+
 	const filteredOrders =
 		activeFilter === "all"
-			? visibleOrders
-			: visibleOrders.filter((o) => o.derivedStatus === activeFilter);
+			? sortedVisibleOrders
+			: sortedVisibleOrders.filter((o) => o.derivedStatus === activeFilter);
 
 	const countByDerived = useCallback(
 		(status: string) =>
@@ -461,6 +608,31 @@ export default function KitchenKDSPage() {
 	const pendingCount = countByDerived("pending");
 	const preparingCount = countByDerived("preparing");
 	const readyCount = countByDerived("ready");
+
+	// ─── Sound notification when new pending items appear ─────────────────
+	useEffect(() => {
+		if (initialLoadRef.current) {
+			// Don't beep on first load
+			prevPendingCountRef.current = pendingCount;
+			const ids = new Set(kitchenOrders.map((o) => o.id));
+			prevOrderIdsRef.current = ids;
+			initialLoadRef.current = false;
+			return;
+		}
+
+		const currentIds = new Set(kitchenOrders.map((o) => o.id));
+		const hasNewOrder = [...currentIds].some(
+			(id) => !prevOrderIdsRef.current.has(id),
+		);
+		const pendingIncreased = pendingCount > prevPendingCountRef.current;
+
+		if (pendingIncreased || hasNewOrder) {
+			playBeep();
+		}
+
+		prevPendingCountRef.current = pendingCount;
+		prevOrderIdsRef.current = currentIds;
+	}, [pendingCount, kitchenOrders]);
 
 	const avgMins =
 		visibleOrders.length > 0
@@ -477,6 +649,9 @@ export default function KitchenKDSPage() {
 		itemId: string,
 		next: ItemStatus,
 	) {
+		// Save previous state for rollback
+		const previousOrders = optimisticOrders;
+
 		// Optimistic update
 		setOptimisticOrders((prev) => {
 			if (!prev) return prev;
@@ -491,15 +666,47 @@ export default function KitchenKDSPage() {
 			});
 		});
 
-		await fetch(`/api/orders/${orderId}/items/${itemId}`, {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ status: next }),
-		});
+		try {
+			const res = await fetch(`/api/orders/${orderId}/items/${itemId}`, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ status: next }),
+			});
+			if (!res.ok) throw new Error("update failed");
+		} catch {
+			// Rollback on failure
+			setOptimisticOrders(previousOrders);
+			setUpdateError("Error al actualizar — reintentando...");
+		}
 	}
+
+	// Format last updated time
+	const lastUpdatedStr = lastUpdated
+		? lastUpdated.toLocaleTimeString("es-AR", {
+				hour: "2-digit",
+				minute: "2-digit",
+				second: "2-digit",
+			})
+		: null;
 
 	return (
 		<div className="min-h-screen bg-surface-0 flex flex-col noise-overlay">
+			{/* ── Error toast ── */}
+			{updateError && (
+				<ErrorToast
+					message={updateError}
+					onDismiss={() => setUpdateError(null)}
+				/>
+			)}
+
+			{/* ── Connection error banner ── */}
+			{pollError && (
+				<div className="sticky top-0 z-50 flex items-center justify-center gap-2 px-4 py-2 bg-red-500/90 text-white font-display text-sm font-bold backdrop-blur-md">
+					<WifiOff className="w-4 h-4" />
+					Error de conexión — reintentando...
+				</div>
+			)}
+
 			{/* ── Header ── */}
 			<header className="sticky top-0 z-40 bg-surface-1/95 backdrop-blur-md border-b border-surface-3 shadow-[0_1px_0_rgba(255,255,255,0.04)]">
 				<div className="relative flex items-center px-4 sm:px-6 py-3 gap-3">
@@ -514,9 +721,21 @@ export default function KitchenKDSPage() {
 									COCINA
 								</span>
 							</div>
-							<p className="font-display text-[9px] sm:text-[10px] text-ink-tertiary uppercase tracking-[0.2em] mt-0.5 hidden sm:block">
-								My Way · Kitchen Display System
-							</p>
+							<div className="flex items-center gap-2 mt-0.5">
+								<p className="font-display text-[9px] sm:text-[10px] text-ink-tertiary uppercase tracking-[0.2em] hidden sm:block">
+									My Way · Kitchen Display System
+								</p>
+								{/* Connection indicator */}
+								<span
+									className={clsx(
+										"w-2 h-2 rounded-full shrink-0",
+										pollError
+											? "bg-red-500 shadow-[0_0_6px_#ef4444]"
+											: "bg-emerald-500 shadow-[0_0_6px_#10b981]",
+									)}
+									title={pollError ? "Desconectado" : "Conectado"}
+								/>
+							</div>
 						</div>
 					</div>
 
@@ -530,6 +749,11 @@ export default function KitchenKDSPage() {
 						</span>
 						<span className="font-display text-[9px] text-ink-tertiary uppercase tracking-[0.2em] mt-0.5">
 							En vivo
+							{lastUpdatedStr && (
+								<span className="ml-2 text-ink-tertiary/60">
+									· Actualizado {lastUpdatedStr}
+								</span>
+							)}
 						</span>
 					</div>
 
@@ -697,6 +921,15 @@ export default function KitchenKDSPage() {
 					</div>
 
 					<div className="ml-auto flex items-center gap-2 text-ink-tertiary shrink-0 hidden sm:flex">
+						{/* Connection status dot */}
+						<span
+							className={clsx(
+								"w-2 h-2 rounded-full",
+								pollError
+									? "bg-red-500 shadow-[0_0_6px_#ef4444]"
+									: "bg-emerald-500 shadow-[0_0_6px_#10b981]",
+							)}
+						/>
 						<span className="font-display text-[10px] uppercase tracking-widest">
 							KDS — My Way Bar &amp; Pool
 						</span>

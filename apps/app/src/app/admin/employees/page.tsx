@@ -10,12 +10,14 @@ import {
 	Calendar,
 	Users,
 	Shield,
-	Coffee,
 	UtensilsCrossed,
 	Wine,
 	Wallet,
+	X,
+	EyeOff,
+	Truck,
 } from "lucide-react";
-import type { Staff } from "@/lib/types";
+import type { Staff, StaffRole } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -26,7 +28,17 @@ const ROLE_LABELS: Record<string, string> = {
 	kitchen: "Cocina",
 	bar: "Barra",
 	admin: "Admin",
+	repartidor: "Repartidor",
 };
+
+const ROLE_OPTIONS: { value: StaffRole; label: string }[] = [
+	{ value: "admin", label: "Admin" },
+	{ value: "cashier", label: "Cajero" },
+	{ value: "waiter", label: "Mozo" },
+	{ value: "kitchen", label: "Cocina" },
+	{ value: "bar", label: "Barra" },
+	{ value: "repartidor", label: "Repartidor" },
+];
 
 const ROLE_COLORS: Record<string, string> = {
 	admin: "#f59e0b",
@@ -34,6 +46,7 @@ const ROLE_COLORS: Record<string, string> = {
 	kitchen: "#10b981",
 	bar: "#8b5cf6",
 	cashier: "#f59e0b",
+	repartidor: "#ec4899",
 };
 
 const ROLE_ICONS: Record<string, React.ElementType> = {
@@ -42,6 +55,7 @@ const ROLE_ICONS: Record<string, React.ElementType> = {
 	kitchen: UtensilsCrossed,
 	bar: Wine,
 	cashier: Wallet,
+	repartidor: Truck,
 };
 
 const ROLE_ACCENT: Record<
@@ -89,6 +103,13 @@ const ROLE_ACCENT: Record<
 		badgeBg: "rgba(245,158,11,0.1)",
 		badgeBorder: "rgba(245,158,11,0.2)",
 	},
+	repartidor: {
+		avatarBg: "rgba(236,72,153,0.25)",
+		avatarBorder: "rgba(236,72,153,0.4)",
+		textColor: "#ec4899",
+		badgeBg: "rgba(236,72,153,0.1)",
+		badgeBorder: "rgba(236,72,153,0.2)",
+	},
 };
 
 const DEFAULT_ACCENT = {
@@ -121,11 +142,488 @@ const SHIFT_SLOTS = [
 	},
 ];
 
+// ─── Form state type ─────────────────────────────────────────────────────────
+
+interface EmployeeForm {
+	name: string;
+	role: StaffRole;
+	avatar: string;
+	pin: string;
+}
+
+const EMPTY_FORM: EmployeeForm = {
+	name: "",
+	role: "waiter",
+	avatar: "",
+	pin: "",
+};
+
+// ─── Employee Modal ──────────────────────────────────────────────────────────
+
+function EmployeeModal({
+	open,
+	onClose,
+	onSave,
+	initial,
+	saving,
+}: {
+	open: boolean;
+	onClose: () => void;
+	onSave: (form: EmployeeForm) => void;
+	initial: EmployeeForm;
+	saving: boolean;
+}) {
+	const [form, setForm] = useState<EmployeeForm>(initial);
+	const [showPin, setShowPin] = useState(false);
+
+	useEffect(() => {
+		setForm(initial);
+		setShowPin(false);
+	}, [initial]);
+
+	if (!open) return null;
+
+	const isEdit = initial.name !== "";
+	const isValid = form.name.trim().length > 0 && /^\d{4}$/.test(form.pin);
+
+	return (
+		<div
+			style={{
+				position: "fixed",
+				inset: 0,
+				zIndex: 9999,
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				background: "rgba(0,0,0,0.7)",
+				backdropFilter: "blur(4px)",
+			}}
+			onClick={(e) => {
+				if (e.target === e.currentTarget) onClose();
+			}}
+		>
+			<div
+				style={{
+					width: "100%",
+					maxWidth: 460,
+					margin: "0 16px",
+					background: "var(--s1)",
+					border: "1px solid var(--s4)",
+					borderRadius: 16,
+					overflow: "hidden",
+					boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+				}}
+			>
+				{/* Header */}
+				<div
+					style={{
+						padding: "16px 20px",
+						borderBottom: "1px solid var(--s3)",
+						background: "var(--s2)",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "space-between",
+					}}
+				>
+					<div className="flex items-center gap-2.5">
+						<UserPlus size={14} style={{ color: "var(--gold)" }} />
+						<span
+							className="font-display uppercase"
+							style={{
+								fontSize: 11,
+								letterSpacing: "0.15em",
+								color: "#ccc",
+								fontWeight: 600,
+							}}
+						>
+							{isEdit ? "Editar empleado" : "Agregar empleado"}
+						</span>
+					</div>
+					<button
+						onClick={onClose}
+						style={{
+							background: "none",
+							border: "none",
+							cursor: "pointer",
+							padding: 4,
+							color: "#666",
+						}}
+					>
+						<X size={16} />
+					</button>
+				</div>
+
+				{/* Form */}
+				<div style={{ padding: "20px" }}>
+					<div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+						{/* Name */}
+						<div>
+							<label
+								className="font-display uppercase"
+								style={{
+									display: "block",
+									fontSize: 10,
+									letterSpacing: "0.15em",
+									color: "#888",
+									fontWeight: 600,
+									marginBottom: 6,
+								}}
+							>
+								Nombre *
+							</label>
+							<input
+								type="text"
+								value={form.name}
+								onChange={(e) => setForm({ ...form, name: e.target.value })}
+								placeholder="Nombre completo"
+								style={{
+									width: "100%",
+									padding: "10px 14px",
+									background: "var(--s2)",
+									border: "1px solid var(--s4)",
+									borderRadius: 10,
+									color: "#f5f5f5",
+									fontSize: 13,
+									outline: "none",
+								}}
+							/>
+						</div>
+
+						{/* Role */}
+						<div>
+							<label
+								className="font-display uppercase"
+								style={{
+									display: "block",
+									fontSize: 10,
+									letterSpacing: "0.15em",
+									color: "#888",
+									fontWeight: 600,
+									marginBottom: 6,
+								}}
+							>
+								Rol *
+							</label>
+							<select
+								value={form.role}
+								onChange={(e) =>
+									setForm({ ...form, role: e.target.value as StaffRole })
+								}
+								style={{
+									width: "100%",
+									padding: "10px 14px",
+									background: "var(--s2)",
+									border: "1px solid var(--s4)",
+									borderRadius: 10,
+									color: "#f5f5f5",
+									fontSize: 13,
+									outline: "none",
+									cursor: "pointer",
+								}}
+							>
+								{ROLE_OPTIONS.map((r) => (
+									<option key={r.value} value={r.value}>
+										{r.label}
+									</option>
+								))}
+							</select>
+							{/* Role color preview */}
+							<div className="flex items-center gap-2" style={{ marginTop: 8 }}>
+								<span
+									className="font-display uppercase"
+									style={{
+										display: "inline-flex",
+										alignItems: "center",
+										padding: "3px 10px",
+										borderRadius: 6,
+										border: `1px solid ${ROLE_COLORS[form.role] ?? "#888"}30`,
+										background: `${ROLE_COLORS[form.role] ?? "#888"}15`,
+										color: ROLE_COLORS[form.role] ?? "#888",
+										fontSize: 10,
+										fontWeight: 700,
+										letterSpacing: "0.1em",
+									}}
+								>
+									{ROLE_LABELS[form.role] ?? form.role}
+								</span>
+							</div>
+						</div>
+
+						{/* Avatar */}
+						<div>
+							<label
+								className="font-display uppercase"
+								style={{
+									display: "block",
+									fontSize: 10,
+									letterSpacing: "0.15em",
+									color: "#888",
+									fontWeight: 600,
+									marginBottom: 6,
+								}}
+							>
+								Avatar (emoji o iniciales)
+							</label>
+							<input
+								type="text"
+								value={form.avatar}
+								onChange={(e) => setForm({ ...form, avatar: e.target.value })}
+								placeholder="ej: JG o un emoji"
+								maxLength={4}
+								style={{
+									width: "100%",
+									padding: "10px 14px",
+									background: "var(--s2)",
+									border: "1px solid var(--s4)",
+									borderRadius: 10,
+									color: "#f5f5f5",
+									fontSize: 13,
+									outline: "none",
+								}}
+							/>
+						</div>
+
+						{/* PIN */}
+						<div>
+							<label
+								className="font-display uppercase"
+								style={{
+									display: "block",
+									fontSize: 10,
+									letterSpacing: "0.15em",
+									color: "#888",
+									fontWeight: 600,
+									marginBottom: 6,
+								}}
+							>
+								PIN (4 digitos) *
+							</label>
+							<div style={{ position: "relative" }}>
+								<input
+									type={showPin ? "text" : "password"}
+									value={form.pin}
+									onChange={(e) => {
+										const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+										setForm({ ...form, pin: val });
+									}}
+									placeholder="0000"
+									maxLength={4}
+									inputMode="numeric"
+									style={{
+										width: "100%",
+										padding: "10px 14px",
+										paddingRight: 40,
+										background: "var(--s2)",
+										border: `1px solid ${form.pin.length === 4 ? "var(--s4)" : form.pin.length > 0 ? "#ef444460" : "var(--s4)"}`,
+										borderRadius: 10,
+										color: "#f5f5f5",
+										fontSize: 16,
+										letterSpacing: "0.3em",
+										fontFamily: "monospace",
+										outline: "none",
+									}}
+								/>
+								<button
+									type="button"
+									onClick={() => setShowPin(!showPin)}
+									style={{
+										position: "absolute",
+										right: 10,
+										top: "50%",
+										transform: "translateY(-50%)",
+										background: "none",
+										border: "none",
+										cursor: "pointer",
+										padding: 4,
+										color: "#666",
+									}}
+								>
+									{showPin ? <EyeOff size={14} /> : <Eye size={14} />}
+								</button>
+							</div>
+							{form.pin.length > 0 && form.pin.length < 4 && (
+								<span
+									className="font-body"
+									style={{ fontSize: 10, color: "#ef4444", marginTop: 4 }}
+								>
+									El PIN debe tener exactamente 4 digitos
+								</span>
+							)}
+						</div>
+					</div>
+				</div>
+
+				{/* Footer */}
+				<div
+					style={{
+						padding: "14px 20px",
+						borderTop: "1px solid var(--s3)",
+						display: "flex",
+						justifyContent: "flex-end",
+						gap: 10,
+					}}
+				>
+					<button
+						onClick={onClose}
+						className="btn-ghost"
+						style={{ padding: "8px 16px", fontSize: 12 }}
+					>
+						Cancelar
+					</button>
+					<button
+						onClick={() => onSave(form)}
+						disabled={!isValid || saving}
+						className="btn-primary"
+						style={{
+							padding: "8px 20px",
+							fontSize: 12,
+							opacity: !isValid || saving ? 0.5 : 1,
+							cursor: !isValid || saving ? "not-allowed" : "pointer",
+						}}
+					>
+						{saving
+							? "Guardando..."
+							: isEdit
+								? "Guardar cambios"
+								: "Agregar empleado"}
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+}
+
+// ─── Delete Confirmation Modal ───────────────────────────────────────────────
+
+function DeleteModal({
+	open,
+	name,
+	onClose,
+	onConfirm,
+	deleting,
+}: {
+	open: boolean;
+	name: string;
+	onClose: () => void;
+	onConfirm: () => void;
+	deleting: boolean;
+}) {
+	if (!open) return null;
+
+	return (
+		<div
+			style={{
+				position: "fixed",
+				inset: 0,
+				zIndex: 9999,
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				background: "rgba(0,0,0,0.7)",
+				backdropFilter: "blur(4px)",
+			}}
+			onClick={(e) => {
+				if (e.target === e.currentTarget) onClose();
+			}}
+		>
+			<div
+				style={{
+					width: "100%",
+					maxWidth: 400,
+					margin: "0 16px",
+					background: "var(--s1)",
+					border: "1px solid var(--s4)",
+					borderRadius: 16,
+					overflow: "hidden",
+					boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+				}}
+			>
+				<div
+					style={{
+						padding: "16px 20px",
+						borderBottom: "1px solid var(--s3)",
+						background: "var(--s2)",
+						display: "flex",
+						alignItems: "center",
+						gap: 10,
+					}}
+				>
+					<UserX size={14} style={{ color: "#ef4444" }} />
+					<span
+						className="font-display uppercase"
+						style={{
+							fontSize: 11,
+							letterSpacing: "0.15em",
+							color: "#ccc",
+							fontWeight: 600,
+						}}
+					>
+						Eliminar empleado
+					</span>
+				</div>
+				<div style={{ padding: "24px 20px" }}>
+					<p
+						className="font-body"
+						style={{ fontSize: 13, color: "#ccc", lineHeight: 1.6 }}
+					>
+						{"¿Eliminar a "}
+						<strong style={{ color: "#f5f5f5" }}>{name}</strong>
+						{"? Esta accion no se puede deshacer."}
+					</p>
+				</div>
+				<div
+					style={{
+						padding: "14px 20px",
+						borderTop: "1px solid var(--s3)",
+						display: "flex",
+						justifyContent: "flex-end",
+						gap: 10,
+					}}
+				>
+					<button
+						onClick={onClose}
+						className="btn-ghost"
+						style={{ padding: "8px 16px", fontSize: 12 }}
+					>
+						Cancelar
+					</button>
+					<button
+						onClick={onConfirm}
+						disabled={deleting}
+						style={{
+							padding: "8px 20px",
+							fontSize: 12,
+							fontWeight: 600,
+							borderRadius: 10,
+							border: "1px solid #ef444460",
+							background: "#ef444420",
+							color: "#ef4444",
+							cursor: deleting ? "not-allowed" : "pointer",
+							opacity: deleting ? 0.5 : 1,
+						}}
+					>
+						{deleting ? "Eliminando..." : "Eliminar"}
+					</button>
+				</div>
+			</div>
+		</div>
+	);
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function EmployeesPage() {
 	const [staff, setStaff] = useState<Staff[]>([]);
 	const [date, setDate] = useState("");
+
+	// Modal state
+	const [modalOpen, setModalOpen] = useState(false);
+	const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
+	const [saving, setSaving] = useState(false);
+
+	// Delete state
+	const [deleteTarget, setDeleteTarget] = useState<Staff | null>(null);
+	const [deleting, setDeleting] = useState(false);
 
 	const fetchStaff = useCallback(async () => {
 		try {
@@ -151,11 +649,86 @@ export default function EmployeesPage() {
 		);
 	}, []);
 
+	// ─── CRUD handlers ────────────────────────────────────────────────
+
+	const handleOpenCreate = () => {
+		setEditingStaff(null);
+		setModalOpen(true);
+	};
+
+	const handleOpenEdit = (member: Staff) => {
+		setEditingStaff(member);
+		setModalOpen(true);
+	};
+
+	const handleCloseModal = () => {
+		setModalOpen(false);
+		setEditingStaff(null);
+	};
+
+	const handleSave = async (form: EmployeeForm) => {
+		setSaving(true);
+		try {
+			if (editingStaff) {
+				await apiFetch(`/api/staff/${editingStaff.id}`, {
+					method: "PATCH",
+					body: JSON.stringify({
+						name: form.name,
+						role: form.role,
+						avatar: form.avatar,
+						pin: form.pin,
+					}),
+				});
+			} else {
+				await apiFetch("/api/staff", {
+					method: "POST",
+					body: JSON.stringify({
+						name: form.name,
+						role: form.role,
+						avatar: form.avatar,
+						pin: form.pin,
+					}),
+				});
+			}
+			handleCloseModal();
+			await fetchStaff();
+		} catch (e) {
+			console.error(e);
+		} finally {
+			setSaving(false);
+		}
+	};
+
+	const handleDelete = async () => {
+		if (!deleteTarget) return;
+		setDeleting(true);
+		try {
+			await apiFetch(`/api/staff/${deleteTarget.id}`, { method: "DELETE" });
+			setDeleteTarget(null);
+			await fetchStaff();
+		} catch (e) {
+			console.error(e);
+		} finally {
+			setDeleting(false);
+		}
+	};
+
+	// ─── Derived data ─────────────────────────────────────────────────
+
 	const roleEntries = Object.entries(ROLE_LABELS).map(([role, label]) => ({
 		role,
 		label,
 		count: staff.filter((s) => s.role === role).length,
 	}));
+
+	const modalInitial: EmployeeForm = editingStaff
+		? {
+				name: editingStaff.name,
+				role: editingStaff.role,
+				avatar: editingStaff.avatar,
+				pin: editingStaff.pin ?? "0000",
+			}
+		: EMPTY_FORM;
 
 	return (
 		<div style={{ minHeight: "100vh", background: "var(--s0)" }}>
@@ -196,7 +769,11 @@ export default function EmployeesPage() {
 							</p>
 						</div>
 					</div>
-					<button className="btn-primary" style={{ padding: "10px 20px" }}>
+					<button
+						className="btn-primary"
+						style={{ padding: "10px 20px" }}
+						onClick={handleOpenCreate}
+					>
 						<UserPlus size={13} />
 						Agregar empleado
 					</button>
@@ -208,7 +785,7 @@ export default function EmployeesPage() {
 					className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"
 					style={{ marginBottom: 28 }}
 				>
-					{/* Total active — spans 2 cols on lg */}
+					{/* Total active -- spans 2 cols on lg */}
 					<div
 						className="col-span-2 sm:col-span-1 lg:col-span-2"
 						style={{
@@ -585,6 +1162,7 @@ export default function EmployeesPage() {
 											<button
 												className="btn-ghost flex-1 justify-center"
 												style={{ padding: "6px 8px", fontSize: 11 }}
+												onClick={() => handleOpenEdit(s)}
 											>
 												<Eye size={13} />
 												Ver
@@ -592,6 +1170,7 @@ export default function EmployeesPage() {
 											<button
 												className="btn-ghost flex-1 justify-center"
 												style={{ padding: "6px 8px" }}
+												onClick={() => handleOpenEdit(s)}
 											>
 												<Edit2 size={13} />
 												Editar
@@ -599,6 +1178,7 @@ export default function EmployeesPage() {
 											<button
 												className="btn-ghost"
 												style={{ padding: "6px 8px", color: "#ef4444" }}
+												onClick={() => setDeleteTarget(s)}
 											>
 												<UserX size={13} />
 											</button>
@@ -788,6 +1368,22 @@ export default function EmployeesPage() {
 					</div>
 				</div>
 			</div>
+
+			{/* Modals */}
+			<EmployeeModal
+				open={modalOpen}
+				onClose={handleCloseModal}
+				onSave={handleSave}
+				initial={modalInitial}
+				saving={saving}
+			/>
+			<DeleteModal
+				open={deleteTarget !== null}
+				name={deleteTarget?.name ?? ""}
+				onClose={() => setDeleteTarget(null)}
+				onConfirm={handleDelete}
+				deleting={deleting}
+			/>
 		</div>
 	);
 }

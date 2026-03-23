@@ -10,7 +10,6 @@ import {
 	Bell,
 	Users,
 	Clock,
-	Plus,
 } from "lucide-react";
 import clsx from "clsx";
 import { formatCurrency, formatTime, elapsedMinutes } from "@/lib/utils";
@@ -473,8 +472,12 @@ export default function WaiterTablesPage() {
 									fontSize: 12,
 									background: isActive ? "var(--gold)" : "var(--s2)",
 									color: isActive ? "#080808" : "#a3a3a3",
-									border: isActive ? "1px solid rgba(245,158,11,0.7)" : "1px solid var(--s4)",
-									boxShadow: isActive ? "0 0 16px rgba(245,158,11,0.3)" : "none",
+									border: isActive
+										? "1px solid rgba(245,158,11,0.7)"
+										: "1px solid var(--s4)",
+									boxShadow: isActive
+										? "0 0 16px rgba(245,158,11,0.3)"
+										: "none",
 								}}
 							>
 								{zone.name}
@@ -520,29 +523,6 @@ export default function WaiterTablesPage() {
 					</div>
 				)}
 			</main>
-
-			{/* Nueva Orden FAB */}
-			<Link
-				href="/waiter/tables"
-				className="fixed z-40 flex items-center gap-2 btn-primary animate-slide-up"
-				style={{
-					bottom: 80,
-					right: 16,
-					borderRadius: 28,
-					paddingLeft: 18,
-					paddingRight: 18,
-					paddingTop: 14,
-					paddingBottom: 14,
-					boxShadow:
-						"0 0 28px rgba(245,158,11,0.3), 0 4px 16px rgba(0,0,0,0.5)",
-				}}
-				aria-label="Nueva orden"
-			>
-				<Plus className="w-4 h-4" />
-				<span className="font-display font-bold text-xs uppercase tracking-wider">
-					Nueva Orden
-				</span>
-			</Link>
 
 			{/* Bottom nav */}
 			<nav className="mobile-nav">

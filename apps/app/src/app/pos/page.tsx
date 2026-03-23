@@ -4,14 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Delete, Check, LogIn } from "lucide-react";
 
-const CORRECT_PIN = "1234";
-
 export default function POSLoginPage() {
 	const router = useRouter();
 	const [pin, setPin] = useState<string[]>([]);
 	const [shaking, setShaking] = useState(false);
 	const [wrongFlash, setWrongFlash] = useState(false);
 	const [success, setSuccess] = useState(false);
+	const [verifying, setVerifying] = useState(false);
 	const [currentTime, setCurrentTime] = useState("");
 
 	useEffect(() => {
@@ -34,7 +33,7 @@ export default function POSLoginPage() {
 	}, []);
 
 	const handleDigit = (digit: string) => {
-		if (pin.length >= 4 || success) return;
+		if (pin.length >= 4 || success || verifying) return;
 		const next = [...pin, digit];
 		setPin(next);
 		if (next.length === 4) {
@@ -43,15 +42,39 @@ export default function POSLoginPage() {
 	};
 
 	const handleBackspace = () => {
-		if (success) return;
+		if (success || verifying) return;
 		setPin((prev) => prev.slice(0, -1));
 	};
 
-	const checkPin = (digits: string[]) => {
-		if (digits.join("") === CORRECT_PIN) {
-			setSuccess(true);
-			setTimeout(() => router.push("/pos/salon"), 700);
-		} else {
+	const checkPin = async (digits: string[]) => {
+		if (verifying) return;
+		setVerifying(true);
+		try {
+			const res = await fetch("/api/staff/verify-pin", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ pin: digits.join("") }),
+			});
+			if (res.ok) {
+				const staff = (await res.json()) as {
+					id: string;
+					name: string;
+					role: string;
+					avatar: string;
+				};
+				sessionStorage.setItem("pos-staff", JSON.stringify(staff));
+				setSuccess(true);
+				setTimeout(() => router.push("/pos/salon"), 700);
+			} else {
+				setShaking(true);
+				setWrongFlash(true);
+				setTimeout(() => {
+					setShaking(false);
+					setWrongFlash(false);
+					setPin([]);
+				}, 600);
+			}
+		} catch {
 			setShaking(true);
 			setWrongFlash(true);
 			setTimeout(() => {
@@ -59,6 +82,8 @@ export default function POSLoginPage() {
 				setWrongFlash(false);
 				setPin([]);
 			}, 600);
+		} finally {
+			setVerifying(false);
 		}
 	};
 
@@ -144,7 +169,12 @@ export default function POSLoginPage() {
 				<img
 					src="/logo.svg"
 					alt="My Way"
-					style={{ height: 32, width: 'auto', filter: 'invert(1)', display: 'block' }}
+					style={{
+						height: 32,
+						width: "auto",
+						filter: "invert(1)",
+						display: "block",
+					}}
 				/>
 				<div
 					className="font-display text-ink-disabled uppercase tracking-widest"
@@ -282,8 +312,11 @@ export default function POSLoginPage() {
 						paddingTop: 14,
 						paddingBottom: 14,
 						fontSize: 12,
-						opacity: pin.length === 4 && !success ? 1 : 0.35,
-						cursor: pin.length === 4 && !success ? "pointer" : "not-allowed",
+						opacity: pin.length === 4 && !success && !verifying ? 1 : 0.35,
+						cursor:
+							pin.length === 4 && !success && !verifying
+								? "pointer"
+								: "not-allowed",
 						transition: "opacity 0.2s, transform 0.1s",
 						...(success
 							? {
@@ -293,15 +326,17 @@ export default function POSLoginPage() {
 							: {}),
 					}}
 					onClick={() => {
-						if (pin.length === 4 && !success) checkPin(pin);
+						if (pin.length === 4 && !success && !verifying) checkPin(pin);
 					}}
-					disabled={pin.length < 4 || success}
+					disabled={pin.length < 4 || success || verifying}
 				>
 					{success ? (
 						<>
 							<Check size={16} />
 							Acceso concedido
 						</>
+					) : verifying ? (
+						<>Verificando...</>
 					) : (
 						<>
 							<LogIn size={15} />
@@ -309,23 +344,6 @@ export default function POSLoginPage() {
 						</>
 					)}
 				</button>
-
-				{/* Demo hint */}
-				<div
-					className="text-center text-ink-disabled mt-3"
-					style={{ fontSize: 10, letterSpacing: "0.1em" }}
-				>
-					PIN demo:{" "}
-					<span
-						style={{
-							color: "#f59e0b",
-							fontFamily: "var(--font-bebas)",
-							fontSize: 13,
-						}}
-					>
-						1234
-					</span>
-				</div>
 			</div>
 
 			<div className="flex-[0.7]" />
@@ -335,7 +353,13 @@ export default function POSLoginPage() {
 				<img
 					src="/logo.svg"
 					alt="My Way"
-					style={{ height: 16, width: "auto", filter: "invert(1)", opacity: 0.3, display: "block" }}
+					style={{
+						height: 16,
+						width: "auto",
+						filter: "invert(1)",
+						opacity: 0.3,
+						display: "block",
+					}}
 				/>
 				<div
 					className="text-ink-disabled font-kds"

@@ -20,7 +20,13 @@ export type DeliveryStatus =
 	| "on_the_way"
 	| "delivered";
 export type PaymentMethod = "cash" | "mercadopago" | "card";
-export type StaffRole = "waiter" | "bar" | "kitchen" | "cashier" | "admin";
+export type StaffRole =
+	| "waiter"
+	| "bar"
+	| "kitchen"
+	| "cashier"
+	| "admin"
+	| "repartidor";
 
 export interface Zone {
 	id: string;
@@ -64,6 +70,7 @@ export interface Staff {
 	name: string;
 	role: StaffRole;
 	avatar: string;
+	pin: string;
 }
 
 export interface OrderItem {

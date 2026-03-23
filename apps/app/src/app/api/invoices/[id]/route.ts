@@ -26,9 +26,14 @@ export async function PATCH(
 	try {
 		const { id } = await params;
 		const body = await req.json();
+		const allowed = ["status", "cae", "caeExpiry", "afipResponse"] as const;
+		const data: Record<string, unknown> = {};
+		for (const key of allowed) {
+			if (key in body) data[key] = body[key];
+		}
 		const invoice = await db.invoice.update({
 			where: { id },
-			data: body,
+			data,
 			include: { items: true },
 		});
 		return NextResponse.json(invoice);

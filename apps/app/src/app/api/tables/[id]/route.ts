@@ -46,19 +46,32 @@ export async function PATCH(
 ) {
 	try {
 		const { id } = await params;
-		const body = (await request.json()) as { status: string };
-		const { status } = body;
-
-		if (!status) {
+		const body = await request.json();
+		const allowed = [
+			"number",
+			"zoneId",
+			"type",
+			"status",
+			"seats",
+			"x",
+			"y",
+			"w",
+			"h",
+		] as const;
+		const data: Record<string, unknown> = {};
+		for (const key of allowed) {
+			if (key in body) data[key] = body[key];
+		}
+		if (Object.keys(data).length === 0) {
 			return NextResponse.json(
-				{ error: "status is required" },
+				{ error: "No valid fields provided" },
 				{ status: 400 },
 			);
 		}
 
 		const table = await db.table.update({
 			where: { id },
-			data: { status },
+			data,
 		});
 		return NextResponse.json(table);
 	} catch (error) {

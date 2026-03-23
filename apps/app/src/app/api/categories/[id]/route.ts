@@ -8,7 +8,12 @@ export async function PATCH(
 	try {
 		const { id } = await params;
 		const body = await request.json();
-		const category = await db.category.update({ where: { id }, data: body });
+		const allowed = ["name", "icon", "order", "parentId"] as const;
+		const data: Record<string, unknown> = {};
+		for (const key of allowed) {
+			if (key in body) data[key] = body[key];
+		}
+		const category = await db.category.update({ where: { id }, data });
 		return NextResponse.json(category);
 	} catch (error) {
 		console.error("[categories/[id] PATCH]", error);

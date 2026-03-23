@@ -243,6 +243,7 @@ export default function DeliveryPage() {
 					paymentMethod: payment,
 					notes: notes.trim(),
 					items: localCart.map((i) => ({
+						productId: i.productId,
 						name: i.name,
 						qty: i.qty,
 						price: i.price,

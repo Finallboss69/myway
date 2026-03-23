@@ -29,7 +29,20 @@ export async function PATCH(
 	try {
 		const { id } = await params;
 		const body = await req.json();
-		const supplier = await db.supplier.update({ where: { id }, data: body });
+		const allowed = [
+			"name",
+			"cuit",
+			"address",
+			"phone",
+			"email",
+			"notes",
+			"categoryId",
+		] as const;
+		const data: Record<string, unknown> = {};
+		for (const key of allowed) {
+			if (key in body) data[key] = body[key];
+		}
+		const supplier = await db.supplier.update({ where: { id }, data });
 		return NextResponse.json(supplier);
 	} catch (e) {
 		return NextResponse.json({ error: String(e) }, { status: 500 });
