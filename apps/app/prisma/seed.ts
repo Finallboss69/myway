@@ -167,24 +167,24 @@ async function main() {
 
 	// ── Categories ─────────────────────────────────────────────────────────────
 	const categories = [
+		// ── Comida (primero) ──
+		{ id: "c5a", name: "Hamburguesas", icon: "🍔", order: 0 },
+		{ id: "c5b", name: "Sandwiches", icon: "🥪", order: 1 },
+		{ id: "c5c", name: "Mex & Wraps", icon: "🌯", order: 2 },
+		{ id: "c5d", name: "Tapas", icon: "🍟", order: 3 },
+		{ id: "c5e", name: "Barbacoas", icon: "🔥", order: 4 },
+		{ id: "c5f", name: "Tablas", icon: "🪵", order: 5 },
 		// ── Tragos ──
-		{ id: "c1", name: "Recomendados", icon: "🍹", order: 0 },
-		{ id: "c1b", name: "De Autor", icon: "✨", order: 1 },
-		{ id: "c1c", name: "Directos", icon: "🧊", order: 2 },
-		{ id: "c1d", name: "Clásicos", icon: "🥂", order: 3 },
+		{ id: "c1", name: "Recomendados", icon: "🍹", order: 6 },
+		{ id: "c1b", name: "De Autor", icon: "✨", order: 7 },
+		{ id: "c1c", name: "Directos", icon: "🧊", order: 8 },
+		{ id: "c1d", name: "Clásicos", icon: "🥂", order: 9 },
 		// ── Bebidas ──
-		{ id: "c2", name: "Cervezas", icon: "🍺", order: 4 },
-		{ id: "c4", name: "Medidas", icon: "🥃", order: 5 },
-		{ id: "c4b", name: "Bottle Service", icon: "🍾", order: 6 },
-		{ id: "c3", name: "Vinos & Espumantes", icon: "🍷", order: 7 },
-		{ id: "c6", name: "Sin Alcohol", icon: "🥤", order: 8 },
-		// ── Comida ──
-		{ id: "c5a", name: "Hamburguesas", icon: "🍔", order: 9 },
-		{ id: "c5b", name: "Sandwiches", icon: "🥪", order: 10 },
-		{ id: "c5c", name: "Mex & Wraps", icon: "🌯", order: 11 },
-		{ id: "c5d", name: "Tapas", icon: "🍟", order: 12 },
-		{ id: "c5e", name: "Barbacoas", icon: "🔥", order: 13 },
-		{ id: "c5f", name: "Tablas", icon: "🪵", order: 14 },
+		{ id: "c2", name: "Cervezas", icon: "🍺", order: 10 },
+		{ id: "c4", name: "Medidas", icon: "🥃", order: 11 },
+		{ id: "c4b", name: "Bottle Service", icon: "🍾", order: 12 },
+		{ id: "c3", name: "Vinos & Espumantes", icon: "🍷", order: 13 },
+		{ id: "c6", name: "Sin Alcohol", icon: "🥤", order: 14 },
 		// ── Pool ──
 		{ id: "c7", name: "Pool", icon: "🎱", order: 15 },
 	];

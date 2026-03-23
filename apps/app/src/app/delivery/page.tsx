@@ -638,9 +638,9 @@ export default function PublicDeliveryPage() {
 		);
 		const otros = categories.filter((c) => ["c7"].includes(c.id));
 		return [
+			{ label: "Comida", cats: comida },
 			{ label: "Tragos", cats: tragos },
 			{ label: "Bebidas", cats: bebidas },
-			{ label: "Comida", cats: comida },
 			{ label: "Otros", cats: otros },
 		].filter((g) => g.cats.length > 0);
 	}, [categories]);
