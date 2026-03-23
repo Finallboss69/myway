@@ -522,7 +522,7 @@ export default function BarKDSPage() {
 					</div>
 
 					{/* Center: Live clock */}
-					<div className="hidden md:flex absolute left-1/2 -translate-x-1/2 flex-col items-center">
+					<div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 flex-col items-center">
 						<span
 							className="font-kds text-4xl leading-none text-ink-secondary tracking-[0.1em]"
 							suppressHydrationWarning
