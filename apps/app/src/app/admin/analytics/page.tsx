@@ -15,92 +15,70 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface OrderItem {
+/* ─── Types ──────────────────────────────────────────────────────────────── */
+interface OItem {
 	id: string;
 	name: string;
 	qty: number;
 	price: number;
 	target: string;
 }
-
-interface Order {
+interface Ord {
 	id: string;
 	status: string;
 	paymentMethod: string | null;
 	createdAt: string;
 	closedAt: string | null;
-	items: OrderItem[];
+	items: OItem[];
 }
-
-interface Expense {
+interface Exp {
 	id: string;
 	amount: number;
 	date: string;
 	category: { id: string; name: string } | null;
 }
-
-interface Invoice {
+interface Inv {
 	id: string;
 	status: string;
 	total: number;
 	cae: string | null;
 	createdAt: string;
 }
-
-interface CashRegister {
+interface CReg {
 	id: string;
 	date: string;
 	status: string;
 	openingBalance: number;
 	closingBalance: number | null;
-	openedAt: string;
 	closedAt: string | null;
-	_count?: { movements: number };
 }
-
-// ─── Period logic ────────────────────────────────────────────────────────────
 
 const PERIODS = ["Hoy", "Esta Semana", "Este Mes"] as const;
 type Period = (typeof PERIODS)[number];
 
-function startOfToday(): Date {
-	const d = new Date();
+function sod(d: Date) {
 	d.setHours(0, 0, 0, 0);
 	return d;
 }
-
-function startOfWeek(): Date {
-	const d = new Date();
-	const day = d.getDay();
-	const diff = day === 0 ? 6 : day - 1; // Monday start
-	d.setDate(d.getDate() - diff);
-	d.setHours(0, 0, 0, 0);
-	return d;
-}
-
-function startOfMonth(): Date {
-	const d = new Date();
-	d.setDate(1);
-	d.setHours(0, 0, 0, 0);
-	return d;
-}
-
 function periodStart(p: Period): Date {
-	if (p === "Hoy") return startOfToday();
-	if (p === "Esta Semana") return startOfWeek();
-	return startOfMonth();
+	const d = new Date();
+	if (p === "Hoy") return sod(d);
+	if (p === "Esta Semana") {
+		const day = d.getDay();
+		d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+		return sod(d);
+	}
+	d.setDate(1);
+	return sod(d);
+}
+function inP(ds: string | null, s: Date) {
+	return ds ? new Date(ds) >= s : false;
+}
+function orderTotal(o: Ord) {
+	return o.items.reduce((s, i) => s + i.qty * i.price, 0);
 }
 
-function inPeriod(dateStr: string | null, start: Date): boolean {
-	if (!dateStr) return false;
-	return new Date(dateStr) >= start;
-}
-
-// ─── Bar colors ──────────────────────────────────────────────────────────────
-
-const BAR_COLORS = [
+const COLORS = [
 	"#f59e0b",
 	"#f97316",
 	"#ec4899",
@@ -112,33 +90,29 @@ const BAR_COLORS = [
 	"#a855f7",
 	"#64748b",
 ];
-
-const PAYMENT_COLORS: Record<string, string> = {
+const PM_C: Record<string, string> = {
 	cash: "#f59e0b",
 	mercadopago: "#3b82f6",
 	card: "#8b5cf6",
 };
-
-const PAYMENT_LABELS: Record<string, string> = {
+const PM_L: Record<string, string> = {
 	cash: "Efectivo",
 	mercadopago: "MercadoPago",
 	card: "Tarjeta",
 };
 
-// ─── Horizontal bar helper ───────────────────────────────────────────────────
-
+/* ─── Horizontal bars ────────────────────────────────────────────────────── */
 function HBar({
 	items,
 	title,
-	subtitle,
+	sub,
 }: {
-	items: { label: string; value: number; color: string }[];
+	items: { l: string; v: number; c: string }[];
 	title: string;
-	subtitle: string;
+	sub: string;
 }) {
-	const max = Math.max(...items.map((i) => i.value), 1);
-	const total = items.reduce((s, i) => s + i.value, 0);
-
+	const mx = Math.max(...items.map((i) => i.v), 1);
+	const tot = items.reduce((s, i) => s + i.v, 0);
 	return (
 		<div className="card" style={{ padding: 24 }}>
 			<h3
@@ -151,267 +125,290 @@ function HBar({
 				className="font-body text-ink-disabled"
 				style={{ fontSize: 11, marginBottom: 16 }}
 			>
-				{subtitle}
+				{sub}
 			</div>
 			<div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-				{items.map((item) => {
-					const pct = total > 0 ? ((item.value / total) * 100).toFixed(1) : "0";
-					return (
-						<div key={item.label}>
-							<div
-								className="flex items-center justify-between"
-								style={{ marginBottom: 4 }}
+				{items.map((it) => (
+					<div key={it.l}>
+						<div
+							className="flex items-center justify-between"
+							style={{ marginBottom: 4 }}
+						>
+							<span
+								className="font-body text-ink-secondary"
+								style={{ fontSize: 12 }}
 							>
-								<span
-									className="font-body text-ink-secondary"
-									style={{ fontSize: 12 }}
-								>
-									{item.label}
-								</span>
-								<span
-									className="font-body text-ink-disabled"
-									style={{ fontSize: 11, fontFamily: "monospace" }}
-								>
-									{formatCurrency(item.value)} ({pct}%)
-								</span>
-							</div>
+								{it.l}
+							</span>
+							<span
+								className="font-body text-ink-disabled"
+								style={{ fontSize: 11, fontFamily: "monospace" }}
+							>
+								{formatCurrency(it.v)} (
+								{tot > 0 ? ((it.v / tot) * 100).toFixed(1) : "0"}%)
+							</span>
+						</div>
+						<div
+							style={{
+								width: "100%",
+								height: 8,
+								borderRadius: 4,
+								background: "var(--s3)",
+								overflow: "hidden",
+							}}
+						>
 							<div
 								style={{
-									width: "100%",
-									height: 8,
+									width: `${(it.v / mx) * 100}%`,
+									height: "100%",
 									borderRadius: 4,
-									background: "var(--s3)",
-									overflow: "hidden",
+									background: it.c,
+									transition: "width .3s",
 								}}
-							>
-								<div
-									style={{
-										width: `${(item.value / max) * 100}%`,
-										height: "100%",
-										borderRadius: 4,
-										background: item.color,
-										transition: "width 0.3s",
-									}}
-								/>
-							</div>
+							/>
 						</div>
-					);
-				})}
+					</div>
+				))}
 			</div>
 		</div>
 	);
 }
 
-// ─── Main page ───────────────────────────────────────────────────────────────
+/* ─── KPI card ───────────────────────────────────────────────────────────── */
+function Kpi({
+	label,
+	value,
+	Icon,
+	accent,
+}: {
+	label: string;
+	value: string;
+	Icon: React.ElementType;
+	accent?: boolean;
+}) {
+	return (
+		<div
+			className="card p-5"
+			style={{
+				position: "relative",
+				overflow: "hidden",
+				...(accent
+					? {
+							borderColor: "rgba(245,158,11,0.25)",
+							boxShadow: "0 0 24px rgba(245,158,11,0.08)",
+						}
+					: {}),
+			}}
+		>
+			{accent && (
+				<div
+					style={{
+						position: "absolute",
+						inset: 0,
+						background:
+							"radial-gradient(ellipse 300px 200px at 50% 0%,rgba(245,158,11,0.06) 0%,transparent 60%)",
+						pointerEvents: "none",
+					}}
+				/>
+			)}
+			<div
+				className="flex items-center justify-between mb-4"
+				style={{ position: "relative", zIndex: 1 }}
+			>
+				<span
+					className="font-display text-ink-disabled uppercase"
+					style={{ fontSize: 9, letterSpacing: "0.25em" }}
+				>
+					{label}
+				</span>
+				<div
+					style={{
+						width: 32,
+						height: 32,
+						borderRadius: 9,
+						background: accent ? "rgba(245,158,11,0.2)" : "var(--s3)",
+						border: accent
+							? "1px solid rgba(245,158,11,0.3)"
+							: "1px solid var(--s4)",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+					}}
+				>
+					<Icon size={14} style={{ color: accent ? "#f59e0b" : "#888" }} />
+				</div>
+			</div>
+			<div style={{ position: "relative", zIndex: 1 }}>
+				<div
+					className="font-kds"
+					style={{
+						fontSize: accent ? 36 : 30,
+						lineHeight: 1,
+						color: accent ? "#f59e0b" : "#e5e5e5",
+					}}
+				>
+					{value}
+				</div>
+			</div>
+		</div>
+	);
+}
 
+/* ─── Page ───────────────────────────────────────────────────────────────── */
 export default function AnalyticsPage() {
 	const [period, setPeriod] = useState<Period>("Hoy");
-	const [orders, setOrders] = useState<Order[]>([]);
-	const [expenses, setExpenses] = useState<Expense[]>([]);
-	const [invoices, setInvoices] = useState<Invoice[]>([]);
-	const [registers, setRegisters] = useState<CashRegister[]>([]);
+	const [orders, setOrders] = useState<Ord[]>([]);
+	const [expenses, setExpenses] = useState<Exp[]>([]);
+	const [invoices, setInvoices] = useState<Inv[]>([]);
+	const [registers, setRegisters] = useState<CReg[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		let cancelled = false;
-		async function load() {
+		let c = false;
+		(async () => {
 			setLoading(true);
 			setError(null);
 			try {
 				const [o, e, i, r] = await Promise.all([
-					apiFetch<Order[]>("/api/orders?includeClosed=true"),
-					apiFetch<Expense[]>("/api/expenses"),
-					apiFetch<Invoice[]>("/api/invoices"),
-					apiFetch<CashRegister[]>("/api/cash-register"),
+					apiFetch<Ord[]>("/api/orders?includeClosed=true"),
+					apiFetch<Exp[]>("/api/expenses"),
+					apiFetch<Inv[]>("/api/invoices"),
+					apiFetch<CReg[]>("/api/cash-register"),
 				]);
-				if (!cancelled) {
+				if (!c) {
 					setOrders(o);
 					setExpenses(e);
 					setInvoices(i);
 					setRegisters(r);
 				}
 			} catch (err) {
-				if (!cancelled) setError(String(err));
+				if (!c) setError(String(err));
 			} finally {
-				if (!cancelled) setLoading(false);
+				if (!c) setLoading(false);
 			}
-		}
-		load();
+		})();
 		return () => {
-			cancelled = true;
+			c = true;
 		};
 	}, []);
 
-	// ─── Filtered data ────────────────────────────────────────────────────────
-
 	const start = useMemo(() => periodStart(period), [period]);
-
-	const closedOrders = useMemo(
+	const closed = useMemo(
 		() =>
 			orders.filter(
-				(o) =>
-					o.status === "closed" && o.closedAt && inPeriod(o.closedAt, start),
+				(o) => o.status === "closed" && o.closedAt && inP(o.closedAt, start),
 			),
 		[orders, start],
 	);
-
-	const periodExpenses = useMemo(
-		() => expenses.filter((e) => inPeriod(e.date, start)),
+	const pExp = useMemo(
+		() => expenses.filter((e) => inP(e.date, start)),
 		[expenses, start],
 	);
-
-	const periodInvoices = useMemo(
-		() => invoices.filter((i) => inPeriod(i.createdAt, start)),
+	const pInv = useMemo(
+		() => invoices.filter((i) => inP(i.createdAt, start)),
 		[invoices, start],
 	);
 
-	// ─── KPIs ─────────────────────────────────────────────────────────────────
-
 	const revenue = useMemo(
-		() =>
-			closedOrders.reduce(
-				(s, o) => s + o.items.reduce((si, i) => si + i.qty * i.price, 0),
-				0,
-			),
-		[closedOrders],
+		() => closed.reduce((s, o) => s + orderTotal(o), 0),
+		[closed],
 	);
+	const cnt = closed.length;
+	const avgTicket = cnt > 0 ? Math.round(revenue / cnt) : 0;
+	const totExp = useMemo(() => pExp.reduce((s, e) => s + e.amount, 0), [pExp]);
 
-	const orderCount = closedOrders.length;
-	const avgTicket = orderCount > 0 ? Math.round(revenue / orderCount) : 0;
-	const totalExpenses = useMemo(
-		() => periodExpenses.reduce((s, e) => s + e.amount, 0),
-		[periodExpenses],
-	);
-
-	// ─── P&L ──────────────────────────────────────────────────────────────────
-
-	const mercaderiaExpenses = useMemo(
+	const mercExp = useMemo(
 		() =>
-			periodExpenses
+			pExp
 				.filter((e) => e.category?.name === "Mercadería")
 				.reduce((s, e) => s + e.amount, 0),
-		[periodExpenses],
+		[pExp],
 	);
-
-	const personalExpenses = useMemo(
+	const persExp = useMemo(
 		() =>
-			periodExpenses
+			pExp
 				.filter((e) => e.category?.name === "Personal")
 				.reduce((s, e) => s + e.amount, 0),
-		[periodExpenses],
+		[pExp],
 	);
+	const resultado = revenue - totExp;
+	const foodPct = revenue > 0 ? (mercExp / revenue) * 100 : 0;
+	const primePct = revenue > 0 ? ((mercExp + persExp) / revenue) * 100 : 0;
 
-	const resultado = revenue - totalExpenses;
-	const foodCostPct = revenue > 0 ? (mercaderiaExpenses / revenue) * 100 : 0;
-	const primeCostPct =
-		revenue > 0 ? ((mercaderiaExpenses + personalExpenses) / revenue) * 100 : 0;
-
-	// ─── Payment method breakdown ─────────────────────────────────────────────
-
-	const paymentBreakdown = useMemo(() => {
-		const map: Record<string, { amount: number; count: number }> = {};
-		for (const o of closedOrders) {
-			const method = o.paymentMethod || "cash";
-			const total = o.items.reduce((s, i) => s + i.qty * i.price, 0);
-			if (!map[method]) map[method] = { amount: 0, count: 0 };
-			map[method].amount += total;
-			map[method].count += 1;
+	const pmBreak = useMemo(() => {
+		const m: Record<string, { amt: number; n: number }> = {};
+		for (const o of closed) {
+			const k = o.paymentMethod || "cash";
+			const t = orderTotal(o);
+			if (!m[k]) m[k] = { amt: 0, n: 0 };
+			m[k].amt += t;
+			m[k].n++;
 		}
-		return Object.entries(map)
-			.map(([method, data]) => ({
-				method,
-				label: PAYMENT_LABELS[method] || method,
-				color: PAYMENT_COLORS[method] || "#64748b",
-				...data,
+		return Object.entries(m)
+			.map(([k, v]) => ({
+				k,
+				label: PM_L[k] || k,
+				color: PM_C[k] || "#64748b",
+				...v,
 			}))
-			.sort((a, b) => b.amount - a.amount);
-	}, [closedOrders]);
+			.sort((a, b) => b.amt - a.amt);
+	}, [closed]);
+	const pmTotal = pmBreak.reduce((s, p) => s + p.amt, 0);
 
-	const paymentTotal = paymentBreakdown.reduce((s, p) => s + p.amount, 0);
-
-	// ─── Category breakdown ───────────────────────────────────────────────────
-
-	const categoryBreakdown = useMemo(() => {
-		const map: Record<string, number> = {};
-		for (const o of closedOrders) {
-			for (const item of o.items) {
-				const cat = item.name; // use item name as proxy
-				// group by product name — we don't have category name on order items
-				// Actually let's accumulate by item name
-				map[item.name] = (map[item.name] || 0) + item.qty * item.price;
-			}
-		}
-		return Object.entries(map)
-			.map(([name, value]) => ({ name, value }))
-			.sort((a, b) => b.value - a.value)
+	const prodBreak = useMemo(() => {
+		const m: Record<string, number> = {};
+		for (const o of closed)
+			for (const i of o.items) m[i.name] = (m[i.name] || 0) + i.qty * i.price;
+		return Object.entries(m)
+			.map(([n, v]) => ({ n, v }))
+			.sort((a, b) => b.v - a.v)
 			.slice(0, 10);
-	}, [closedOrders]);
+	}, [closed]);
 
-	// ─── Expense breakdown by category ────────────────────────────────────────
-
-	const expenseBreakdown = useMemo(() => {
-		const map: Record<string, number> = {};
-		for (const e of periodExpenses) {
-			const cat = e.category?.name || "Sin categoría";
-			map[cat] = (map[cat] || 0) + e.amount;
+	const expBreak = useMemo(() => {
+		const m: Record<string, number> = {};
+		for (const e of pExp) {
+			const c = e.category?.name || "Sin categoría";
+			m[c] = (m[c] || 0) + e.amount;
 		}
-		return Object.entries(map)
-			.map(([name, value]) => ({ name, value }))
-			.sort((a, b) => b.value - a.value);
-	}, [periodExpenses]);
+		return Object.entries(m)
+			.map(([n, v]) => ({ n, v }))
+			.sort((a, b) => b.v - a.v);
+	}, [pExp]);
 
-	// ─── Hourly revenue (today only) ─────────────────────────────────────────
-
-	const hourlyRevenue = useMemo(() => {
+	const hourly = useMemo(() => {
 		if (period !== "Hoy") return [];
-		const hours: Record<number, number> = {};
-		for (const o of closedOrders) {
+		const h: Record<number, number> = {};
+		for (const o of closed) {
 			if (!o.closedAt) continue;
-			const h = new Date(o.closedAt).getHours();
-			const total = o.items.reduce((s, i) => s + i.qty * i.price, 0);
-			hours[h] = (hours[h] || 0) + total;
+			const hr = new Date(o.closedAt).getHours();
+			h[hr] = (h[hr] || 0) + orderTotal(o);
 		}
-		// Return all 24 hours but only those with data, or range 10-03
-		const entries = Object.entries(hours)
-			.map(([h, v]) => ({ hour: Number(h), value: v }))
-			.sort((a, b) => a.hour - b.hour);
-		return entries;
-	}, [closedOrders, period]);
+		return Object.entries(h)
+			.map(([k, v]) => ({ hr: Number(k), v }))
+			.sort((a, b) => a.hr - b.hr);
+	}, [closed, period]);
 
-	// ─── AFIP summary ─────────────────────────────────────────────────────────
-
-	const afipAuthorized = useMemo(
-		() => periodInvoices.filter((i) => i.status === "authorized").length,
-		[periodInvoices],
+	const afipAuth = useMemo(
+		() => pInv.filter((i) => i.status === "authorized"),
+		[pInv],
 	);
-	const afipTotal = useMemo(
-		() =>
-			periodInvoices
-				.filter((i) => i.status === "authorized")
-				.reduce((s, i) => s + i.total, 0),
-		[periodInvoices],
-	);
-	const afipPending = useMemo(
-		() => periodInvoices.filter((i) => i.status === "draft").length,
-		[periodInvoices],
+	const afipPend = useMemo(
+		() => pInv.filter((i) => i.status === "draft").length,
+		[pInv],
 	);
 
-	// ─── Cash register ────────────────────────────────────────────────────────
-
-	const todayRegister = useMemo(() => {
-		const today = new Date().toDateString();
-		return registers.find((r) => new Date(r.date).toDateString() === today);
+	const todayReg = useMemo(() => {
+		const t = new Date().toDateString();
+		return registers.find((r) => new Date(r.date).toDateString() === t);
 	}, [registers]);
-
 	const lastClosed = useMemo(
 		() => registers.find((r) => r.status === "closed"),
 		[registers],
 	);
 
-	// ─── Render ───────────────────────────────────────────────────────────────
-
-	if (loading) {
+	if (loading)
 		return (
 			<div
 				className="min-h-screen flex items-center justify-center"
@@ -424,9 +421,8 @@ export default function AnalyticsPage() {
 				/>
 			</div>
 		);
-	}
 
-	if (error) {
+	if (error)
 		return (
 			<div
 				className="min-h-screen flex items-center justify-center"
@@ -452,7 +448,6 @@ export default function AnalyticsPage() {
 				</div>
 			</div>
 		);
-	}
 
 	return (
 		<div
@@ -471,7 +466,7 @@ export default function AnalyticsPage() {
 							letterSpacing: "0.04em",
 						}}
 					>
-						ANALITICAS
+						ANALÍTICAS
 					</h1>
 					<div
 						className="font-body text-ink-disabled mt-1"
@@ -499,7 +494,7 @@ export default function AnalyticsPage() {
 								letterSpacing: "0.1em",
 								border: "none",
 								cursor: "pointer",
-								transition: "all 0.15s",
+								transition: "all .15s",
 								boxShadow:
 									period === p ? "0 0 8px rgba(245,158,11,0.3)" : "none",
 							}}
@@ -509,110 +504,31 @@ export default function AnalyticsPage() {
 					))}
 				</div>
 			</div>
-
 			<div className="divider-gold mb-7" />
 
 			<div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-				{/* ── 1. KPI Row ──────────────────────────────────────────── */}
+				{/* KPI Row */}
 				<div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-					{[
-						{
-							label: "Ingresos",
-							value: formatCurrency(revenue),
-							icon: DollarSign,
-							accent: true,
-						},
-						{
-							label: "Pedidos",
-							value: String(orderCount),
-							icon: ShoppingBag,
-							accent: false,
-						},
-						{
-							label: "Ticket Promedio",
-							value: formatCurrency(avgTicket),
-							icon: Receipt,
-							accent: false,
-						},
-						{
-							label: "Gastos del Período",
-							value: formatCurrency(totalExpenses),
-							icon: Wallet,
-							accent: false,
-						},
-					].map(({ label, value, icon: Icon, accent }) => (
-						<div
-							key={label}
-							className="card p-5"
-							style={{
-								position: "relative",
-								overflow: "hidden",
-								...(accent
-									? {
-											borderColor: "rgba(245,158,11,0.25)",
-											boxShadow: "0 0 24px rgba(245,158,11,0.08)",
-										}
-									: {}),
-							}}
-						>
-							{accent && (
-								<div
-									style={{
-										position: "absolute",
-										inset: 0,
-										background:
-											"radial-gradient(ellipse 300px 200px at 50% 0%, rgba(245,158,11,0.06) 0%, transparent 60%)",
-										pointerEvents: "none",
-									}}
-								/>
-							)}
-							<div
-								className="flex items-center justify-between mb-4"
-								style={{ position: "relative", zIndex: 1 }}
-							>
-								<span
-									className="font-display text-ink-disabled uppercase"
-									style={{ fontSize: 9, letterSpacing: "0.25em" }}
-								>
-									{label}
-								</span>
-								<div
-									style={{
-										width: 32,
-										height: 32,
-										borderRadius: 9,
-										background: accent ? "rgba(245,158,11,0.2)" : "var(--s3)",
-										border: accent
-											? "1px solid rgba(245,158,11,0.3)"
-											: "1px solid var(--s4)",
-										display: "flex",
-										alignItems: "center",
-										justifyContent: "center",
-									}}
-								>
-									<Icon
-										size={14}
-										style={{ color: accent ? "#f59e0b" : "#888" }}
-									/>
-								</div>
-							</div>
-							<div style={{ position: "relative", zIndex: 1 }}>
-								<div
-									className="font-kds"
-									style={{
-										fontSize: accent ? 36 : 30,
-										lineHeight: 1,
-										color: accent ? "#f59e0b" : "#e5e5e5",
-									}}
-								>
-									{value}
-								</div>
-							</div>
-						</div>
-					))}
+					<Kpi
+						label="Ingresos"
+						value={formatCurrency(revenue)}
+						Icon={DollarSign}
+						accent
+					/>
+					<Kpi label="Pedidos" value={String(cnt)} Icon={ShoppingBag} />
+					<Kpi
+						label="Ticket Promedio"
+						value={formatCurrency(avgTicket)}
+						Icon={Receipt}
+					/>
+					<Kpi
+						label="Gastos del Período"
+						value={formatCurrency(totExp)}
+						Icon={Wallet}
+					/>
 				</div>
 
-				{/* ── 2. P&L Summary ─────────────────────────────────────── */}
+				{/* P&L */}
 				<div className="card-gold" style={{ padding: 24, borderRadius: 14 }}>
 					<h3
 						className="font-display text-ink-primary"
@@ -620,13 +536,7 @@ export default function AnalyticsPage() {
 					>
 						Resultado del Período
 					</h3>
-					<div
-						style={{
-							display: "flex",
-							flexDirection: "column",
-							gap: 10,
-						}}
-					>
+					<div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
 						<div className="flex items-center justify-between">
 							<span
 								className="font-body text-ink-secondary"
@@ -650,7 +560,7 @@ export default function AnalyticsPage() {
 								className="font-body text-ink-secondary"
 								style={{ fontSize: 13 }}
 							>
-								- Gastos totales
+								− Gastos totales
 							</span>
 							<span
 								className="font-body"
@@ -660,7 +570,7 @@ export default function AnalyticsPage() {
 									color: "#ef4444",
 								}}
 							>
-								{formatCurrency(totalExpenses)}
+								{formatCurrency(totExp)}
 							</span>
 						</div>
 						<div
@@ -704,10 +614,10 @@ export default function AnalyticsPage() {
 										className="font-kds"
 										style={{
 											fontSize: 22,
-											color: foodCostPct <= 30 ? "#22c55e" : "#ef4444",
+											color: foodPct <= 30 ? "#22c55e" : "#ef4444",
 										}}
 									>
-										{foodCostPct.toFixed(1)}%
+										{foodPct.toFixed(1)}%
 									</span>
 									<span
 										className="font-body text-ink-disabled"
@@ -729,10 +639,10 @@ export default function AnalyticsPage() {
 										className="font-kds"
 										style={{
 											fontSize: 22,
-											color: primeCostPct <= 60 ? "#22c55e" : "#ef4444",
+											color: primePct <= 60 ? "#22c55e" : "#ef4444",
 										}}
 									>
-										{primeCostPct.toFixed(1)}%
+										{primePct.toFixed(1)}%
 									</span>
 									<span
 										className="font-body text-ink-disabled"
@@ -746,16 +656,12 @@ export default function AnalyticsPage() {
 					</div>
 				</div>
 
-				{/* ── 3. Payment Methods ──────────────────────────────────── */}
-				{paymentBreakdown.length > 0 && (
+				{/* Payment Methods */}
+				{pmBreak.length > 0 && (
 					<div className="card" style={{ padding: 24 }}>
 						<h3
 							className="font-display text-ink-primary"
-							style={{
-								fontSize: 13,
-								fontWeight: 700,
-								marginBottom: 2,
-							}}
+							style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}
 						>
 							Ingresos por Método de Pago
 						</h3>
@@ -765,20 +671,12 @@ export default function AnalyticsPage() {
 						>
 							Desglose de pedidos cerrados
 						</div>
-						<div
-							style={{
-								display: "flex",
-								flexDirection: "column",
-								gap: 12,
-							}}
-						>
-							{paymentBreakdown.map((pm) => {
+						<div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+							{pmBreak.map((pm) => {
 								const pct =
-									paymentTotal > 0
-										? ((pm.amount / paymentTotal) * 100).toFixed(1)
-										: "0";
+									pmTotal > 0 ? ((pm.amt / pmTotal) * 100).toFixed(1) : "0";
 								return (
-									<div key={pm.method}>
+									<div key={pm.k}>
 										<div
 											className="flex items-center justify-between"
 											style={{ marginBottom: 6 }}
@@ -803,16 +701,13 @@ export default function AnalyticsPage() {
 													className="font-body text-ink-disabled"
 													style={{ fontSize: 11 }}
 												>
-													({pm.count} {pm.count === 1 ? "pedido" : "pedidos"})
+													({pm.n} {pm.n === 1 ? "pedido" : "pedidos"})
 												</span>
 											</div>
 											<div className="flex items-center gap-3">
 												<span
 													className="font-display text-ink-secondary"
-													style={{
-														fontSize: 11,
-														fontWeight: 700,
-													}}
+													style={{ fontSize: 11, fontWeight: 700 }}
 												>
 													{pct}%
 												</span>
@@ -822,10 +717,10 @@ export default function AnalyticsPage() {
 														fontSize: 13,
 														fontFamily: "monospace",
 														minWidth: 100,
-														textAlign: "right",
+														textAlign: "right" as const,
 													}}
 												>
-													{formatCurrency(pm.amount)}
+													{formatCurrency(pm.amt)}
 												</span>
 											</div>
 										</div>
@@ -840,11 +735,11 @@ export default function AnalyticsPage() {
 										>
 											<div
 												style={{
-													width: `${paymentTotal > 0 ? (pm.amount / paymentTotal) * 100 : 0}%`,
+													width: `${pmTotal > 0 ? (pm.amt / pmTotal) * 100 : 0}%`,
 													height: "100%",
 													borderRadius: 4,
 													background: pm.color,
-													transition: "width 0.3s",
+													transition: "width .3s",
 												}}
 											/>
 										</div>
@@ -855,80 +750,80 @@ export default function AnalyticsPage() {
 					</div>
 				)}
 
-				{/* ── 4. Revenue by Product ───────────────────────────────── */}
-				{categoryBreakdown.length > 0 && (
+				{/* Revenue by Product */}
+				{prodBreak.length > 0 && (
 					<HBar
 						title="Ingresos por Producto"
-						subtitle="Top 10 productos por monto vendido"
-						items={categoryBreakdown.map((c, i) => ({
-							label: c.name,
-							value: c.value,
-							color: BAR_COLORS[i % BAR_COLORS.length],
+						sub="Top 10 productos por monto vendido"
+						items={prodBreak.map((p, i) => ({
+							l: p.n,
+							v: p.v,
+							c: COLORS[i % COLORS.length],
 						}))}
 					/>
 				)}
 
-				{/* ── 5. Expense Breakdown ────────────────────────────────── */}
-				{expenseBreakdown.length > 0 && (
+				{/* Expense Breakdown */}
+				{expBreak.length > 0 && (
 					<HBar
 						title="Desglose de Gastos"
-						subtitle="Gastos agrupados por categoría"
-						items={expenseBreakdown.map((e, i) => ({
-							label: e.name,
-							value: e.value,
-							color: BAR_COLORS[i % BAR_COLORS.length],
+						sub="Gastos agrupados por categoría"
+						items={expBreak.map((e, i) => ({
+							l: e.n,
+							v: e.v,
+							c: COLORS[i % COLORS.length],
 						}))}
 					/>
 				)}
 
-				{/* ── 6. Hourly Revenue (Hoy only) ────────────────────────── */}
-				{period === "Hoy" && hourlyRevenue.length > 0 && (
-					<div className="card" style={{ padding: 24 }}>
-						<div className="flex items-center justify-between mb-6">
-							<div>
-								<h3
-									className="font-display text-ink-primary"
-									style={{ fontSize: 13, fontWeight: 700 }}
-								>
-									Ingresos por Hora
-								</h3>
-								<div
-									className="font-body text-ink-disabled mt-0.5"
-									style={{ fontSize: 11 }}
-								>
-									Pedidos cerrados hoy por hora
+				{/* Hourly Revenue */}
+				{period === "Hoy" &&
+					hourly.length > 0 &&
+					(() => {
+						const mx = Math.max(...hourly.map((h) => h.v), 1);
+						const nowHr = new Date().getHours();
+						return (
+							<div className="card" style={{ padding: 24 }}>
+								<div className="flex items-center justify-between mb-6">
+									<div>
+										<h3
+											className="font-display text-ink-primary"
+											style={{ fontSize: 13, fontWeight: 700 }}
+										>
+											Ingresos por Hora
+										</h3>
+										<div
+											className="font-body text-ink-disabled mt-0.5"
+											style={{ fontSize: 11 }}
+										>
+											Pedidos cerrados hoy por hora
+										</div>
+									</div>
+									<div style={{ textAlign: "right" }}>
+										<div
+											className="font-kds"
+											style={{
+												fontSize: 22,
+												lineHeight: 1,
+												color: "var(--gold)",
+											}}
+										>
+											{formatCurrency(revenue)}
+										</div>
+										<div
+											className="font-body text-ink-disabled"
+											style={{ fontSize: 10 }}
+										>
+											total hoy
+										</div>
+									</div>
 								</div>
-							</div>
-							<div style={{ textAlign: "right" }}>
-								<div
-									className="font-kds"
-									style={{
-										fontSize: 22,
-										lineHeight: 1,
-										color: "var(--gold)",
-									}}
-								>
-									{formatCurrency(revenue)}
-								</div>
-								<div
-									className="font-body text-ink-disabled"
-									style={{ fontSize: 10 }}
-								>
-									total hoy
-								</div>
-							</div>
-						</div>
-						{(() => {
-							const maxH = Math.max(...hourlyRevenue.map((h) => h.value), 1);
-							const nowHour = new Date().getHours();
-							return (
 								<div className="flex items-end gap-2" style={{ height: 200 }}>
-									{hourlyRevenue.map((h) => {
-										const heightPct = (h.value / maxH) * 100;
-										const isCurrent = h.hour === nowHour;
+									{hourly.map((h) => {
+										const cur = h.hr === nowHr;
 										return (
 											<div
-												key={h.hour}
+												key={h.hr}
 												className="flex-1 flex flex-col items-center gap-1.5 h-full"
 											>
 												<div className="flex-1 w-full flex flex-col items-center justify-end gap-1">
@@ -936,23 +831,23 @@ export default function AnalyticsPage() {
 														className="font-body"
 														style={{
 															fontSize: 9,
-															color: isCurrent ? "#f59e0b" : "#555",
+															color: cur ? "#f59e0b" : "#555",
 															fontFamily: "monospace",
 														}}
 													>
-														{Math.round(h.value / 1000)}k
+														{Math.round(h.v / 1000)}k
 													</span>
 													<div
 														style={{
 															width: "100%",
-															height: `${heightPct}%`,
+															height: `${(h.v / mx) * 100}%`,
 															minHeight: 2,
 															borderRadius: "4px 4px 0 0",
-															background: isCurrent ? "#f59e0b" : "var(--s4)",
-															boxShadow: isCurrent
+															background: cur ? "#f59e0b" : "var(--s4)",
+															boxShadow: cur
 																? "0 0 12px rgba(245,158,11,0.4)"
 																: "none",
-															transition: "all 0.3s",
+															transition: "all .3s",
 														}}
 													/>
 												</div>
@@ -960,23 +855,21 @@ export default function AnalyticsPage() {
 													className="font-body flex-shrink-0"
 													style={{
 														fontSize: 10,
-														color: isCurrent ? "#f59e0b" : "#555",
+														color: cur ? "#f59e0b" : "#555",
 														fontFamily: "monospace",
 													}}
 												>
-													{String(h.hour).padStart(2, "0")}
-													:00
+													{String(h.hr).padStart(2, "0")}:00
 												</span>
 											</div>
 										);
 									})}
 								</div>
-							);
-						})()}
-					</div>
-				)}
+							</div>
+						);
+					})()}
 
-				{/* ── 7. AFIP Summary ─────────────────────────────────────── */}
+				{/* AFIP + Cash Register */}
 				<div className="grid gap-4 grid-cols-1 md:grid-cols-2">
 					<div className="card" style={{ padding: 24 }}>
 						<div className="flex items-center gap-2 mb-4">
@@ -985,16 +878,10 @@ export default function AnalyticsPage() {
 								className="font-display text-ink-primary"
 								style={{ fontSize: 13, fontWeight: 700 }}
 							>
-								AFIP - Facturación
+								AFIP — Facturación
 							</h3>
 						</div>
-						<div
-							style={{
-								display: "flex",
-								flexDirection: "column",
-								gap: 12,
-							}}
-						>
+						<div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 							<div className="flex items-center justify-between">
 								<span
 									className="font-body text-ink-secondary"
@@ -1006,7 +893,7 @@ export default function AnalyticsPage() {
 									className="font-kds"
 									style={{ fontSize: 24, color: "#22c55e" }}
 								>
-									{afipAuthorized}
+									{afipAuth.length}
 								</span>
 							</div>
 							<div className="flex items-center justify-between">
@@ -1024,7 +911,7 @@ export default function AnalyticsPage() {
 										color: "#e5e5e5",
 									}}
 								>
-									{formatCurrency(afipTotal)}
+									{formatCurrency(afipAuth.reduce((s, i) => s + i.total, 0))}
 								</span>
 							</div>
 							<div className="flex items-center justify-between">
@@ -1038,16 +925,14 @@ export default function AnalyticsPage() {
 									className="font-kds"
 									style={{
 										fontSize: 24,
-										color: afipPending > 0 ? "#f59e0b" : "#666",
+										color: afipPend > 0 ? "#f59e0b" : "#666",
 									}}
 								>
-									{afipPending}
+									{afipPend}
 								</span>
 							</div>
 						</div>
 					</div>
-
-					{/* ── 8. Cash Register ────────────────────────────────── */}
 					<div className="card" style={{ padding: 24 }}>
 						<div className="flex items-center gap-2 mb-4">
 							<Landmark size={16} style={{ color: "var(--gold)" }} />
@@ -1058,13 +943,9 @@ export default function AnalyticsPage() {
 								Caja Registradora
 							</h3>
 						</div>
-						{todayRegister ? (
+						{todayReg ? (
 							<div
-								style={{
-									display: "flex",
-									flexDirection: "column",
-									gap: 12,
-								}}
+								style={{ display: "flex", flexDirection: "column", gap: 12 }}
 							>
 								<div className="flex items-center justify-between">
 									<span
@@ -1077,17 +958,16 @@ export default function AnalyticsPage() {
 										className="badge"
 										style={{
 											background:
-												todayRegister.status === "open"
+												todayReg.status === "open"
 													? "rgba(34,197,94,0.15)"
 													: "rgba(100,116,139,0.15)",
-											color:
-												todayRegister.status === "open" ? "#22c55e" : "#94a3b8",
+											color: todayReg.status === "open" ? "#22c55e" : "#94a3b8",
 											fontSize: 11,
 											padding: "3px 10px",
 											borderRadius: 6,
 										}}
 									>
-										{todayRegister.status === "open" ? "Abierta" : "Cerrada"}
+										{todayReg.status === "open" ? "Abierta" : "Cerrada"}
 									</span>
 								</div>
 								<div className="flex items-center justify-between">
@@ -1105,10 +985,10 @@ export default function AnalyticsPage() {
 											color: "#e5e5e5",
 										}}
 									>
-										{formatCurrency(todayRegister.openingBalance)}
+										{formatCurrency(todayReg.openingBalance)}
 									</span>
 								</div>
-								{todayRegister.closingBalance != null && (
+								{todayReg.closingBalance != null && (
 									<div className="flex items-center justify-between">
 										<span
 											className="font-body text-ink-secondary"
@@ -1118,23 +998,16 @@ export default function AnalyticsPage() {
 										</span>
 										<span
 											className="font-kds"
-											style={{
-												fontSize: 24,
-												color: "var(--gold)",
-											}}
+											style={{ fontSize: 24, color: "var(--gold)" }}
 										>
-											{formatCurrency(todayRegister.closingBalance)}
+											{formatCurrency(todayReg.closingBalance)}
 										</span>
 									</div>
 								)}
 							</div>
 						) : lastClosed ? (
 							<div
-								style={{
-									display: "flex",
-									flexDirection: "column",
-									gap: 12,
-								}}
+								style={{ display: "flex", flexDirection: "column", gap: 12 }}
 							>
 								<div
 									className="font-body text-ink-disabled"
@@ -1147,7 +1020,7 @@ export default function AnalyticsPage() {
 										className="font-body text-ink-secondary"
 										style={{ fontSize: 12 }}
 									>
-										Ultimo cierre
+										Último cierre
 									</span>
 									<span
 										className="font-body"
@@ -1180,26 +1053,17 @@ export default function AnalyticsPage() {
 					</div>
 				</div>
 
-				{/* ── Empty state ──────────────────────────────────────────── */}
-				{orderCount === 0 &&
-					totalExpenses === 0 &&
-					periodInvoices.length === 0 && (
-						<div className="card" style={{ padding: 40, textAlign: "center" }}>
-							<TrendingUp
-								size={32}
-								style={{
-									color: "#555",
-									margin: "0 auto 12px",
-								}}
-							/>
-							<p
-								className="font-body text-ink-disabled"
-								style={{ fontSize: 13 }}
-							>
-								No hay datos para este período
-							</p>
-						</div>
-					)}
+				{cnt === 0 && totExp === 0 && pInv.length === 0 && (
+					<div className="card" style={{ padding: 40, textAlign: "center" }}>
+						<TrendingUp
+							size={32}
+							style={{ color: "#555", margin: "0 auto 12px" }}
+						/>
+						<p className="font-body text-ink-disabled" style={{ fontSize: 13 }}>
+							No hay datos para este período
+						</p>
+					</div>
+				)}
 			</div>
 		</div>
 	);

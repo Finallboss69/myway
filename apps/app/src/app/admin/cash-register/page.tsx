@@ -1138,6 +1138,18 @@ export default function CashRegisterPage() {
 					</div>
 				</div>
 
+				{(activeRegister || history.length > 0) && (
+					<button
+						className="btn-ghost flex items-center gap-1.5"
+						onClick={handlePrint}
+					>
+						<Printer size={14} />
+						<span className="font-display" style={{ fontSize: 10 }}>
+							Imprimir
+						</span>
+					</button>
+				)}
+
 				{activeRegister && (
 					<div
 						className="font-body text-ink-disabled"
