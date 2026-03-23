@@ -595,13 +595,22 @@ export default function TableDetailPage() {
 	);
 
 	useEffect(() => {
-		fetch("/api/tables")
-			.then((r) => r.json())
-			.then((tables: TableInfo[]) => {
-				const found = tables.find((t) => t.id === tableId);
-				if (found) setTableInfo(found);
-			})
-			.catch(() => {});
+		let active = true;
+		const load = () => {
+			fetch("/api/tables")
+				.then((r) => r.json())
+				.then((tables: TableInfo[]) => {
+					const found = tables.find((t) => t.id === tableId);
+					if (active && found) setTableInfo(found);
+				})
+				.catch(() => {});
+		};
+		load();
+		const id = setInterval(load, 5000);
+		return () => {
+			active = false;
+			clearInterval(id);
+		};
 	}, [tableId]);
 
 	const [optimisticOrders, setOptimisticOrders] = useState<Order[] | null>(
@@ -725,8 +734,17 @@ export default function TableDetailPage() {
 			</header>
 
 			{/* Pill tab switcher */}
-			<div style={{ background: "var(--s1)", padding: "10px 16px", borderBottom: "1px solid var(--s3)" }}>
-				<div className="flex gap-2 p-1 rounded-2xl" style={{ background: "var(--s3)" }}>
+			<div
+				style={{
+					background: "var(--s1)",
+					padding: "10px 16px",
+					borderBottom: "1px solid var(--s3)",
+				}}
+			>
+				<div
+					className="flex gap-2 p-1 rounded-2xl"
+					style={{ background: "var(--s3)" }}
+				>
 					{(["pedido", "agregar"] as const).map((tab) => (
 						<button
 							key={tab}
@@ -737,7 +755,10 @@ export default function TableDetailPage() {
 								fontSize: 15,
 								background: activeTab === tab ? "var(--gold)" : "transparent",
 								color: activeTab === tab ? "#080808" : "#6b6b6b",
-								boxShadow: activeTab === tab ? "0 2px 12px rgba(245,158,11,0.3)" : "none",
+								boxShadow:
+									activeTab === tab
+										? "0 2px 12px rgba(245,158,11,0.3)"
+										: "none",
 							}}
 						>
 							{tab === "pedido" ? "PEDIDO ACTUAL" : "AGREGAR ITEMS"}
