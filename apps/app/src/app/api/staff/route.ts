@@ -24,6 +24,12 @@ export async function POST(request: NextRequest) {
 			avatar: string;
 			pin?: string;
 		};
+		if (!body.name || !body.role || !body.avatar) {
+			return NextResponse.json(
+				{ error: "name, role, avatar required" },
+				{ status: 400 },
+			);
+		}
 		const member = await db.staff.create({
 			data: {
 				name: body.name,

@@ -36,6 +36,17 @@ export async function POST(request: NextRequest) {
 			isAvailable?: boolean;
 			isPoolChip?: boolean;
 		};
+		if (
+			!body.name ||
+			!body.categoryId ||
+			!body.target ||
+			typeof body.price !== "number"
+		) {
+			return NextResponse.json(
+				{ error: "name, price, categoryId, target required" },
+				{ status: 400 },
+			);
+		}
 		const product = await db.product.create({
 			data: {
 				name: body.name,

@@ -23,6 +23,12 @@ export async function POST(request: NextRequest) {
 			icon: string;
 			order?: number;
 		};
+		if (!body.name || !body.icon) {
+			return NextResponse.json(
+				{ error: "name, icon required" },
+				{ status: 400 },
+			);
+		}
 		const category = await db.category.create({
 			data: { name: body.name, icon: body.icon, order: body.order ?? 0 },
 		});

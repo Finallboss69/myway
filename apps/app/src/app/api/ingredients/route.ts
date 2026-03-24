@@ -34,6 +34,21 @@ export async function POST(request: NextRequest) {
 			categoryId?: string | null;
 			supplierId?: string | null;
 		};
+		if (
+			!body.name ||
+			!body.unit ||
+			typeof body.stockCurrent !== "number" ||
+			typeof body.alertThreshold !== "number" ||
+			typeof body.costPerUnit !== "number"
+		) {
+			return NextResponse.json(
+				{
+					error:
+						"name, unit, stockCurrent, alertThreshold, costPerUnit required",
+				},
+				{ status: 400 },
+			);
+		}
 		const ingredient = await db.ingredient.create({
 			data: {
 				name: body.name,

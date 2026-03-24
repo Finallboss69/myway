@@ -19,7 +19,11 @@ export async function GET() {
 export async function POST(req: Request) {
 	try {
 		const body = await req.json();
-		const category = await db.ingredientCategory.create({ data: body });
+		if (!body.name) {
+			return NextResponse.json({ error: "name required" }, { status: 400 });
+		}
+		const allowed = { name: body.name, order: body.order ?? 0 };
+		const category = await db.ingredientCategory.create({ data: allowed });
 		return NextResponse.json(category, { status: 201 });
 	} catch (e) {
 		console.error("[ingredient-categories POST]", e);

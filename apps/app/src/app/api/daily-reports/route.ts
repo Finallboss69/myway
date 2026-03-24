@@ -31,6 +31,12 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
 	try {
 		const { date: dateStr } = await req.json();
+		if (!dateStr || isNaN(new Date(dateStr).getTime())) {
+			return NextResponse.json(
+				{ error: "valid date required" },
+				{ status: 400 },
+			);
+		}
 		const date = new Date(dateStr);
 		const start = new Date(date);
 		start.setHours(0, 0, 0, 0);

@@ -24,14 +24,31 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
 	try {
 		const body = await req.json();
+		if (
+			!body.productId ||
+			!body.ingredientId ||
+			typeof body.quantity !== "number" ||
+			!body.unit
+		) {
+			return NextResponse.json(
+				{ error: "productId, ingredientId, quantity, unit required" },
+				{ status: 400 },
+			);
+		}
+		const allowed = {
+			productId: body.productId,
+			ingredientId: body.ingredientId,
+			quantity: body.quantity,
+			unit: body.unit,
+		};
 		const item = await db.recipeIngredient.create({
-			data: body,
+			data: allowed,
 			include: { ingredient: true },
 		});
 
 		// Recalculate product cost
 		const allIngredients = await db.recipeIngredient.findMany({
-			where: { productId: body.productId },
+			where: { productId: allowed.productId },
 			include: { ingredient: true },
 		});
 		const totalCost = allIngredients.reduce(
