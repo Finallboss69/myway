@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Delete, Check, LogIn, LogOut } from "lucide-react";
 
 interface StaffSession {
@@ -22,15 +22,25 @@ interface PinGateProps {
 	subtitle?: string;
 }
 
+/** Sessions expire after 8 hours (one shift) */
+const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+
 function getSession(key: string): StaffSession | null {
 	try {
 		const raw = localStorage.getItem(key);
 		if (!raw) return null;
-		return JSON.parse(raw) as StaffSession;
+		const data = JSON.parse(raw) as StaffSession & { createdAt?: number };
+		if (data.createdAt && Date.now() - data.createdAt > SESSION_TTL_MS) {
+			localStorage.removeItem(key);
+			return null;
+		}
+		return data;
 	} catch {
 		return null;
 	}
 }
+
+const EMPTY_ROLES: string[] = [];
 
 export default function PinGate({
 	children,
@@ -39,12 +49,7 @@ export default function PinGate({
 	title = "Ingresá tu PIN",
 	subtitle,
 }: PinGateProps) {
-	// Stable reference for allowedRoles to avoid infinite re-render loop
-	const roles = useMemo(
-		() => allowedRoles ?? [],
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[JSON.stringify(allowedRoles)],
-	);
+	const roles = allowedRoles ?? EMPTY_ROLES;
 
 	const [authed, setAuthed] = useState<StaffSession | null>(null);
 	const [checking, setChecking] = useState(true);
@@ -107,7 +112,10 @@ export default function PinGate({
 					}, 600);
 					return;
 				}
-				localStorage.setItem(storageKey, JSON.stringify(staff));
+				localStorage.setItem(
+					storageKey,
+					JSON.stringify({ ...staff, createdAt: Date.now() }),
+				);
 				setSuccess(true);
 				setTimeout(() => setAuthed(staff), 500);
 			} else {
