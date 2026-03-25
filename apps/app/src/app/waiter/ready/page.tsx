@@ -11,6 +11,8 @@ import {
 	PackageCheck,
 } from "lucide-react";
 import clsx from "clsx";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -462,6 +464,7 @@ export default function ReadyPage() {
 					Cuenta
 				</Link>
 			</nav>
+			<HelpButton {...helpContent.waiterReady} variant="float" />
 		</div>
 	);
 }

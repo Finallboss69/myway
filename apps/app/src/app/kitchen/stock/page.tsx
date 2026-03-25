@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -996,6 +998,7 @@ export default function KitchenStockPage() {
 					onSave={handleAdjust}
 				/>
 			)}
+			<HelpButton {...helpContent.kitchenStock} variant="float" />
 		</div>
 	);
 }

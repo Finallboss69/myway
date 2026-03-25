@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import {
 	Truck,
 	MapPin,
@@ -675,6 +677,7 @@ export default function DeliveryPage() {
 
 			{/* ── Bottom nav ─────────────────────────────────────────────────── */}
 			<BottomNav />
+			<HelpButton {...helpContent.customerDelivery} variant="float" />
 		</div>
 	);
 }

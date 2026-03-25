@@ -4,6 +4,8 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Search, X, CheckCircle } from "lucide-react";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 
 interface Category {
 	id: string;
@@ -1514,6 +1516,7 @@ export default function PublicDeliveryPage() {
 					cartCount={cartCount}
 				/>
 			)}
+			<HelpButton {...helpContent.deliveryDashboard} variant="float" />
 		</>
 	);
 }

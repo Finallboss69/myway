@@ -15,6 +15,8 @@ import {
 import { formatCurrency, elapsedMinutes } from "@/lib/utils";
 import type { Order } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
@@ -820,6 +822,7 @@ export default function OrdersPage() {
 					</div>
 				</div>
 			</div>
+			<HelpButton {...helpContent.posOrders} variant="float" />
 		</div>
 	);
 }

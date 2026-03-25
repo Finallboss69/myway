@@ -15,6 +15,8 @@ import {
 	WifiOff,
 } from "lucide-react";
 import { elapsedMinutes } from "@/lib/utils";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -924,6 +926,7 @@ export default function BarKDSPage() {
 					</div>
 				</div>
 			</footer>
+			<HelpButton {...helpContent.barBoard} variant="float" />
 		</div>
 	);
 }

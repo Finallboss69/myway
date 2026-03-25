@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { formatCurrency } from "@/lib/utils";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1230,6 +1232,7 @@ export default function TableDetailPage() {
 					Cuenta
 				</Link>
 			</nav>
+			<HelpButton {...helpContent.waiterTableDetail} variant="float" />
 		</div>
 	);
 }

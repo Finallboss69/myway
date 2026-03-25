@@ -17,6 +17,8 @@ import {
 	Wine,
 } from "lucide-react";
 import Link from "next/link";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -980,6 +982,7 @@ export default function BarStockPage() {
 					onSave={handleAdjust}
 				/>
 			)}
+			<HelpButton {...helpContent.barStock} variant="float" />
 		</div>
 	);
 }

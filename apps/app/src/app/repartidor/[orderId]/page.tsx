@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { use } from "react";
 import type { TrackingData } from "@/lib/types";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 
 const STATUS_LABELS: Record<string, string> = {
 	pending: "Pendiente",
@@ -522,6 +524,7 @@ export default function RepartidorPage({
 					tiempo real.
 				</p>
 			</div>
+			<HelpButton {...helpContent.repartidorOrder} variant="float" />
 		</div>
 	);
 }

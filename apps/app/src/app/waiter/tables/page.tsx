@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { formatCurrency, formatTime, elapsedMinutes } from "@/lib/utils";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -565,6 +567,7 @@ export default function WaiterTablesPage() {
           main .grid { grid-template-columns: repeat(4, 1fr) !important; }
         }
       `}</style>
+			<HelpButton {...helpContent.waiterTables} variant="float" />
 		</div>
 	);
 }

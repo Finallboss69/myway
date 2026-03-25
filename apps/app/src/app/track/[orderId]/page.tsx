@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { use } from "react";
 import dynamic from "next/dynamic";
 import type { TrackingData } from "@/lib/types";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 
 // Leaflet must be loaded client-side only
 const LiveMap = dynamic(() => import("./LiveMap"), { ssr: false });
@@ -431,6 +433,7 @@ export default function TrackPage({
 					</div>
 				</div>
 			</div>
+			<HelpButton {...helpContent.trackOrder} variant="float" />
 		</div>
 	);
 }

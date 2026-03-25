@@ -3,6 +3,8 @@
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import {
 	ArrowLeft,
 	Plus,
@@ -555,14 +557,17 @@ function CartContent() {
 
 export default function CartPage() {
 	return (
-		<Suspense
-			fallback={
-				<div className="min-h-screen bg-surface-0 flex items-center justify-center">
-					<div className="w-12 h-12 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
-				</div>
-			}
-		>
-			<CartContent />
-		</Suspense>
+		<>
+			<Suspense
+				fallback={
+					<div className="min-h-screen bg-surface-0 flex items-center justify-center">
+						<div className="w-12 h-12 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+					</div>
+				}
+			>
+				<CartContent />
+			</Suspense>
+			<HelpButton {...helpContent.customerCart} variant="float" />
+		</>
 	);
 }

@@ -15,6 +15,8 @@ import {
 	WifiOff,
 } from "lucide-react";
 import { elapsedMinutes } from "@/lib/utils";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -936,6 +938,7 @@ export default function KitchenKDSPage() {
 					</div>
 				</div>
 			</footer>
+			<HelpButton {...helpContent.kitchenBoard} variant="float" />
 		</div>
 	);
 }

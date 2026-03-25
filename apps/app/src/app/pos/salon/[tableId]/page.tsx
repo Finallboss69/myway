@@ -29,6 +29,8 @@ import type {
 	Zone,
 } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 
 type PaymentMethod = "cash" | "mercadopago" | "card";
 
@@ -1429,6 +1431,7 @@ export default function TableDetailPage({
 			</div>
 
 			<Toast message={toastMsg} visible={toastVisible} />
+			<HelpButton {...helpContent.posTableDetail} variant="float" />
 		</div>
 	);
 }

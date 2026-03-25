@@ -14,6 +14,8 @@ import {
 import { formatCurrency, elapsedMinutes } from "@/lib/utils";
 import type { Table, Order, Zone, TableShape } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -1004,6 +1006,7 @@ export default function SalonPage() {
 					</aside>
 				</div>
 			</div>
+			<HelpButton {...helpContent.posSalon} variant="float" />
 		</div>
 	);
 }

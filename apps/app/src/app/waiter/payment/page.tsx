@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { formatCurrency } from "@/lib/utils";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -438,7 +440,9 @@ function PaymentContent() {
 												minHeight: 90,
 												padding: "16px 10px",
 												background: isActive ? "var(--gold)" : "var(--s2)",
-												border: isActive ? "1px solid rgba(245,158,11,0.7)" : "1px solid var(--s3)",
+												border: isActive
+													? "1px solid rgba(245,158,11,0.7)"
+													: "1px solid var(--s3)",
 												boxShadow: isActive
 													? "0 0 28px rgba(245,158,11,0.4), 0 2px 12px rgba(0,0,0,0.4)"
 													: "none",
@@ -447,12 +451,18 @@ function PaymentContent() {
 											<div
 												className="w-11 h-11 rounded-xl flex items-center justify-center"
 												style={{
-													background: isActive ? "rgba(0,0,0,0.2)" : "var(--s3)",
+													background: isActive
+														? "rgba(0,0,0,0.2)"
+														: "var(--s3)",
 													border: isActive ? "none" : "1px solid var(--s4)",
 												}}
 											>
 												<Icon
-													style={{ width: 20, height: 20, color: isActive ? "#080808" : "#6b6b6b" }}
+													style={{
+														width: 20,
+														height: 20,
+														color: isActive ? "#080808" : "#6b6b6b",
+													}}
 												/>
 											</div>
 											<span
@@ -618,6 +628,7 @@ function PaymentContent() {
 					</div>
 				</div>
 			)}
+			<HelpButton {...helpContent.waiterPayment} variant="float" />
 		</div>
 	);
 }

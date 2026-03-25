@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -838,17 +840,20 @@ function MenuContent() {
 
 export default function CustomerMenuPage() {
 	return (
-		<Suspense
-			fallback={
-				<div className="min-h-screen bg-surface-0 flex items-center justify-center">
-					<div className="text-center">
-						<div className="w-12 h-12 rounded-full border-2 border-brand-500 border-t-transparent animate-spin mx-auto mb-4" />
-						<p className="font-body text-ink-tertiary text-sm">Cargando…</p>
+		<>
+			<Suspense
+				fallback={
+					<div className="min-h-screen bg-surface-0 flex items-center justify-center">
+						<div className="text-center">
+							<div className="w-12 h-12 rounded-full border-2 border-brand-500 border-t-transparent animate-spin mx-auto mb-4" />
+							<p className="font-body text-ink-tertiary text-sm">Cargando…</p>
+						</div>
 					</div>
-				</div>
-			}
-		>
-			<MenuContent />
-		</Suspense>
+				}
+			>
+				<MenuContent />
+			</Suspense>
+			<HelpButton {...helpContent.customerMenu} variant="float" />
+		</>
 	);
 }

@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import HelpButton from "@/components/HelpButton";
+import { helpContent } from "@/lib/help-content";
 import {
 	CheckCircle,
 	Clock,
@@ -612,14 +614,17 @@ function OrderStatusContent() {
 
 export default function OrderStatusPage() {
 	return (
-		<Suspense
-			fallback={
-				<div className="min-h-screen bg-surface-0 flex items-center justify-center">
-					<div className="w-12 h-12 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
-				</div>
-			}
-		>
-			<OrderStatusContent />
-		</Suspense>
+		<>
+			<Suspense
+				fallback={
+					<div className="min-h-screen bg-surface-0 flex items-center justify-center">
+						<div className="w-12 h-12 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
+					</div>
+				}
+			>
+				<OrderStatusContent />
+			</Suspense>
+			<HelpButton {...helpContent.customerOrderStatus} variant="float" />
+		</>
 	);
 }
