@@ -1,6 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { db } from "@/lib/db";
 import { getMpMerchantOrder } from "@/lib/mercadopago";
+
+/**
+ * Verify MercadoPago webhook signature (HMAC-SHA256).
+ * Returns true if signature is valid or if no webhook secret is configured (dev mode).
+ */
+async function verifyMpSignature(request: NextRequest): Promise<boolean> {
+	const secret = await getWebhookSecret();
+	if (!secret) return true; // No secret configured — skip in dev
+
+	const xSignature = request.headers.get("x-signature");
+	const xRequestId = request.headers.get("x-request-id");
+	if (!xSignature || !xRequestId) return false;
+
+	const ts = xSignature.match(/ts=([^,]+)/)?.[1];
+	const v1 = xSignature.match(/v1=([^,]+)/)?.[1];
+	if (!ts || !v1) return false;
+
+	const dataId = new URL(request.url).searchParams.get("data.id") ?? "";
+	const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+	const expected = crypto
+		.createHmac("sha256", secret)
+		.update(manifest)
+		.digest("hex");
+
+	try {
+		return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(v1));
+	} catch {
+		return false;
+	}
+}
+
+async function getWebhookSecret(): Promise<string | null> {
+	const row = await db.setting.findUnique({
+		where: { key: "mp_webhook_secret" },
+	});
+	return row?.value ?? null;
+}
 
 /**
  * POST /api/webhooks/mercadopago — MercadoPago IPN notification handler
@@ -11,6 +49,12 @@ import { getMpMerchantOrder } from "@/lib/mercadopago";
 export async function POST(request: NextRequest) {
 	// Always respond 200 immediately — MP retries on non-2xx
 	try {
+		// Verify webhook signature when secret is configured
+		const sigValid = await verifyMpSignature(request);
+		if (!sigValid) {
+			console.warn("[webhook/mercadopago] Invalid signature — rejected");
+			return NextResponse.json({ received: true });
+		}
 		const url = new URL(request.url);
 		const topic = url.searchParams.get("topic");
 		const id = url.searchParams.get("id");
@@ -71,15 +115,20 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ received: true });
 		}
 
-		// Mark payment as paid
-		await db.mpPayment.update({
-			where: { id: mpPayment.id },
+		// Atomic update — prevents race condition from concurrent IPN retries
+		const updated = await db.mpPayment.updateMany({
+			where: { id: mpPayment.id, status: { not: "paid" } },
 			data: {
 				status: "paid",
 				paidAt: new Date(),
 				mpOrderId: String(merchantOrder.id),
 			},
 		});
+
+		if (updated.count === 0) {
+			// Already processed by a concurrent request
+			return NextResponse.json({ received: true });
+		}
 
 		// Close the orders
 		const orderIds = mpPayment.orderId.split(",");

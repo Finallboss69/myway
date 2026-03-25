@@ -114,7 +114,11 @@ export default function PinGate({
 				}
 				localStorage.setItem(
 					storageKey,
-					JSON.stringify({ ...staff, createdAt: Date.now() }),
+					JSON.stringify({
+						...staff,
+						pin: digits.join(""),
+						createdAt: Date.now(),
+					}),
 				);
 				setSuccess(true);
 				setTimeout(() => setAuthed(staff), 500);

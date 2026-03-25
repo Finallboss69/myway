@@ -41,6 +41,18 @@ import { apiFetch } from "@/lib/api";
 import HelpButton from "@/components/HelpButton";
 import { helpContent } from "@/lib/help-content";
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getStaffPin(): string {
+	try {
+		const raw = localStorage.getItem("myway-pos-staff");
+		if (!raw) return "";
+		return JSON.parse(raw)?.pin ?? "";
+	} catch {
+		return "";
+	}
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CANVAS_PAD = 60;
@@ -981,7 +993,10 @@ function TableDetailPanel({
 		try {
 			const res = await fetch("/api/payments/mp", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					"x-staff-pin": getStaffPin(),
+				},
 				body: JSON.stringify({ orderIds }),
 			});
 			const data = await res.json();

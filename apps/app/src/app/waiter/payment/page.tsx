@@ -50,6 +50,16 @@ type PaymentMethod = "cash" | "mercadopago" | "card";
 
 const IVA_RATE = 0.21;
 
+function getStaffPin(): string {
+	try {
+		const raw = localStorage.getItem("myway-waiter-staff");
+		if (!raw) return "";
+		return JSON.parse(raw)?.pin ?? "";
+	} catch {
+		return "";
+	}
+}
+
 // ─── MercadoPago QR Component ─────────────────────────────────────────────────
 
 function MercadoPagoQR({
@@ -73,7 +83,10 @@ function MercadoPagoQR({
 		try {
 			const res = await fetch("/api/payments/mp", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					"x-staff-pin": getStaffPin(),
+				},
 				body: JSON.stringify({ orderIds }),
 			});
 			const data = await res.json();

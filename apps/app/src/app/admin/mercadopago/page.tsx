@@ -40,7 +40,25 @@ const FIELDS = [
 		help: "ID externo del punto de venta (creado en MercadoPago)",
 		secret: false,
 	},
+	{
+		key: "mp_webhook_secret",
+		label: "Webhook Secret",
+		placeholder: "...",
+		help: "Clave secreta para verificar notificaciones (Integraciones → Webhooks)",
+		secret: true,
+	},
 ] as const;
+
+function getStaffPin(): string {
+	try {
+		const raw = localStorage.getItem("myway-admin-staff");
+		if (!raw) return "";
+		const session = JSON.parse(raw);
+		return session?.pin ?? "";
+	} catch {
+		return "";
+	}
+}
 
 export default function MercadoPagoSettingsPage() {
 	const [values, setValues] = useState<Record<string, string>>({});
@@ -51,7 +69,9 @@ export default function MercadoPagoSettingsPage() {
 	const [showToken, setShowToken] = useState(false);
 
 	useEffect(() => {
-		fetch("/api/settings")
+		fetch("/api/settings", {
+			headers: { "x-staff-pin": getStaffPin() },
+		})
 			.then((r) => r.json())
 			.then((data: SettingRow[]) => {
 				const map: Record<string, string> = {};
@@ -71,7 +91,10 @@ export default function MercadoPagoSettingsPage() {
 		try {
 			const res = await fetch("/api/settings", {
 				method: "PUT",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					"x-staff-pin": getStaffPin(),
+				},
 				body: JSON.stringify({ key, value: value.trim() }),
 			});
 			if (!res.ok) {

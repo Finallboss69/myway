@@ -1,23 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { clearMpSettingsCache } from "@/lib/mercadopago";
+import { requireStaffRole } from "@/lib/auth-check";
 
 const ALLOWED_KEYS = [
 	"mp_access_token",
 	"mp_user_id",
 	"mp_external_pos_id",
+	"mp_webhook_secret",
 ] as const;
 
-export async function GET() {
+const SECRET_KEYS = new Set(["mp_access_token", "mp_webhook_secret"]);
+
+const ADMIN_ROLES = ["admin", "manager"];
+
+export async function GET(request: NextRequest) {
+	const auth = await requireStaffRole(request, ADMIN_ROLES);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const settings = await db.setting.findMany({
 			where: { key: { in: [...ALLOWED_KEYS] } },
 		});
-		// Mask the access token for security
+		// Mask secret values for security
 		const result = settings.map((s) => ({
 			key: s.key,
 			value:
-				s.key === "mp_access_token" && s.value.length > 8
+				SECRET_KEYS.has(s.key) && s.value.length > 8
 					? s.value.slice(0, 4) + "****" + s.value.slice(-4)
 					: s.value,
 			updatedAt: s.updatedAt,
@@ -33,6 +42,9 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
+	const auth = await requireStaffRole(request, ADMIN_ROLES);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const body = (await request.json()) as { key: string; value: string };
 		const { key, value } = body;
@@ -63,7 +75,7 @@ export async function PUT(request: NextRequest) {
 		return NextResponse.json({
 			key: setting.key,
 			value:
-				key === "mp_access_token" && setting.value.length > 8
+				SECRET_KEYS.has(key) && setting.value.length > 8
 					? setting.value.slice(0, 4) + "****" + setting.value.slice(-4)
 					: setting.value,
 		});

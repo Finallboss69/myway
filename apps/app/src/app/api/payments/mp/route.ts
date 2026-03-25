@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createMpQr } from "@/lib/mercadopago";
+import { requireStaffRole } from "@/lib/auth-check";
+
+const STAFF_ROLES = ["admin", "manager", "pos", "waiter"];
 
 /**
  * POST /api/payments/mp — Generate a MercadoPago QR for one or more orders on a table
  * Body: { orderId: string } or { orderIds: string[] }
  */
 export async function POST(request: NextRequest) {
+	const auth = await requireStaffRole(request, STAFF_ROLES);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const body = (await request.json()) as {
 			orderId?: string;
@@ -49,13 +55,10 @@ export async function POST(request: NextRequest) {
 		const externalReference = `myway-${orders[0].tableId}-${Date.now()}`;
 		const tableNumber = orders[0].tableNumber;
 
-		// Build notification URL from the request origin
-		const origin =
-			request.headers.get("x-forwarded-host") ??
-			request.headers.get("host") ??
-			"localhost:3000";
-		const proto = request.headers.get("x-forwarded-proto") ?? "https";
-		const notificationUrl = `${proto}://${origin}/api/webhooks/mercadopago`;
+		// Build notification URL from server-side env var (not request headers)
+		const appUrl =
+			process.env.NEXT_PUBLIC_APP_URL ?? "https://myway-pi.vercel.app";
+		const notificationUrl = `${appUrl}/api/webhooks/mercadopago`;
 
 		// Create QR via MP API
 		const mpItems = allItems.map((item) => ({
