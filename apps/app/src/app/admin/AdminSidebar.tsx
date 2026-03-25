@@ -131,7 +131,7 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
 	// Read staff info from session
 	useEffect(() => {
 		try {
-			const stored = sessionStorage.getItem("myway-admin-staff");
+			const stored = localStorage.getItem("myway-admin-staff");
 			if (stored) {
 				const staff = JSON.parse(stored) as { name?: string; role?: string };
 				if (staff.name) setStaffName(staff.name);

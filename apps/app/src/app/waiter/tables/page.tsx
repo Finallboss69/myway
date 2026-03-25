@@ -275,7 +275,7 @@ export default function WaiterTablesPage() {
 	useEffect(() => {
 		if (typeof window !== "undefined") {
 			try {
-				const stored = sessionStorage.getItem("myway-waiter-staff");
+				const stored = localStorage.getItem("myway-waiter-staff");
 				if (stored) {
 					const staff = JSON.parse(stored) as { name: string };
 					setWaiterName(staff.name);

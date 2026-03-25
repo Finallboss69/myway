@@ -24,7 +24,7 @@ interface PinGateProps {
 
 function getSession(key: string): StaffSession | null {
 	try {
-		const raw = sessionStorage.getItem(key);
+		const raw = localStorage.getItem(key);
 		if (!raw) return null;
 		return JSON.parse(raw) as StaffSession;
 	} catch {
@@ -60,7 +60,7 @@ export default function PinGate({
 		if (s) {
 			// Validate stored session still has an allowed role
 			if (roles.length > 0 && !roles.includes(s.role)) {
-				sessionStorage.removeItem(storageKey);
+				localStorage.removeItem(storageKey);
 			} else {
 				setAuthed(s);
 			}
@@ -107,7 +107,7 @@ export default function PinGate({
 					}, 600);
 					return;
 				}
-				sessionStorage.setItem(storageKey, JSON.stringify(staff));
+				localStorage.setItem(storageKey, JSON.stringify(staff));
 				setSuccess(true);
 				setTimeout(() => setAuthed(staff), 500);
 			} else {
@@ -134,7 +134,7 @@ export default function PinGate({
 	};
 
 	const handleLogout = () => {
-		sessionStorage.removeItem(storageKey);
+		localStorage.removeItem(storageKey);
 		setAuthed(null);
 		setSuccess(false);
 		setPin([]);

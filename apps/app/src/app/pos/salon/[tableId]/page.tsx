@@ -338,7 +338,7 @@ export default function TableDetailPage({
 	const [staffName, setStaffName] = useState<string>("");
 	useEffect(() => {
 		try {
-			const stored = sessionStorage.getItem("pos-staff");
+			const stored = localStorage.getItem("pos-staff");
 			if (stored) {
 				const staff = JSON.parse(stored) as { name?: string };
 				if (staff.name) setStaffName(staff.name);

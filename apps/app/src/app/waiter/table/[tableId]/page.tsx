@@ -555,7 +555,7 @@ function AgregarTab({
 		setSending(true);
 		let waiterName: string | undefined;
 		try {
-			const stored = sessionStorage.getItem("myway-waiter-staff");
+			const stored = localStorage.getItem("myway-waiter-staff");
 			if (stored) {
 				waiterName = (JSON.parse(stored) as { name: string }).name;
 			}
