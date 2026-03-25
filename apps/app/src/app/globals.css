@@ -1,6 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
 
 /* ─── Design tokens ────────────────────────────────────────────────────────── */
 :root {
@@ -749,4 +748,7 @@ body {
 }
 .text-pool-500 {
 	color: #10b981;
+}
+.text-ink-disabled {
+	color: #404040;
 }

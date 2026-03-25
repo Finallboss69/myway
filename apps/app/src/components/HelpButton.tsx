@@ -29,7 +29,7 @@ export default function HelpButton({ sectionTitle, items }: HelpButtonProps) {
 					border: "1px solid rgba(245,158,11,0.2)",
 					color: "rgba(245,158,11,0.7)",
 					fontSize: 12,
-					fontFamily: "var(--font-dm)",
+					fontFamily: "var(--font-dm-sans)",
 				}}
 				title="¿Qué puedo hacer aquí?"
 			>
