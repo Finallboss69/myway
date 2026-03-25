@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Delete, Check, LogIn, LogOut } from "lucide-react";
 
 interface StaffSession {
@@ -35,10 +35,17 @@ function getSession(key: string): StaffSession | null {
 export default function PinGate({
 	children,
 	storageKey,
-	allowedRoles = [],
+	allowedRoles,
 	title = "Ingresá tu PIN",
 	subtitle,
 }: PinGateProps) {
+	// Stable reference for allowedRoles to avoid infinite re-render loop
+	const roles = useMemo(
+		() => allowedRoles ?? [],
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[JSON.stringify(allowedRoles)],
+	);
+
 	const [authed, setAuthed] = useState<StaffSession | null>(null);
 	const [checking, setChecking] = useState(true);
 	const [pin, setPin] = useState<string[]>([]);
@@ -52,14 +59,14 @@ export default function PinGate({
 		const s = getSession(storageKey);
 		if (s) {
 			// Validate stored session still has an allowed role
-			if (allowedRoles.length > 0 && !allowedRoles.includes(s.role)) {
+			if (roles.length > 0 && !roles.includes(s.role)) {
 				sessionStorage.removeItem(storageKey);
 			} else {
 				setAuthed(s);
 			}
 		}
 		setChecking(false);
-	}, [storageKey, allowedRoles]);
+	}, [storageKey, roles]);
 
 	const handleDigit = (digit: string) => {
 		if (pin.length >= 4 || success || verifying) return;
@@ -89,7 +96,7 @@ export default function PinGate({
 			});
 			if (res.ok) {
 				const staff = (await res.json()) as StaffSession;
-				if (allowedRoles.length > 0 && !allowedRoles.includes(staff.role)) {
+				if (roles.length > 0 && !roles.includes(staff.role)) {
 					setError("No tenés permisos para acceder");
 					setShaking(true);
 					setWrongFlash(true);

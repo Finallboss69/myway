@@ -242,132 +242,127 @@ function FloorTable({ table, order }: { table: Table; order?: Order }) {
 	return (
 		<Link
 			href={`/pos/salon/${table.id}`}
-			style={{ textDecoration: "none", display: "block" }}
+			onMouseEnter={() => setHovered(true)}
+			onMouseLeave={() => setHovered(false)}
+			style={{
+				textDecoration: "none",
+				position: "absolute",
+				left: table.x,
+				top: table.y,
+				width: table.w,
+				height: table.h,
+				transform: `rotate(${rotation}deg) scale(${baseScale})`,
+				transformOrigin: "center center",
+				transition: "transform 0.2s ease, box-shadow 0.2s ease",
+				borderRadius,
+				border: `2px solid ${colors.border}`,
+				boxShadow: [
+					`0 0 ${hovered ? 28 : 18}px ${colors.glow.replace(/[\d.]+\)$/, `${0.35 * glowIntensity})`)}`,
+					`0 4px 16px rgba(0,0,0,0.5)`,
+					`inset 0 1px 0 rgba(255,255,255,0.06)`,
+				].join(", "),
+				background: isPool ? poolBg : colors.bg,
+				display: "flex",
+				flexDirection: "column",
+				alignItems: "center",
+				justifyContent: "center",
+				gap: 2,
+				cursor: "pointer",
+				overflow: "hidden",
+				zIndex: hovered ? 10 : 1,
+			}}
 		>
+			{/* Pool pockets */}
+			{isPool && <PoolPockets w={table.w} h={table.h} />}
+
+			{/* Pool felt inner border */}
+			{isPool && (
+				<div
+					style={{
+						position: "absolute",
+						inset: 5,
+						borderRadius: 4,
+						border: "1px solid rgba(255,255,255,0.08)",
+						pointerEvents: "none",
+					}}
+				/>
+			)}
+
+			{/* Table number */}
 			<div
-				onMouseEnter={() => setHovered(true)}
-				onMouseLeave={() => setHovered(false)}
 				style={{
-					position: "absolute",
-					left: table.x,
-					top: table.y,
-					width: table.w,
-					height: table.h,
-					transform: `rotate(${rotation}deg) scale(${baseScale})`,
-					transformOrigin: "center center",
-					transition: "transform 0.2s ease, box-shadow 0.2s ease",
-					borderRadius,
-					border: `2px solid ${colors.border}`,
-					boxShadow: [
-						`0 0 ${hovered ? 28 : 18}px ${colors.glow.replace(/[\d.]+\)$/, `${0.35 * glowIntensity})`)}`,
-						`0 4px 16px rgba(0,0,0,0.5)`,
-						`inset 0 1px 0 rgba(255,255,255,0.06)`,
-					].join(", "),
-					background: isPool ? poolBg : colors.bg,
-					display: "flex",
-					flexDirection: "column",
-					alignItems: "center",
-					justifyContent: "center",
-					gap: 2,
-					cursor: "pointer",
-					overflow: "hidden",
-					zIndex: hovered ? 10 : 1,
+					fontFamily: "var(--font-bebas)",
+					fontSize: isRound
+						? Math.min(Math.min(table.w, table.h) * 0.4, 56)
+						: Math.min(table.w * 0.45, 64),
+					lineHeight: 0.9,
+					color: isPool ? "#4ade80" : colors.text,
+					letterSpacing: "0.04em",
+					textShadow: `0 0 20px ${isPool ? "#4ade80" : colors.text}60`,
+					position: "relative",
+					zIndex: 2,
 				}}
 			>
-				{/* Pool pockets */}
-				{isPool && <PoolPockets w={table.w} h={table.h} />}
+				{table.number}
+			</div>
 
-				{/* Pool felt inner border */}
-				{isPool && (
+			{/* Status label */}
+			<div style={{ position: "relative", zIndex: 2 }}>
+				{status === "available" ? (
 					<div
 						style={{
-							position: "absolute",
-							inset: 5,
-							borderRadius: 4,
-							border: "1px solid rgba(255,255,255,0.08)",
-							pointerEvents: "none",
+							fontFamily: "var(--font-syne)",
+							fontSize: 7,
+							fontWeight: 700,
+							letterSpacing: "0.22em",
+							color: isPool ? "#4ade80" : "#10b981",
+							textTransform: "uppercase",
 						}}
-					/>
-				)}
+					>
+						LIBRE
+					</div>
+				) : status === "occupied" && elapsed > 0 ? (
+					<div
+						style={{
+							fontFamily: "var(--font-bebas)",
+							fontSize: 15,
+							lineHeight: 1,
+							color: elapsed > 20 ? "#ef4444" : "#f59e0b",
+							letterSpacing: "0.06em",
+						}}
+					>
+						{elapsed}m
+					</div>
+				) : status === "reserved" ? (
+					<div
+						style={{
+							fontFamily: "var(--font-syne)",
+							fontSize: 7,
+							fontWeight: 700,
+							letterSpacing: "0.22em",
+							color: "#a78bfa",
+							textTransform: "uppercase",
+						}}
+					>
+						RESERV.
+					</div>
+				) : null}
+			</div>
 
-				{/* Table number */}
-				<div
-					style={{
-						fontFamily: "var(--font-bebas)",
-						fontSize: isRound
-							? Math.min(Math.min(table.w, table.h) * 0.4, 56)
-							: Math.min(table.w * 0.45, 64),
-						lineHeight: 0.9,
-						color: isPool ? "#4ade80" : colors.text,
-						letterSpacing: "0.04em",
-						textShadow: `0 0 20px ${isPool ? "#4ade80" : colors.text}60`,
-						position: "relative",
-						zIndex: 2,
-					}}
-				>
-					{table.number}
-				</div>
-
-				{/* Status label */}
-				<div style={{ position: "relative", zIndex: 2 }}>
-					{status === "available" ? (
-						<div
-							style={{
-								fontFamily: "var(--font-syne)",
-								fontSize: 7,
-								fontWeight: 700,
-								letterSpacing: "0.22em",
-								color: isPool ? "#4ade80" : "#10b981",
-								textTransform: "uppercase",
-							}}
-						>
-							LIBRE
-						</div>
-					) : status === "occupied" && elapsed > 0 ? (
-						<div
-							style={{
-								fontFamily: "var(--font-bebas)",
-								fontSize: 15,
-								lineHeight: 1,
-								color: elapsed > 20 ? "#ef4444" : "#f59e0b",
-								letterSpacing: "0.06em",
-							}}
-						>
-							{elapsed}m
-						</div>
-					) : status === "reserved" ? (
-						<div
-							style={{
-								fontFamily: "var(--font-syne)",
-								fontSize: 7,
-								fontWeight: 700,
-								letterSpacing: "0.22em",
-								color: "#a78bfa",
-								textTransform: "uppercase",
-							}}
-						>
-							RESERV.
-						</div>
-					) : null}
-				</div>
-
-				{/* Seats */}
-				<div
-					style={{
-						display: "flex",
-						alignItems: "center",
-						gap: 2,
-						color: isPool ? "rgba(255,255,255,0.35)" : "#555",
-						fontSize: 9,
-						position: "relative",
-						zIndex: 2,
-					}}
-				>
-					<Users size={8} />
-					<span style={{ fontFamily: "var(--font-dm-sans)" }}>
-						{table.seats}
-					</span>
-				</div>
+			{/* Seats */}
+			<div
+				style={{
+					display: "flex",
+					alignItems: "center",
+					gap: 2,
+					color: isPool ? "rgba(255,255,255,0.35)" : "#555",
+					fontSize: 9,
+					position: "relative",
+					zIndex: 2,
+				}}
+			>
+				<Users size={8} />
+				<span style={{ fontFamily: "var(--font-dm-sans)" }}>{table.seats}</span>
 			</div>
 		</Link>
 	);
