@@ -47,9 +47,10 @@ export async function PATCH(
 
 		let newOrderStatus: string | null;
 		if (allDone) {
-			// All items delivered/cancelled — don't change order status;
-			// the close route handles transitioning to "closed".
-			newOrderStatus = null;
+			// All items delivered/cancelled — mark order as "ready" so
+			// the cashier sees it's ready to close and collect payment.
+			// The actual "closed" transition happens via /api/orders/[id]/close.
+			newOrderStatus = "ready";
 		} else if (allReadyOrDone) {
 			newOrderStatus = "ready";
 		} else if (anyPreparing || anyReady) {
@@ -60,7 +61,7 @@ export async function PATCH(
 
 		const updatedOrder = await db.order.update({
 			where: { id: orderId },
-			data: newOrderStatus ? { status: newOrderStatus } : {},
+			data: { status: newOrderStatus },
 			include: { items: true },
 		});
 
