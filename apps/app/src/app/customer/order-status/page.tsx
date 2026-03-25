@@ -600,7 +600,7 @@ function OrderStatusContent() {
 
 				<p className="text-center font-body text-ink-tertiary text-[11px] pb-4">
 					<RefreshCw size={10} className="inline mr-1" />
-					Actualiza automáticamente cada 5 segundos
+					Actualiza automáticamente cada 10 segundos
 				</p>
 			</div>
 

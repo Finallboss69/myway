@@ -564,6 +564,9 @@ export default function BarKDSPage() {
 			});
 	}, []);
 
+	// API returns only bar-target items (?target=bar). deriveOrderStatus
+	// intentionally operates on bar items only — "ready" means all bar
+	// items are ready, independent of kitchen items on the same order.
 	const barOrders = useMemo(
 		() =>
 			orders
@@ -571,10 +574,7 @@ export default function BarKDSPage() {
 				.map((o) => ({
 					...o,
 					items: o.items.filter(
-						(i) =>
-							i.target === "bar" &&
-							i.status !== "cancelled" &&
-							i.status !== "delivered",
+						(i) => i.status !== "cancelled" && i.status !== "delivered",
 					),
 				}))
 				.filter((o) => o.items.length > 0),

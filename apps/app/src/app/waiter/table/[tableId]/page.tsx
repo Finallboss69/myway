@@ -967,7 +967,7 @@ export default function TableDetailPage() {
 	const [activeTab, setActiveTab] = useState<"pedido" | "agregar">("pedido");
 	const [showSuccess, setShowSuccess] = useState(false);
 
-	const orders = usePolling<Order[]>(`/api/orders?tableId=${tableId}`, 5000);
+	const orders = usePolling<Order[]>(`/api/orders?tableId=${tableId}`, 12000);
 
 	// Also compute ready count across all orders for bottom nav badge
 	const [allOrders, setAllOrders] = useState<Order[]>([]);

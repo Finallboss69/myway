@@ -117,7 +117,7 @@ export default function AdminRepartidoresPage() {
 								className="font-body"
 								style={{ fontSize: 12, color: "#666", marginTop: 2 }}
 							>
-								Pedidos en camino en tiempo real - actualiza cada 5s
+								Pedidos en camino en tiempo real - actualiza cada 15s
 							</p>
 							<HelpButton {...helpContent.repartidores} />
 						</div>
