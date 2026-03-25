@@ -35,9 +35,42 @@ export async function PATCH(
 		const body = (await request.json()) as { status: string };
 		const { status } = body;
 
-		if (!status) {
+		const VALID_STATUSES = [
+			"pending",
+			"preparing",
+			"ready",
+			"closed",
+			"cancelled",
+		];
+		if (!status || !VALID_STATUSES.includes(status)) {
 			return NextResponse.json(
-				{ error: "status is required" },
+				{
+					error: `status inválido. Valores permitidos: ${VALID_STATUSES.join(", ")}`,
+				},
+				{ status: 400 },
+			);
+		}
+
+		// Validate state transitions
+		const existing = await db.order.findUnique({ where: { id } });
+		if (!existing) {
+			return NextResponse.json(
+				{ error: "Pedido no encontrado" },
+				{ status: 404 },
+			);
+		}
+
+		const TRANSITIONS: Record<string, string[]> = {
+			pending: ["preparing", "cancelled"],
+			preparing: ["ready", "pending", "cancelled"],
+			ready: ["closed", "preparing", "cancelled"],
+			closed: [],
+			cancelled: [],
+		};
+		const allowed = TRANSITIONS[existing.status] ?? [];
+		if (!allowed.includes(status)) {
+			return NextResponse.json(
+				{ error: `No se puede cambiar de "${existing.status}" a "${status}"` },
 				{ status: 400 },
 			);
 		}

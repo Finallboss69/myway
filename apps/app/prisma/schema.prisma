@@ -67,18 +67,20 @@ model Zone {
 }
 
 model Table {
-  id     String  @id @default(cuid())
-  number Int
-  zoneId String
-  zone   Zone    @relation(fields: [zoneId], references: [id])
-  type   String  @default("bar")
-  status String  @default("available")
-  seats  Int     @default(4)
-  x      Float   @default(0)
-  y      Float   @default(0)
-  w      Float   @default(90)
-  h      Float   @default(60)
-  orders Order[]
+  id       String  @id @default(cuid())
+  number   Int
+  zoneId   String
+  zone     Zone    @relation(fields: [zoneId], references: [id])
+  type     String  @default("bar")
+  status   String  @default("available")
+  seats    Int     @default(4)
+  x        Float   @default(0)
+  y        Float   @default(0)
+  w        Float   @default(90)
+  h        Float   @default(60)
+  shape    String  @default("square")
+  rotation Float   @default(0)
+  orders   Order[]
 }
 
 model Category {

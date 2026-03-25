@@ -10,7 +10,7 @@ export async function POST(
 		const body = await req.json();
 		const { type, amount, concept, paymentMethod, orderId, expenseId } = body;
 
-		if (!type || !amount || !concept?.trim()) {
+		if (!type || amount === undefined || amount === null || !concept?.trim()) {
 			return NextResponse.json(
 				{ error: "type, amount, concept required" },
 				{ status: 400 },
@@ -19,6 +19,12 @@ export async function POST(
 		if (!["income", "expense"].includes(type)) {
 			return NextResponse.json(
 				{ error: "type must be income or expense" },
+				{ status: 400 },
+			);
+		}
+		if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) {
+			return NextResponse.json(
+				{ error: "amount debe ser un número positivo" },
 				{ status: 400 },
 			);
 		}

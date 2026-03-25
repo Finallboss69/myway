@@ -174,11 +174,11 @@ export async function POST(request: NextRequest) {
 				itemName = product.name;
 				itemPrice = product.price;
 			} else {
-				// Fallback: no productId, use client price with warning
-				console.warn(
-					`[delivery POST] Item "${itemName}" has no productId — using client price ${item.price}`,
+				// Reject items without productId — never trust client prices
+				return NextResponse.json(
+					{ error: `Producto "${itemName}" requiere productId válido` },
+					{ status: 400 },
 				);
-				itemPrice = item.price ?? 0;
 			}
 
 			resolvedItems.push({

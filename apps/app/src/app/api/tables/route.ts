@@ -24,8 +24,25 @@ export async function POST(request: NextRequest) {
 			zoneId: string;
 			seats?: number;
 			type?: string;
+			x?: number;
+			y?: number;
+			w?: number;
+			h?: number;
+			shape?: string;
+			rotation?: number;
 		};
-		const { number, zoneId, seats = 4, type = "bar" } = body;
+		const {
+			number,
+			zoneId,
+			seats = 4,
+			type = "bar",
+			x,
+			y,
+			w,
+			h,
+			shape = "square",
+			rotation = 0,
+		} = body;
 
 		if (!number || !zoneId) {
 			return NextResponse.json(
@@ -35,7 +52,18 @@ export async function POST(request: NextRequest) {
 		}
 
 		const table = await db.table.create({
-			data: { number, zoneId, seats, type },
+			data: {
+				number,
+				zoneId,
+				seats,
+				type,
+				shape,
+				rotation,
+				...(x !== undefined && { x }),
+				...(y !== undefined && { y }),
+				...(w !== undefined && { w }),
+				...(h !== undefined && { h }),
+			},
 			include: { zone: true },
 		});
 		return NextResponse.json(table, { status: 201 });

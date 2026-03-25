@@ -24,18 +24,40 @@ export async function POST(request: NextRequest) {
 			avatar: string;
 			pin?: string;
 		};
-		if (!body.name || !body.role || !body.avatar) {
+		const VALID_ROLES = [
+			"admin",
+			"manager",
+			"cashier",
+			"waiter",
+			"kitchen",
+			"bar",
+			"repartidor",
+		];
+		if (!body.name?.trim() || !body.role || !body.avatar) {
 			return NextResponse.json(
 				{ error: "name, role, avatar required" },
 				{ status: 400 },
 			);
 		}
+		if (!VALID_ROLES.includes(body.role)) {
+			return NextResponse.json(
+				{ error: `role inválido. Valores: ${VALID_ROLES.join(", ")}` },
+				{ status: 400 },
+			);
+		}
+		// Validate PIN format if provided
+		if (body.pin && !/^\d{4,6}$/.test(body.pin)) {
+			return NextResponse.json(
+				{ error: "PIN debe ser 4-6 dígitos" },
+				{ status: 400 },
+			);
+		}
 		const member = await db.staff.create({
 			data: {
-				name: body.name,
+				name: body.name.trim(),
 				role: body.role,
 				avatar: body.avatar,
-				pin: body.pin ?? String(Math.floor(1000 + Math.random() * 9000)),
+				pin: body.pin ?? String(Math.floor(100000 + Math.random() * 900000)),
 			},
 			omit: { pin: true },
 		});

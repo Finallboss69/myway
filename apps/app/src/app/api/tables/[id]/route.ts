@@ -57,6 +57,8 @@ export async function PATCH(
 			"y",
 			"w",
 			"h",
+			"shape",
+			"rotation",
 		] as const;
 		const data: Record<string, unknown> = {};
 		for (const key of allowed) {

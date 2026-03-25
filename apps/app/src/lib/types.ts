@@ -2,6 +2,7 @@
 
 export type TableStatus = "available" | "occupied" | "reserved";
 export type TableType = "bar" | "pool";
+export type TableShape = "square" | "round" | "rect" | "pool";
 export type ItemStatus =
 	| "pending"
 	| "preparing"
@@ -46,6 +47,8 @@ export interface Table {
 	y: number;
 	w: number;
 	h: number;
+	shape: TableShape;
+	rotation: number;
 }
 
 export interface Category {

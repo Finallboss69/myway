@@ -46,6 +46,12 @@ export async function POST(req: Request) {
 				{ status: 400 },
 			);
 		}
+		if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) {
+			return NextResponse.json(
+				{ error: "amount debe ser un número positivo" },
+				{ status: 400 },
+			);
+		}
 		const expense = await db.expense.create({
 			data: {
 				categoryId,

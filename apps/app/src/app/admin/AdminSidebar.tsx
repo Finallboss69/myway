@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
 	LayoutDashboard,
 	BarChart3,
@@ -125,6 +125,29 @@ interface AdminSidebarProps {
 
 export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
 	const pathname = usePathname();
+	const [staffName, setStaffName] = useState("Admin");
+	const [staffRole, setStaffRole] = useState("Administrador");
+
+	// Read staff info from session
+	useEffect(() => {
+		try {
+			const stored = sessionStorage.getItem("myway-admin-staff");
+			if (stored) {
+				const staff = JSON.parse(stored) as { name?: string; role?: string };
+				if (staff.name) setStaffName(staff.name);
+				if (staff.role)
+					setStaffRole(
+						staff.role === "admin"
+							? "Administrador"
+							: staff.role === "manager"
+								? "Manager"
+								: staff.role,
+					);
+			}
+		} catch {
+			/* ignore */
+		}
+	}, []);
 
 	// Close on route change (mobile)
 	useEffect(() => {
@@ -278,7 +301,12 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
 							className="font-kds text-brand-500"
 							style={{ fontSize: 13, lineHeight: 1 }}
 						>
-							VP
+							{staffName
+								.split(" ")
+								.map((w) => w[0])
+								.join("")
+								.slice(0, 2)
+								.toUpperCase()}
 						</span>
 					</div>
 					<div className="flex-1 min-w-0">
@@ -286,13 +314,13 @@ export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
 							className="font-display text-ink-primary truncate"
 							style={{ fontSize: 12, fontWeight: 600 }}
 						>
-							Valentina Paz
+							{staffName}
 						</div>
 						<div
 							className="font-body text-ink-tertiary"
 							style={{ fontSize: 10 }}
 						>
-							Administrador
+							{staffRole}
 						</div>
 					</div>
 					<Link

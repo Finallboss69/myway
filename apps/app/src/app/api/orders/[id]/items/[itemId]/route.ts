@@ -10,9 +10,18 @@ export async function PATCH(
 		const body = (await request.json()) as { status: string };
 		const { status } = body;
 
-		if (!status) {
+		const VALID_ITEM_STATUSES = [
+			"pending",
+			"preparing",
+			"ready",
+			"delivered",
+			"cancelled",
+		];
+		if (!status || !VALID_ITEM_STATUSES.includes(status)) {
 			return NextResponse.json(
-				{ error: "status is required" },
+				{
+					error: `status inválido. Valores: ${VALID_ITEM_STATUSES.join(", ")}`,
+				},
 				{ status: 400 },
 			);
 		}

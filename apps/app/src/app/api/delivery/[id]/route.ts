@@ -10,10 +10,26 @@ export async function PATCH(
 		const body = (await request.json()) as { status: string };
 		const { status } = body;
 
-		if (!status) {
+		const VALID_STATUSES = [
+			"pending",
+			"preparing",
+			"ready",
+			"en_camino",
+			"delivered",
+			"cancelled",
+		];
+		if (!status || !VALID_STATUSES.includes(status)) {
 			return NextResponse.json(
-				{ error: "status is required" },
+				{ error: `status inválido. Valores: ${VALID_STATUSES.join(", ")}` },
 				{ status: 400 },
+			);
+		}
+
+		const existing = await db.deliveryOrder.findUnique({ where: { id } });
+		if (!existing) {
+			return NextResponse.json(
+				{ error: "Pedido no encontrado" },
+				{ status: 404 },
 			);
 		}
 
