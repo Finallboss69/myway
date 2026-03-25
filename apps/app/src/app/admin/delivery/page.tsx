@@ -802,8 +802,10 @@ const FILTER_TABS: { key: FilterKey; label: string }[] = [
 	{ key: "all", label: "Todos" },
 	{ key: "pending", label: "Pendiente" },
 	{ key: "preparing", label: "Preparando" },
+	{ key: "ready", label: "Listo" },
 	{ key: "en_camino", label: "En camino" },
 	{ key: "delivered", label: "Entregados" },
+	{ key: "cancelled", label: "Cancelados" },
 ];
 
 // --- Page -------------------------------------------------------------------

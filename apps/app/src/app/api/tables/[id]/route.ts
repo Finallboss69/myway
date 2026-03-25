@@ -89,6 +89,48 @@ export async function PATCH(
 			);
 		}
 
+		// Validate numeric fields
+		const numericFields = [
+			"number",
+			"seats",
+			"x",
+			"y",
+			"w",
+			"h",
+			"rotation",
+		] as const;
+		for (const field of numericFields) {
+			if (field in data) {
+				if (
+					typeof data[field] !== "number" ||
+					!Number.isFinite(data[field] as number)
+				) {
+					return NextResponse.json(
+						{ error: `${field} debe ser un número válido` },
+						{ status: 400 },
+					);
+				}
+			}
+		}
+		if (typeof data.seats === "number" && (data.seats < 1 || data.seats > 50)) {
+			return NextResponse.json(
+				{ error: "seats debe ser entre 1 y 50" },
+				{ status: 400 },
+			);
+		}
+		if (typeof data.w === "number" && (data.w < 20 || data.w > 2000)) {
+			return NextResponse.json(
+				{ error: "w debe ser entre 20 y 2000" },
+				{ status: 400 },
+			);
+		}
+		if (typeof data.h === "number" && (data.h < 20 || data.h > 2000)) {
+			return NextResponse.json(
+				{ error: "h debe ser entre 20 y 2000" },
+				{ status: 400 },
+			);
+		}
+
 		const table = await db.table.update({
 			where: { id },
 			data,

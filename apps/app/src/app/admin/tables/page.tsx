@@ -276,7 +276,6 @@ export default function AdminTablesPage() {
 
 	// --- Refs ---
 	const canvasRef = useRef<HTMLDivElement>(null);
-	const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	// --- Fetch data ---
 

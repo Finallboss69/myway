@@ -2,21 +2,11 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
 // Rate limiting: track failed attempts per IP
-const attempts = new Map<string, { count: number; lastAttempt: number }>();
+// NOTE: In-memory — resets on cold start. Adequate for single-process/dev.
+// For production with multiple serverless instances, replace with Redis/DB.
+const attempts = new Map<string, { count: number; lockedAt: number | null }>();
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes
-const CLEANUP_INTERVAL = 10 * 60 * 1000; // cleanup every 10 min
-
-// Periodically clean old entries
-if (typeof globalThis !== "undefined") {
-	const cleanup = () => {
-		const now = Date.now();
-		for (const [key, val] of attempts) {
-			if (now - val.lastAttempt > LOCKOUT_MS) attempts.delete(key);
-		}
-	};
-	setInterval(cleanup, CLEANUP_INTERVAL);
-}
 
 function getClientIp(req: Request): string {
 	const forwarded = req.headers.get("x-forwarded-for");
@@ -28,8 +18,8 @@ export async function POST(req: Request) {
 
 	// Check rate limit
 	const record = attempts.get(ip);
-	if (record && record.count >= MAX_ATTEMPTS) {
-		const elapsed = Date.now() - record.lastAttempt;
+	if (record && record.lockedAt !== null) {
+		const elapsed = Date.now() - record.lockedAt;
 		if (elapsed < LOCKOUT_MS) {
 			const remaining = Math.ceil((LOCKOUT_MS - elapsed) / 1000);
 			return NextResponse.json(
@@ -55,9 +45,11 @@ export async function POST(req: Request) {
 		const staff = await db.staff.findFirst({ where: { pin } });
 		if (!staff) {
 			// Record failed attempt
-			const prev = attempts.get(ip) ?? { count: 0, lastAttempt: 0 };
-			attempts.set(ip, { count: prev.count + 1, lastAttempt: Date.now() });
-			const remaining = MAX_ATTEMPTS - (prev.count + 1);
+			const prev = attempts.get(ip) ?? { count: 0, lockedAt: null };
+			const newCount = prev.count + 1;
+			const lockedAt = newCount >= MAX_ATTEMPTS ? Date.now() : null;
+			attempts.set(ip, { count: newCount, lockedAt });
+			const remaining = MAX_ATTEMPTS - newCount;
 			const msg =
 				remaining > 0
 					? `PIN incorrecto. ${remaining} intento${remaining !== 1 ? "s" : ""} restante${remaining !== 1 ? "s" : ""}`
