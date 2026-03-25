@@ -51,6 +51,15 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
+		// Validate shape enum
+		const VALID_SHAPES = ["square", "round", "rect", "pool"];
+		if (!VALID_SHAPES.includes(shape)) {
+			return NextResponse.json(
+				{ error: `shape inválido. Valores: ${VALID_SHAPES.join(", ")}` },
+				{ status: 400 },
+			);
+		}
+
 		const table = await db.table.create({
 			data: {
 				number,

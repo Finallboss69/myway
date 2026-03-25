@@ -7,21 +7,21 @@ import type { TrackingData } from "@/lib/types";
 const STATUS_LABELS: Record<string, string> = {
 	pending: "Pendiente",
 	preparing: "Preparando",
-	on_the_way: "En camino",
+	en_camino: "En camino",
 	delivered: "Entregado",
 };
 
 const NEXT_STATUS: Record<string, string | null> = {
 	pending: "preparing",
-	preparing: "on_the_way",
-	on_the_way: "delivered",
+	preparing: "en_camino",
+	en_camino: "delivered",
 	delivered: null,
 };
 
 const ADVANCE_LABEL: Record<string, string> = {
 	pending: "Iniciar preparación",
 	preparing: "Salir a entregar",
-	on_the_way: "Confirmar entrega",
+	en_camino: "Confirmar entrega",
 };
 
 function formatCurrency(n: number) {
@@ -468,7 +468,7 @@ export default function RepartidorPage({
 							padding: "14px",
 							borderRadius: 14,
 							border: "none",
-							background: order.status === "on_the_way" ? "#10b981" : "#f59e0b",
+							background: order.status === "en_camino" ? "#10b981" : "#f59e0b",
 							color: "#080808",
 							fontSize: 14,
 							fontWeight: 700,

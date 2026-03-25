@@ -71,6 +71,24 @@ export async function PATCH(
 			);
 		}
 
+		// Validate shape enum
+		const VALID_SHAPES = ["square", "round", "rect", "pool"];
+		if (data.shape && !VALID_SHAPES.includes(data.shape as string)) {
+			return NextResponse.json(
+				{ error: `shape inválido. Valores: ${VALID_SHAPES.join(", ")}` },
+				{ status: 400 },
+			);
+		}
+
+		// Validate status enum
+		const VALID_STATUSES = ["available", "occupied", "reserved"];
+		if (data.status && !VALID_STATUSES.includes(data.status as string)) {
+			return NextResponse.json(
+				{ error: `status inválido. Valores: ${VALID_STATUSES.join(", ")}` },
+				{ status: 400 },
+			);
+		}
+
 		const table = await db.table.update({
 			where: { id },
 			data,

@@ -47,7 +47,14 @@ const STATUS_CONFIG: Record<
 		border: "rgba(59,130,246,0.25)",
 		icon: <Flame size={11} />,
 	},
-	on_the_way: {
+	ready: {
+		label: "Listo",
+		color: "#8b5cf6",
+		bg: "rgba(139,92,246,0.1)",
+		border: "rgba(139,92,246,0.25)",
+		icon: <Package size={11} />,
+	},
+	en_camino: {
 		label: "En camino",
 		color: "#f59e0b",
 		bg: "rgba(245,158,11,0.1)",
@@ -61,15 +68,20 @@ const STATUS_CONFIG: Record<
 		border: "rgba(16,185,129,0.25)",
 		icon: <CheckCircle2 size={11} />,
 	},
+	cancelled: {
+		label: "Cancelado",
+		color: "#ef4444",
+		bg: "rgba(239,68,68,0.1)",
+		border: "rgba(239,68,68,0.25)",
+		icon: <X size={11} />,
+	},
 };
 
-const NEXT_STATUS: Record<
-	Exclude<DeliveryStatus, "delivered">,
-	DeliveryStatus
-> = {
+const NEXT_STATUS: Partial<Record<DeliveryStatus, DeliveryStatus>> = {
 	pending: "preparing",
-	preparing: "on_the_way",
-	on_the_way: "delivered",
+	preparing: "ready",
+	ready: "en_camino",
+	en_camino: "delivered",
 };
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -223,16 +235,18 @@ function DeliveryCard({
 		? null
 		: NEXT_STATUS[order.status as Exclude<DeliveryStatus, "delivered">];
 
-	const advanceLabel: Record<Exclude<DeliveryStatus, "delivered">, string> = {
+	const advanceLabel: Partial<Record<DeliveryStatus, string>> = {
 		pending: "Iniciar preparacion",
-		preparing: "Enviar a repartidor",
-		on_the_way: "Confirmar entrega",
+		preparing: "Marcar listo",
+		ready: "Enviar a repartidor",
+		en_camino: "Confirmar entrega",
 	};
 
-	const advanceBg: Record<Exclude<DeliveryStatus, "delivered">, string> = {
+	const advanceBg: Partial<Record<DeliveryStatus, string>> = {
 		pending: "#3b82f6",
-		preparing: "#f59e0b",
-		on_the_way: "#10b981",
+		preparing: "#8b5cf6",
+		ready: "#f59e0b",
+		en_camino: "#10b981",
 	};
 
 	return (
@@ -532,7 +546,7 @@ function KpiCard({
 function StatsRow({ orders }: { orders: DeliveryOrder[] }) {
 	const pending = orders.filter((o) => o.status === "pending").length;
 	const preparing = orders.filter((o) => o.status === "preparing").length;
-	const onTheWay = orders.filter((o) => o.status === "on_the_way").length;
+	const onTheWay = orders.filter((o) => o.status === "en_camino").length;
 	const delivered = orders.filter((o) => o.status === "delivered").length;
 	const total = orders
 		.filter((o) => o.status === "delivered")
@@ -788,7 +802,7 @@ const FILTER_TABS: { key: FilterKey; label: string }[] = [
 	{ key: "all", label: "Todos" },
 	{ key: "pending", label: "Pendiente" },
 	{ key: "preparing", label: "Preparando" },
-	{ key: "on_the_way", label: "En camino" },
+	{ key: "en_camino", label: "En camino" },
 	{ key: "delivered", label: "Entregados" },
 ];
 

@@ -21,7 +21,10 @@ const CANVAS_PAD = 60;
 const CANVAS_MIN_W = 800;
 const CANVAS_MIN_H = 500;
 
-const STATUS_COLORS = {
+const STATUS_COLORS: Record<
+	string,
+	{ border: string; glow: string; bg: string; text: string }
+> = {
 	available: {
 		border: "#10b981",
 		glow: "rgba(16,185,129,0.35)",
@@ -40,7 +43,7 @@ const STATUS_COLORS = {
 		bg: "rgba(139,92,246,0.06)",
 		text: "#8b5cf6",
 	},
-} as const;
+};
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -218,7 +221,7 @@ function FloorTable({ table, order }: { table: Table; order?: Order }) {
 		(table as Table & { rotation?: number }).rotation ?? 0;
 
 	const status = table.status;
-	const colors = STATUS_COLORS[status];
+	const colors = STATUS_COLORS[status] ?? STATUS_COLORS.available;
 
 	const isRound = shape === "round";
 	const isPool = shape === "pool";

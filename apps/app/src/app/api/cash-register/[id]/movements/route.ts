@@ -51,6 +51,10 @@ export async function POST(
 		});
 		return NextResponse.json(movement, { status: 201 });
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[cash-register movements POST]", e);
+		return NextResponse.json(
+			{ error: "Failed to create movement" },
+			{ status: 500 },
+		);
 	}
 }

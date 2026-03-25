@@ -11,14 +11,14 @@ const LiveMap = dynamic(() => import("./LiveMap"), { ssr: false });
 const STATUS_STEPS = [
 	"pending",
 	"preparing",
-	"on_the_way",
+	"en_camino",
 	"delivered",
 ] as const;
 
 const STATUS_LABELS: Record<string, string> = {
 	pending: "Recibido",
 	preparing: "Preparando",
-	on_the_way: "En camino",
+	en_camino: "En camino",
 	delivered: "Entregado",
 };
 
@@ -151,7 +151,7 @@ export default function TrackPage({
 	}
 
 	const showMap =
-		data.status === "on_the_way" &&
+		data.status === "en_camino" &&
 		data.repartidorLat !== null &&
 		data.repartidorLng !== null;
 
@@ -209,7 +209,7 @@ export default function TrackPage({
 				)}
 			</div>
 
-			{/* Map — only when on_the_way and GPS available */}
+			{/* Map — only when en_camino and GPS available */}
 			{showMap && (
 				<div style={{ height: "55vw", maxHeight: 320, position: "relative" }}>
 					<LiveMap lat={data.repartidorLat!} lng={data.repartidorLng!} />

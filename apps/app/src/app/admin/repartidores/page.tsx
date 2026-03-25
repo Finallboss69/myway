@@ -42,7 +42,7 @@ export default function AdminRepartidoresPage() {
 
 	const fetchOrders = useCallback(async () => {
 		try {
-			const res = await fetch("/api/delivery?status=on_the_way");
+			const res = await fetch("/api/delivery?status=en_camino");
 			if (!res.ok) return;
 			const data = await res.json();
 			setOrders(data.orders ?? []);

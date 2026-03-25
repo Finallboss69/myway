@@ -18,8 +18,10 @@ export type OrderStatus =
 export type DeliveryStatus =
 	| "pending"
 	| "preparing"
-	| "on_the_way"
-	| "delivered";
+	| "ready"
+	| "en_camino"
+	| "delivered"
+	| "cancelled";
 export type PaymentMethod = "cash" | "mercadopago" | "card";
 export type StaffRole =
 	| "waiter"
