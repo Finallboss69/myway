@@ -13,7 +13,10 @@ export async function GET(
 		});
 
 		if (!order) {
-			return NextResponse.json({ error: "Order not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		}
 
 		return NextResponse.json({

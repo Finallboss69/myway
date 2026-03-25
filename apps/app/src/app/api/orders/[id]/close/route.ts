@@ -23,7 +23,10 @@ export async function POST(
 		});
 
 		if (!order) {
-			return NextResponse.json({ error: "Order not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		}
 
 		if (order.status === "closed" || order.status === "cancelled") {

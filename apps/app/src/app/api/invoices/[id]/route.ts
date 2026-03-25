@@ -12,7 +12,10 @@ export async function GET(
 			include: { items: true },
 		});
 		if (!invoice)
-			return NextResponse.json({ error: "not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		return NextResponse.json(invoice);
 	} catch (e) {
 		console.error("[invoices/[id] GET]", e);

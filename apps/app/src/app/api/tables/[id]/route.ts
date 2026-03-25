@@ -12,7 +12,10 @@ export async function GET(
 			include: { zone: true },
 		});
 		if (!table)
-			return NextResponse.json({ error: "Not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		return NextResponse.json(table);
 	} catch (error) {
 		console.error("[tables/[id] GET]", error);

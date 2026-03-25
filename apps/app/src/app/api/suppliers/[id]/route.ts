@@ -15,7 +15,10 @@ export async function GET(
 			},
 		});
 		if (!supplier)
-			return NextResponse.json({ error: "not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		return NextResponse.json(supplier);
 	} catch (e) {
 		console.error("[suppliers/[id] GET]", e);

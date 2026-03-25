@@ -54,7 +54,10 @@ export async function DELETE(
 		const { id } = await params;
 		const item = await db.recipeIngredient.findUnique({ where: { id } });
 		if (!item)
-			return NextResponse.json({ error: "Not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 
 		await db.recipeIngredient.delete({ where: { id } });
 

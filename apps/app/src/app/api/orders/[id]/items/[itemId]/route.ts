@@ -26,46 +26,48 @@ export async function PATCH(
 			);
 		}
 
-		// Update item status
-		await db.orderItem.update({
-			where: { id: itemId },
-			data: { status },
+		// Wrap in transaction to prevent race conditions when
+		// multiple items are updated concurrently.
+		const { updatedOrder, allDone } = await db.$transaction(async (tx) => {
+			// Update item status
+			await tx.orderItem.update({
+				where: { id: itemId },
+				data: { status },
+			});
+
+			// Fetch all items of this order to recalculate order status
+			const allItems = await tx.orderItem.findMany({
+				where: { orderId },
+			});
+
+			const DONE_STATUSES = ["delivered", "cancelled"];
+			const done = allItems.every((i) => DONE_STATUSES.includes(i.status));
+			const allReadyOrDone = allItems.every((i) =>
+				["ready", "delivered", "cancelled"].includes(i.status),
+			);
+			const anyPreparing = allItems.some((i) => i.status === "preparing");
+			const anyReady = allItems.some((i) => i.status === "ready");
+
+			// Derive order status — "ready" means cashier can close it
+			let newOrderStatus: string;
+			if (allReadyOrDone) {
+				newOrderStatus = "ready";
+			} else if (anyPreparing || anyReady) {
+				newOrderStatus = "preparing";
+			} else {
+				newOrderStatus = "pending";
+			}
+
+			const order = await tx.order.update({
+				where: { id: orderId },
+				data: { status: newOrderStatus },
+				include: { items: true },
+			});
+
+			return { updatedOrder: order, allDone: done };
 		});
 
-		// Fetch all items of this order to recalculate order status
-		const allItems = await db.orderItem.findMany({ where: { orderId } });
-
-		const DONE_STATUSES = ["delivered", "cancelled"];
-		const allDone = allItems.every((item) =>
-			DONE_STATUSES.includes(item.status),
-		);
-		const anyPreparing = allItems.some((item) => item.status === "preparing");
-		const anyReady = allItems.some((item) => item.status === "ready");
-		const allReadyOrDone = allItems.every((item) =>
-			["ready", "delivered", "cancelled"].includes(item.status),
-		);
-
-		let newOrderStatus: string | null;
-		if (allDone) {
-			// All items delivered/cancelled — mark order as "ready" so
-			// the cashier sees it's ready to close and collect payment.
-			// The actual "closed" transition happens via /api/orders/[id]/close.
-			newOrderStatus = "ready";
-		} else if (allReadyOrDone) {
-			newOrderStatus = "ready";
-		} else if (anyPreparing || anyReady) {
-			newOrderStatus = "preparing";
-		} else {
-			newOrderStatus = "pending";
-		}
-
-		const updatedOrder = await db.order.update({
-			where: { id: orderId },
-			data: { status: newOrderStatus },
-			include: { items: true },
-		});
-
-		// Emit notification in response if all items are done
+		// Notify only when every item is fully done (delivered/cancelled)
 		const notification = allDone
 			? {
 					type: "order_complete",

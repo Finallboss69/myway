@@ -12,7 +12,10 @@ export async function GET(
 			include: { movements: { orderBy: { createdAt: "desc" } } },
 		});
 		if (!register)
-			return NextResponse.json({ error: "not found" }, { status: 404 });
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		return NextResponse.json(register);
 	} catch (e) {
 		console.error("[cash-register/[id] GET]", e);
@@ -38,7 +41,10 @@ export async function PATCH(
 				include: { movements: true },
 			});
 			if (!register)
-				return NextResponse.json({ error: "not found" }, { status: 404 });
+				return NextResponse.json(
+					{ error: "Recurso no encontrado" },
+					{ status: 404 },
+				);
 
 			const movementTotal = register.movements.reduce((sum, m) => {
 				return sum + (m.type === "income" ? m.amount : -m.amount);
