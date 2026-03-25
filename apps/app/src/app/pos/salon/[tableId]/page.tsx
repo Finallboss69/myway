@@ -379,7 +379,7 @@ export default function TableDetailPage({
 		};
 		init();
 		fetchOrders();
-		const id = setInterval(fetchOrders, 5000);
+		const id = setInterval(fetchOrders, 12000);
 		return () => clearInterval(id);
 	}, [tableId, fetchOrders]);
 

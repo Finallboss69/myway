@@ -1673,7 +1673,7 @@ export default function SalonPage() {
 
 	useEffect(() => {
 		fetchData();
-		const id = setInterval(fetchData, 5000);
+		const id = setInterval(fetchData, 12000);
 		return () => clearInterval(id);
 	}, [fetchData]);
 

@@ -70,7 +70,7 @@ export default function TrackPage({
 
 	useEffect(() => {
 		fetchTracking();
-		pollRef.current = setInterval(fetchTracking, 5000);
+		pollRef.current = setInterval(fetchTracking, 10000);
 		return () => {
 			if (pollRef.current) clearInterval(pollRef.current);
 		};

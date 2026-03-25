@@ -62,7 +62,7 @@ function playBeep() {
 
 // ─── Polling hook ─────────────────────────────────────────────────────────────
 
-function usePolling<T>(url: string, interval = 3000) {
+function usePolling<T>(url: string, interval = 8000) {
 	const [data, setData] = useState<T | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(false);

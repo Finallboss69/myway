@@ -7,9 +7,9 @@ declare global {
 }
 
 function createPrismaClient() {
-	const adapter = new PrismaPg({
-		connectionString: process.env.DATABASE_URL!,
-	});
+	// Use transaction-mode pooler (port 6543) for better connection handling
+	const connStr = (process.env.DATABASE_URL ?? "").replace(/:5432\b/, ":6543");
+	const adapter = new PrismaPg({ connectionString: connStr });
 	return new PrismaClient({
 		adapter,
 		log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],

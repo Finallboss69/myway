@@ -1000,7 +1000,7 @@ export default function TableDetailPage() {
 				.catch(() => {});
 		};
 		load();
-		const id = setInterval(load, 5000);
+		const id = setInterval(load, 12000);
 		return () => {
 			active = false;
 			clearInterval(id);

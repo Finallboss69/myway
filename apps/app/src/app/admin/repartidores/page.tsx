@@ -54,7 +54,7 @@ export default function AdminRepartidoresPage() {
 
 	useEffect(() => {
 		fetchOrders();
-		pollRef.current = setInterval(fetchOrders, 5000);
+		pollRef.current = setInterval(fetchOrders, 15000);
 		return () => {
 			if (pollRef.current) clearInterval(pollRef.current);
 		};
