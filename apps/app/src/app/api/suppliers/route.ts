@@ -12,7 +12,11 @@ export async function GET() {
 		});
 		return NextResponse.json(suppliers);
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[suppliers GET]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -36,6 +40,10 @@ export async function POST(req: Request) {
 		});
 		return NextResponse.json(supplier, { status: 201 });
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[suppliers POST]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }

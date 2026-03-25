@@ -14,7 +14,11 @@ export async function GET() {
 			keyPem: config.keyPem ? "***configured***" : null,
 		});
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[afip-config GET]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -58,6 +62,10 @@ export async function PUT(req: Request) {
 			keyPem: config.keyPem ? "***configured***" : null,
 		});
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[afip-config PUT]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }

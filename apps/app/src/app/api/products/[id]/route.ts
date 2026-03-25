@@ -15,7 +15,11 @@ export async function GET(
 			return NextResponse.json({ error: "Not found" }, { status: 404 });
 		return NextResponse.json(product);
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[products/[id] GET]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -44,7 +48,11 @@ export async function PATCH(
 		const product = await db.product.update({ where: { id }, data });
 		return NextResponse.json(product);
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[products/[id] PATCH]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -57,6 +65,10 @@ export async function DELETE(
 		await db.product.delete({ where: { id } });
 		return NextResponse.json({ ok: true });
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[products/[id] DELETE]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }

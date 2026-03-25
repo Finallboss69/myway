@@ -26,6 +26,13 @@ export async function POST(
 			return NextResponse.json({ error: "Order not found" }, { status: 404 });
 		}
 
+		if (order.status === "closed" || order.status === "cancelled") {
+			return NextResponse.json(
+				{ error: "Order already closed" },
+				{ status: 400 },
+			);
+		}
+
 		const closedOrder = await db.$transaction(async (tx) => {
 			const closed = await tx.order.update({
 				where: { id },

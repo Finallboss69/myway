@@ -27,6 +27,7 @@ interface OrderItem {
 	price: number;
 	status: string;
 	target: string;
+	notes?: string;
 }
 
 interface Order {
@@ -415,6 +416,17 @@ function OrderCard({
 							<p className="font-display text-sm font-bold uppercase tracking-wide text-ink-primary truncate">
 								{item.name}
 							</p>
+							{item.notes && (
+								<p
+									className="font-display text-xs mt-0.5 truncate"
+									style={{
+										color: "#fbbf24",
+										fontStyle: "italic",
+									}}
+								>
+									* {item.notes}
+								</p>
+							)}
 							<div className="mt-1">
 								<ItemStatusChip status={item.status} />
 							</div>

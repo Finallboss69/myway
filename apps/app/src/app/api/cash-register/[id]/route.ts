@@ -15,7 +15,11 @@ export async function GET(
 			return NextResponse.json({ error: "not found" }, { status: 404 });
 		return NextResponse.json(register);
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[cash-register/[id] GET]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -60,6 +64,10 @@ export async function PATCH(
 		const updated = await db.cashRegister.update({ where: { id }, data });
 		return NextResponse.json(updated);
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[cash-register/[id] PATCH]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }

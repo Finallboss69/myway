@@ -20,7 +20,11 @@ export async function PATCH(
 		});
 		return NextResponse.json(invoice);
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[supplier-invoices/[id] PATCH]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -33,6 +37,10 @@ export async function DELETE(
 		await db.supplierInvoice.delete({ where: { id } });
 		return NextResponse.json({ ok: true });
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[supplier-invoices/[id] DELETE]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }

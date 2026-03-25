@@ -17,6 +17,10 @@ export async function POST(req: Request) {
 		);
 		return NextResponse.json(result, { status: 201 });
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[afip/invoice POST]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }

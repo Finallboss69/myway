@@ -31,7 +31,11 @@ export async function PATCH(
 		});
 		return NextResponse.json(expense);
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[expenses/[id] PATCH]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -44,6 +48,10 @@ export async function DELETE(
 		await db.expense.delete({ where: { id } });
 		return NextResponse.json({ ok: true });
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[expenses/[id] DELETE]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }

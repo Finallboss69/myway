@@ -23,7 +23,11 @@ export async function GET(req: Request) {
 		});
 		return NextResponse.json(expenses);
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[expenses GET]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -67,6 +71,10 @@ export async function POST(req: Request) {
 		});
 		return NextResponse.json(expense, { status: 201 });
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[expenses POST]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }

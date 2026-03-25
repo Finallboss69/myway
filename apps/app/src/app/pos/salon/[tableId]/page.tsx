@@ -336,12 +336,6 @@ export default function TableDetailPage({
 	const [sending, setSending] = useState(false);
 	const [closing, setClosing] = useState(false);
 	const [staffName, setStaffName] = useState<string>("");
-	const [confirmDialog, setConfirmDialog] = useState<{
-		open: boolean;
-		method: PaymentMethod;
-		methodLabel: string;
-	}>({ open: false, method: "cash", methodLabel: "" });
-
 	useEffect(() => {
 		try {
 			const stored = sessionStorage.getItem("pos-staff");

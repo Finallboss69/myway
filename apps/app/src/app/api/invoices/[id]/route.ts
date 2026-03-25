@@ -15,7 +15,11 @@ export async function GET(
 			return NextResponse.json({ error: "not found" }, { status: 404 });
 		return NextResponse.json(invoice);
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[invoices/[id] GET]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -38,6 +42,10 @@ export async function PATCH(
 		});
 		return NextResponse.json(invoice);
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[invoices/[id] PATCH]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }

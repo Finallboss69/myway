@@ -45,8 +45,12 @@ export async function PATCH(
 			["ready", "delivered", "cancelled"].includes(item.status),
 		);
 
-		let newOrderStatus: string;
-		if (allDone || allReadyOrDone) {
+		let newOrderStatus: string | null;
+		if (allDone) {
+			// All items delivered/cancelled — don't change order status;
+			// the close route handles transitioning to "closed".
+			newOrderStatus = null;
+		} else if (allReadyOrDone) {
 			newOrderStatus = "ready";
 		} else if (anyPreparing || anyReady) {
 			newOrderStatus = "preparing";
@@ -56,7 +60,7 @@ export async function PATCH(
 
 		const updatedOrder = await db.order.update({
 			where: { id: orderId },
-			data: { status: newOrderStatus },
+			data: newOrderStatus ? { status: newOrderStatus } : {},
 			include: { items: true },
 		});
 

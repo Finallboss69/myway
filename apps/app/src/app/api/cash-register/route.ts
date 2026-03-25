@@ -15,7 +15,11 @@ export async function GET(req: Request) {
 		});
 		return NextResponse.json(registers);
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[cash-register GET]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -43,6 +47,10 @@ export async function POST(req: Request) {
 		});
 		return NextResponse.json(register, { status: 201 });
 	} catch (e) {
-		return NextResponse.json({ error: String(e) }, { status: 500 });
+		console.error("[cash-register POST]", e);
+		return NextResponse.json(
+			{ error: "Error interno del servidor" },
+			{ status: 500 },
+		);
 	}
 }

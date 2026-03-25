@@ -36,8 +36,8 @@ type IngStatus = "ok" | "low" | "critical";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getStatus(ing: Ingredient): IngStatus {
-	if (ing.stockCurrent <= ing.alertThreshold * 0.6) return "critical";
-	if (ing.stockCurrent <= ing.alertThreshold) return "low";
+	if (ing.stockCurrent < ing.alertThreshold) return "critical";
+	if (ing.stockCurrent < ing.alertThreshold * 1.5) return "low";
 	return "ok";
 }
 
