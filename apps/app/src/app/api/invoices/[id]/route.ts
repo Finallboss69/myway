@@ -29,6 +29,12 @@ export async function PATCH(
 ) {
 	try {
 		const { id } = await params;
+		const existing = await db.invoice.findUnique({ where: { id } });
+		if (!existing)
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		const body = await req.json();
 		const allowed = ["status", "cae", "caeExpiry", "afipResponse"] as const;
 		const data: Record<string, unknown> = {};

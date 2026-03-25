@@ -7,6 +7,12 @@ export async function PATCH(
 ) {
 	try {
 		const { id } = await params;
+		const existing = await db.expense.findUnique({ where: { id } });
+		if (!existing)
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		const body = await req.json();
 		const allowed = [
 			"categoryId",
@@ -45,6 +51,12 @@ export async function DELETE(
 ) {
 	try {
 		const { id } = await params;
+		const existing = await db.expense.findUnique({ where: { id } });
+		if (!existing)
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		await db.expense.delete({ where: { id } });
 		return NextResponse.json({ ok: true });
 	} catch (e) {

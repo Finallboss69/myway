@@ -7,6 +7,12 @@ export async function PUT(
 ) {
 	try {
 		const { id } = await params;
+		const existing = await db.recipeIngredient.findUnique({ where: { id } });
+		if (!existing)
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		const body = await req.json();
 		const allowed = ["quantity", "unit", "ingredientId"] as const;
 		const data: Record<string, unknown> = {};

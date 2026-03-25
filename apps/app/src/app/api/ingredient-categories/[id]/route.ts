@@ -7,6 +7,12 @@ export async function PUT(
 ) {
 	try {
 		const { id } = await params;
+		const existing = await db.ingredientCategory.findUnique({ where: { id } });
+		if (!existing)
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		const body = await req.json();
 		const allowed = ["name", "icon", "order"] as const;
 		const data: Record<string, unknown> = {};
@@ -30,6 +36,12 @@ export async function DELETE(
 ) {
 	try {
 		const { id } = await params;
+		const existing = await db.ingredientCategory.findUnique({ where: { id } });
+		if (!existing)
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		await db.ingredientCategory.delete({ where: { id } });
 		return NextResponse.json({ ok: true });
 	} catch (e) {

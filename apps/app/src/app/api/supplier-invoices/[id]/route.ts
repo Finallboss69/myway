@@ -7,6 +7,12 @@ export async function PATCH(
 ) {
 	try {
 		const { id } = await params;
+		const existing = await db.supplierInvoice.findUnique({ where: { id } });
+		if (!existing)
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		const body = await req.json();
 		const { items, ...data } = body;
 		if (data.date) data.date = new Date(data.date);
@@ -34,6 +40,12 @@ export async function DELETE(
 ) {
 	try {
 		const { id } = await params;
+		const existing = await db.supplierInvoice.findUnique({ where: { id } });
+		if (!existing)
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		await db.supplierInvoice.delete({ where: { id } });
 		return NextResponse.json({ ok: true });
 	} catch (e) {

@@ -29,6 +29,12 @@ export async function DELETE(
 ) {
 	try {
 		const { id } = await params;
+		const existing = await db.table.findUnique({ where: { id } });
+		if (!existing)
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		await db.table.delete({ where: { id } });
 		return NextResponse.json({ success: true });
 	} catch (error) {
@@ -46,6 +52,12 @@ export async function PATCH(
 ) {
 	try {
 		const { id } = await params;
+		const existing = await db.table.findUnique({ where: { id } });
+		if (!existing)
+			return NextResponse.json(
+				{ error: "Recurso no encontrado" },
+				{ status: 404 },
+			);
 		const body = await request.json();
 		const allowed = [
 			"number",
