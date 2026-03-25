@@ -1,15 +1,3 @@
-"use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-
-export default function POSLoginPage() {
-	const router = useRouter();
-
-	useEffect(() => {
-		// PinGate in layout handles auth — go straight to salon
-		router.replace("/pos/salon");
-	}, [router]);
-
-	return null;
-}
+// Redirect handled by next.config.ts → /pos/salon
+// This file exists only as a route placeholder.
+export { default } from "./salon/page";
