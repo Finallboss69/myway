@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
+import QRCode from "react-qr-code";
 import {
 	LayoutGrid,
 	ListOrdered,
@@ -22,6 +23,8 @@ import {
 	UtensilsCrossed,
 	Wine,
 	GripVertical,
+	Loader2,
+	RefreshCw,
 } from "lucide-react";
 import { formatCurrency, elapsedMinutes } from "@/lib/utils";
 import type {
@@ -955,6 +958,64 @@ function TableDetailPanel({
 	closing: boolean;
 }) {
 	const [activeCategory, setActiveCategory] = useState<string | null>(null);
+	const [mpQr, setMpQr] = useState<{ qrData: string; extRef: string } | null>(
+		null,
+	);
+	const [mpLoading, setMpLoading] = useState(false);
+	const [mpError, setMpError] = useState<string | null>(null);
+	const mpPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+	// Cleanup MP polling on unmount
+	useEffect(() => {
+		return () => {
+			if (mpPollRef.current) clearInterval(mpPollRef.current);
+		};
+	}, []);
+
+	const handleMpPayment = async () => {
+		const orderIds = tableOrders.map((o) => o.id);
+		if (orderIds.length === 0) return;
+		setMpLoading(true);
+		setMpError(null);
+		setMpQr(null);
+		try {
+			const res = await fetch("/api/payments/mp", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ orderIds }),
+			});
+			const data = await res.json();
+			if (!res.ok) {
+				setMpError(data.error ?? "Error al generar QR");
+				return;
+			}
+			setMpQr({ qrData: data.qrData, extRef: data.externalReference });
+
+			// Start polling for payment confirmation
+			if (mpPollRef.current) clearInterval(mpPollRef.current);
+			mpPollRef.current = setInterval(async () => {
+				try {
+					const sr = await fetch(
+						`/api/payments/mp?externalReference=${encodeURIComponent(data.externalReference)}`,
+					);
+					if (sr.ok) {
+						const sd = await sr.json();
+						if (sd.status === "paid") {
+							if (mpPollRef.current) clearInterval(mpPollRef.current);
+							setMpQr(null);
+							onCloseTable("mercadopago");
+						}
+					}
+				} catch {
+					/* ignore */
+				}
+			}, 3000);
+		} catch {
+			setMpError("Error de conexión");
+		} finally {
+			setMpLoading(false);
+		}
+	};
 
 	const allOrderItems = tableOrders.flatMap((o) => o.items);
 	const filteredProducts = activeCategory
@@ -1410,8 +1471,8 @@ function TableDetailPanel({
 								sub="QR / Link de pago"
 								amount={total}
 								accentColor="#3b82f6"
-								onClick={() => onCloseTable("mercadopago")}
-								disabled={closing}
+								onClick={handleMpPayment}
+								disabled={closing || mpLoading}
 							/>
 							<PayButton
 								icon={<CreditCard size={16} style={{ color: "#a78bfa" }} />}
@@ -1423,6 +1484,52 @@ function TableDetailPanel({
 								disabled={closing}
 							/>
 						</div>
+
+						{/* MP QR Display */}
+						{mpLoading && (
+							<div className="flex items-center justify-center gap-2 mt-3 py-4">
+								<Loader2 size={16} className="text-blue-400 animate-spin" />
+								<span className="font-display text-xs text-ink-tertiary">
+									Generando QR...
+								</span>
+							</div>
+						)}
+						{mpError && (
+							<div className="flex flex-col items-center gap-2 mt-3">
+								<p className="font-display text-xs text-red-400">{mpError}</p>
+								<button
+									onClick={handleMpPayment}
+									className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2 border border-surface-3 font-display text-[10px] text-ink-secondary"
+								>
+									<RefreshCw size={12} /> Reintentar
+								</button>
+							</div>
+						)}
+						{mpQr && (
+							<div className="flex flex-col items-center gap-3 mt-3 py-4">
+								<div className="rounded-xl p-3" style={{ background: "#fff" }}>
+									<QRCode value={mpQr.qrData} size={160} level="M" />
+								</div>
+								<div className="flex items-center gap-2">
+									<div
+										className="w-2 h-2 rounded-full animate-pulse"
+										style={{ background: "#009ee3" }}
+									/>
+									<span
+										className="font-display text-[11px]"
+										style={{ color: "#009ee3" }}
+									>
+										Esperando pago...
+									</span>
+								</div>
+								<button
+									onClick={handleMpPayment}
+									className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-display text-[10px] text-ink-tertiary hover:text-ink-secondary"
+								>
+									<RefreshCw size={11} /> Regenerar QR
+								</button>
+							</div>
+						)}
 					</section>
 				)}
 

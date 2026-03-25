@@ -19,6 +19,7 @@ import {
 	Wallet,
 	DollarSign,
 	Settings,
+	Smartphone,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -89,6 +90,13 @@ const NAV_ITEMS = [
 		href: "/admin/cash-register",
 		label: "Caja",
 		icon: Wallet,
+		exact: false,
+		section: "ADMINISTRACIÓN",
+	},
+	{
+		href: "/admin/mercadopago",
+		label: "MercadoPago",
+		icon: Smartphone,
 		exact: false,
 		section: "ADMINISTRACIÓN",
 	},

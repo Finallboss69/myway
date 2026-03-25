@@ -421,6 +421,31 @@ model CashMovement {
   @@index([registerId])
 }
 
+// ─── Settings (key-value config) ─────────────────────────────
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// ─── MercadoPago Payments ────────────────────────────────────
+
+model MpPayment {
+  id                String   @id @default(cuid())
+  orderId           String
+  externalReference String   @unique
+  qrData            String?
+  mpOrderId         String?
+  status            String   @default("pending")
+  amount            Float
+  paidAt            DateTime?
+  createdAt         DateTime @default(now())
+
+  @@index([orderId])
+  @@index([status])
+}
+
 // ─── Daily Reports ───────────────────────────────────────────
 
 model DailyReport {

@@ -1,8 +1,16 @@
 "use client";
 
-import { useState, useEffect, useMemo, Suspense } from "react";
+import {
+	useState,
+	useEffect,
+	useMemo,
+	useRef,
+	useCallback,
+	Suspense,
+} from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import QRCode from "react-qr-code";
 import {
 	ArrowLeft,
 	Home,
@@ -12,6 +20,7 @@ import {
 	Smartphone,
 	Terminal,
 	Loader2,
+	RefreshCw,
 } from "lucide-react";
 import clsx from "clsx";
 import { formatCurrency } from "@/lib/utils";
@@ -41,94 +50,128 @@ type PaymentMethod = "cash" | "mercadopago" | "card";
 
 const IVA_RATE = 0.21;
 
-// ─── QR Placeholder ───────────────────────────────────────────────────────────
+// ─── MercadoPago QR Component ─────────────────────────────────────────────────
 
-function QRPlaceholder() {
+function MercadoPagoQR({
+	orderIds,
+	onPaid,
+}: {
+	orderIds: string[];
+	onPaid: () => void;
+}) {
+	const [qrData, setQrData] = useState<string | null>(null);
+	const [extRef, setExtRef] = useState<string | null>(null);
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+	const generateQR = useCallback(async () => {
+		setLoading(true);
+		setError(null);
+		setQrData(null);
+		setExtRef(null);
+		try {
+			const res = await fetch("/api/payments/mp", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ orderIds }),
+			});
+			const data = await res.json();
+			if (!res.ok) {
+				setError(data.error ?? "Error al generar QR");
+				return;
+			}
+			setQrData(data.qrData);
+			setExtRef(data.externalReference);
+		} catch {
+			setError("Error de conexión");
+		} finally {
+			setLoading(false);
+		}
+	}, [orderIds]);
+
+	// Auto-generate on mount
+	useEffect(() => {
+		if (orderIds.length > 0) generateQR();
+	}, [orderIds, generateQR]);
+
+	// Poll for payment status
+	useEffect(() => {
+		if (!extRef) return;
+		const check = async () => {
+			try {
+				const res = await fetch(
+					`/api/payments/mp?externalReference=${encodeURIComponent(extRef)}`,
+				);
+				if (res.ok) {
+					const data = await res.json();
+					if (data.status === "paid") {
+						if (pollRef.current) clearInterval(pollRef.current);
+						onPaid();
+					}
+				}
+			} catch {
+				/* ignore polling errors */
+			}
+		};
+		pollRef.current = setInterval(check, 3000);
+		return () => {
+			if (pollRef.current) clearInterval(pollRef.current);
+		};
+	}, [extRef, onPaid]);
+
+	if (loading) {
+		return (
+			<div className="flex flex-col items-center gap-3 py-6">
+				<Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+				<p className="font-display text-xs text-ink-tertiary">
+					Generando QR de pago...
+				</p>
+			</div>
+		);
+	}
+
+	if (error) {
+		return (
+			<div className="flex flex-col items-center gap-3 py-4">
+				<p className="font-display text-xs text-red-400 text-center">{error}</p>
+				<button
+					onClick={generateQR}
+					className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-2 border border-surface-3 font-display text-xs text-ink-secondary hover:bg-surface-3 transition-colors"
+				>
+					<RefreshCw size={14} />
+					Reintentar
+				</button>
+			</div>
+		);
+	}
+
+	if (!qrData) return null;
+
 	return (
 		<div className="flex flex-col items-center gap-3 py-4">
-			<div
-				className="rounded-2xl p-4 flex items-center justify-center"
-				style={{ background: "#fff" }}
-			>
-				<svg
-					width="140"
-					height="140"
-					viewBox="0 0 140 140"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					{/* Outer finder patterns */}
-					<rect x="10" y="10" width="40" height="40" rx="4" fill="#1a1a1a" />
-					<rect x="16" y="16" width="28" height="28" rx="2" fill="#fff" />
-					<rect x="22" y="22" width="16" height="16" rx="1" fill="#1a1a1a" />
-
-					<rect x="90" y="10" width="40" height="40" rx="4" fill="#1a1a1a" />
-					<rect x="96" y="16" width="28" height="28" rx="2" fill="#fff" />
-					<rect x="102" y="22" width="16" height="16" rx="1" fill="#1a1a1a" />
-
-					<rect x="10" y="90" width="40" height="40" rx="4" fill="#1a1a1a" />
-					<rect x="16" y="96" width="28" height="28" rx="2" fill="#fff" />
-					<rect x="22" y="102" width="16" height="16" rx="1" fill="#1a1a1a" />
-
-					{/* Data modules (simplified) */}
-					{[60, 68, 76, 84].map((x) =>
-						[10, 18, 26, 34, 42].map((y) => (
-							<rect
-								key={`${x}-${y}`}
-								x={x}
-								y={y}
-								width="6"
-								height="6"
-								rx="1"
-								fill={Math.random() > 0.5 ? "#1a1a1a" : "#fff"}
-							/>
-						)),
-					)}
-					{[10, 18, 26, 34, 42, 50].map((x) =>
-						[60, 68, 76, 84, 92, 100, 108, 116].map((y) => (
-							<rect
-								key={`d-${x}-${y}`}
-								x={x}
-								y={y}
-								width="6"
-								height="6"
-								rx="1"
-								fill={Math.random() > 0.5 ? "#1a1a1a" : "#fff"}
-							/>
-						)),
-					)}
-					{[60, 68, 76, 84, 92, 100, 108, 116, 124].map((x) =>
-						[60, 68, 76, 84, 92, 100, 108, 116].map((y) => (
-							<rect
-								key={`e-${x}-${y}`}
-								x={x}
-								y={y}
-								width="6"
-								height="6"
-								rx="1"
-								fill={Math.random() > 0.5 ? "#1a1a1a" : "#fff"}
-							/>
-						)),
-					)}
-				</svg>
+			<div className="rounded-2xl p-4" style={{ background: "#fff" }}>
+				<QRCode value={qrData} size={180} level="M" />
 			</div>
 			<p className="font-display text-xs text-ink-tertiary text-center">
-				Escanear con MercadoPago
+				Escaneá con la app de MercadoPago
 			</p>
-			<div
-				className="px-3 py-1 rounded-lg"
-				style={{
-					background: "rgba(0,158,227,0.1)",
-					border: "1px solid rgba(0,158,227,0.25)",
-				}}
-			>
-				<span
-					className="font-display text-xs font-bold"
-					style={{ color: "#009ee3" }}
-				>
-					MercadoPago
+			<div className="flex items-center gap-2">
+				<div
+					className="w-2 h-2 rounded-full animate-pulse"
+					style={{ background: "#009ee3" }}
+				/>
+				<span className="font-display text-[11px]" style={{ color: "#009ee3" }}>
+					Esperando pago...
 				</span>
 			</div>
+			<button
+				onClick={generateQR}
+				className="flex items-center gap-2 px-3 py-1.5 rounded-lg font-display text-[10px] text-ink-tertiary hover:text-ink-secondary transition-colors"
+			>
+				<RefreshCw size={12} />
+				Regenerar QR
+			</button>
 		</div>
 	);
 }
@@ -524,7 +567,13 @@ function PaymentContent() {
 							{method === "mercadopago" && (
 								<div className="px-4 pb-4 animate-slide-down">
 									<div className="divider mb-4" />
-									<QRPlaceholder />
+									<MercadoPagoQR
+										orderIds={orders.map((o) => o.id)}
+										onPaid={() => {
+											setSuccess(true);
+											setTimeout(() => router.push("/waiter/tables"), 2500);
+										}}
+									/>
 								</div>
 							)}
 
@@ -549,28 +598,30 @@ function PaymentContent() {
 							)}
 						</div>
 
-						{/* Confirm button — full-width, large and gold */}
-						<button
-							onClick={handleConfirm}
-							disabled={submitting || orders.length === 0}
-							className="btn-primary w-full justify-center"
-							style={{
-								minHeight: 64,
-								fontSize: 16,
-								borderRadius: 16,
-								boxShadow:
-									"0 0 32px rgba(245,158,11,0.3), 0 4px 18px rgba(0,0,0,0.4)",
-							}}
-						>
-							{submitting ? (
-								<Loader2 className="w-5 h-5 animate-spin" />
-							) : (
-								<>
-									<CheckCircle2 className="w-5 h-5" />
-									COBRAR &nbsp;·&nbsp; {formatCurrency(total)}
-								</>
-							)}
-						</button>
+						{/* Confirm button — hidden when MP is selected (QR handles payment) */}
+						{method !== "mercadopago" && (
+							<button
+								onClick={handleConfirm}
+								disabled={submitting || orders.length === 0}
+								className="btn-primary w-full justify-center"
+								style={{
+									minHeight: 64,
+									fontSize: 16,
+									borderRadius: 16,
+									boxShadow:
+										"0 0 32px rgba(245,158,11,0.3), 0 4px 18px rgba(0,0,0,0.4)",
+								}}
+							>
+								{submitting ? (
+									<Loader2 className="w-5 h-5 animate-spin" />
+								) : (
+									<>
+										<CheckCircle2 className="w-5 h-5" />
+										COBRAR &nbsp;·&nbsp; {formatCurrency(total)}
+									</>
+								)}
+							</button>
+						)}
 					</div>
 				)}
 			</main>
