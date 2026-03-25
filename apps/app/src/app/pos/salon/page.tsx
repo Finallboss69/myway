@@ -32,7 +32,7 @@ import type {
 	Product,
 	Category,
 	CartItem,
-	OrderItem,
+	PaymentMethod,
 } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
 import HelpButton from "@/components/HelpButton";
@@ -43,8 +43,6 @@ import { helpContent } from "@/lib/help-content";
 const CANVAS_PAD = 60;
 const CANVAS_MIN_W = 800;
 const CANVAS_MIN_H = 500;
-
-type PaymentMethod = "cash" | "mercadopago" | "card";
 
 const STATUS_COLORS: Record<
 	string,
@@ -298,7 +296,11 @@ function FloorTable({
 				e.dataTransfer.dropEffect = "copy";
 				setDragOver(true);
 			}}
-			onDragLeave={() => setDragOver(false)}
+			onDragLeave={(e) => {
+				if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+					setDragOver(false);
+				}
+			}}
 			onDrop={(e) => {
 				e.preventDefault();
 				setDragOver(false);
@@ -847,6 +849,7 @@ function PayButton({
 	amount,
 	accentColor,
 	onClick,
+	disabled,
 }: {
 	icon: React.ReactNode;
 	label: string;
@@ -854,6 +857,7 @@ function PayButton({
 	amount: number;
 	accentColor: string;
 	onClick: () => void;
+	disabled?: boolean;
 }) {
 	return (
 		<button
@@ -862,11 +866,13 @@ function PayButton({
 				padding: "10px 12px",
 				background: "var(--s2)",
 				border: "1px solid var(--s3)",
-				cursor: "pointer",
+				cursor: disabled ? "not-allowed" : "pointer",
 				textAlign: "left",
 				color: "#f5f5f5",
+				opacity: disabled ? 0.5 : 1,
 			}}
 			onMouseEnter={(e) => {
+				if (disabled) return;
 				const el = e.currentTarget;
 				el.style.borderColor = accentColor;
 				el.style.background = `${accentColor}0e`;
@@ -877,6 +883,7 @@ function PayButton({
 				el.style.background = "var(--s2)";
 			}}
 			onClick={onClick}
+			disabled={disabled}
 		>
 			<div
 				style={{
@@ -1395,6 +1402,7 @@ function TableDetailPanel({
 								amount={total}
 								accentColor="#10b981"
 								onClick={() => onCloseTable("cash")}
+								disabled={closing}
 							/>
 							<PayButton
 								icon={<Smartphone size={16} style={{ color: "#60a5fa" }} />}
@@ -1403,6 +1411,7 @@ function TableDetailPanel({
 								amount={total}
 								accentColor="#3b82f6"
 								onClick={() => onCloseTable("mercadopago")}
+								disabled={closing}
 							/>
 							<PayButton
 								icon={<CreditCard size={16} style={{ color: "#a78bfa" }} />}
@@ -1411,6 +1420,7 @@ function TableDetailPanel({
 								amount={total}
 								accentColor="#8b5cf6"
 								onClick={() => onCloseTable("card")}
+								disabled={closing}
 							/>
 						</div>
 					</section>
@@ -1712,20 +1722,17 @@ export default function SalonPage() {
 			)
 		: [];
 
+	const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const showToast = (msg: string) => {
+		if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
 		setToastMsg(msg);
 		setToastVisible(true);
-		setTimeout(() => setToastVisible(false), 2200);
+		toastTimerRef.current = setTimeout(() => setToastVisible(false), 2200);
 	};
 
 	const handleSelectTable = (tableId: string) => {
-		if (selectedTableId === tableId) {
-			setSelectedTableId(null);
-			setCart([]);
-		} else {
-			setSelectedTableId(tableId);
-			setCart([]);
-		}
+		setSelectedTableId((prev) => (prev === tableId ? null : tableId));
+		setCart([]);
 	};
 
 	const handleAddToCart = (product: Product) => {
@@ -1792,15 +1799,18 @@ export default function SalonPage() {
 	};
 
 	const handleCloseTable = async (method: PaymentMethod) => {
-		if (closing) return;
-		const order = selectedTableOrders[0];
-		if (!order) return;
+		if (closing || selectedTableOrders.length === 0) return;
 		setClosing(true);
 		try {
-			await apiFetch(`/api/orders/${order.id}/close`, {
-				method: "POST",
-				body: JSON.stringify({ paymentMethod: method }),
-			});
+			// Close all open orders for this table
+			await Promise.all(
+				selectedTableOrders.map((o) =>
+					apiFetch(`/api/orders/${o.id}/close`, {
+						method: "POST",
+						body: JSON.stringify({ paymentMethod: method }),
+					}),
+				),
+			);
 			showToast("Mesa cerrada — ¡Hasta pronto!");
 			setSelectedTableId(null);
 			setCart([]);
@@ -1812,45 +1822,29 @@ export default function SalonPage() {
 		}
 	};
 
-	// Drag-and-drop: product dropped onto a table
-	const handleDropProduct = async (tableId: string, productId: string) => {
+	// Drag-and-drop: product dropped onto a table — always add to cart
+	const handleDropProduct = (tableId: string, productId: string) => {
 		const product = products.find((p) => p.id === productId);
 		if (!product) return;
 
-		// If this table is already selected, just add to cart
-		if (tableId === selectedTableId) {
-			handleAddToCart(product);
-			return;
-		}
-
-		// Otherwise, send directly as a new order
-		try {
-			await apiFetch("/api/orders", {
-				method: "POST",
-				body: JSON.stringify({
-					tableId,
-					waiterName: staffName || "Cajero",
-					items: [
-						{
-							productId: product.id,
-							name: product.name,
-							qty: 1,
-							price: product.price,
-							target: product.target,
-						},
-					],
-				}),
-			});
-			await fetchData();
-			showToast(
-				`${product.name} → Mesa ${tables.find((t) => t.id === tableId)?.number}`,
-			);
-			// Auto-select the table so they can see the order
+		if (tableId !== selectedTableId) {
+			// Switch to this table and start a fresh cart with the dropped item
 			setSelectedTableId(tableId);
-			setCart([]);
-		} catch (e) {
-			console.error(e);
+			setCart([
+				{
+					productId: product.id,
+					name: product.name,
+					price: product.price,
+					qty: 1,
+					target: product.target,
+				},
+			]);
+		} else {
+			handleAddToCart(product);
 		}
+		showToast(
+			`${product.name} → Mesa ${tables.find((t) => t.id === tableId)?.number}`,
+		);
 	};
 
 	return (
