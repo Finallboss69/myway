@@ -4,7 +4,11 @@ import PinGate from "@/components/PinGate";
 
 export default function POSLayout({ children }: { children: React.ReactNode }) {
 	return (
-		<PinGate storageKey="pos-staff" subtitle="Sistema POS — Caja">
+		<PinGate
+			storageKey="pos-staff"
+			subtitle="Sistema POS — Caja"
+			allowedRoles={["admin", "manager", "cashier"]}
+		>
 			{children}
 		</PinGate>
 	);

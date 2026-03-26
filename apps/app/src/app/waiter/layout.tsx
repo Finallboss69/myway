@@ -8,7 +8,11 @@ export default function WaiterLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<PinGate storageKey="myway-waiter-staff" subtitle="Sistema de Mozos">
+		<PinGate
+			storageKey="myway-waiter-staff"
+			subtitle="Sistema de Mozos"
+			allowedRoles={["admin", "manager", "waiter"]}
+		>
 			{children}
 		</PinGate>
 	);

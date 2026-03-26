@@ -8,7 +8,11 @@ export default function KitchenLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<PinGate storageKey="myway-kitchen-staff" subtitle="Cocina">
+		<PinGate
+			storageKey="myway-kitchen-staff"
+			subtitle="Cocina"
+			allowedRoles={["admin", "manager", "kitchen"]}
+		>
 			{children}
 		</PinGate>
 	);
