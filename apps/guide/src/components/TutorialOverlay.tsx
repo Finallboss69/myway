@@ -14,7 +14,7 @@ export default function TutorialOverlay({
 }: TutorialOverlayProps) {
 	const [currentStep, setCurrentStep] = useState(0);
 	const [isVisible, setIsVisible] = useState(true);
-	const step = steps[currentStep];
+	const step = steps[currentStep] as TutorialStep | undefined;
 
 	const highlightTarget = useCallback(() => {
 		// Remove previous highlights
@@ -52,6 +52,8 @@ export default function TutorialOverlay({
 		setCurrentStep(0);
 		setIsVisible(true);
 	};
+
+	if (!step) return null;
 
 	if (!isVisible) {
 		return (

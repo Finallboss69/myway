@@ -29,30 +29,30 @@ import {
 	AdminDeliveryScreen,
 } from "../screens/AllScreens";
 
-const screenComponents: Record<string, React.ReactNode> = {
-	"waiter-tables": <WaiterTablesScreen />,
-	"waiter-order": <WaiterOrderScreen />,
-	"waiter-ready": <WaiterReadyScreen />,
-	"waiter-payment": <WaiterPaymentScreen />,
-	"kitchen-board": <KDSBoardScreen variant="kitchen" />,
-	"kitchen-stock": <StockScreen variant="kitchen" />,
-	"bar-board": <KDSBoardScreen variant="bar" />,
-	"bar-stock": <StockScreen variant="bar" />,
-	"pos-salon": <POSSalonScreen />,
-	"pos-orders": <POSOrdersScreen />,
-	"repartidor-delivery": <RepartidorScreen />,
-	"admin-dashboard": <AdminDashboardScreen />,
-	"admin-menu": <AdminMenuScreen />,
-	"admin-tables": <AdminTablesScreen />,
-	"admin-employees": <AdminEmployeesScreen />,
-	"admin-suppliers": <AdminSuppliersScreen />,
-	"admin-expenses": <AdminExpensesScreen />,
-	"admin-cash": <AdminCashScreen />,
-	"admin-accounting": <AdminAccountingScreen />,
-	"admin-invoices": <AdminInvoicesScreen />,
-	"admin-mercadopago": <AdminMPConfigScreen />,
-	"admin-afip": <AdminAFIPConfigScreen />,
-	"admin-delivery": <AdminDeliveryScreen />,
+const screenComponents: Record<string, () => React.ReactElement> = {
+	"waiter-tables": () => <WaiterTablesScreen />,
+	"waiter-order": () => <WaiterOrderScreen />,
+	"waiter-ready": () => <WaiterReadyScreen />,
+	"waiter-payment": () => <WaiterPaymentScreen />,
+	"kitchen-board": () => <KDSBoardScreen variant="kitchen" />,
+	"kitchen-stock": () => <StockScreen variant="kitchen" />,
+	"bar-board": () => <KDSBoardScreen variant="bar" />,
+	"bar-stock": () => <StockScreen variant="bar" />,
+	"pos-salon": () => <POSSalonScreen />,
+	"pos-orders": () => <POSOrdersScreen />,
+	"repartidor-delivery": () => <RepartidorScreen />,
+	"admin-dashboard": () => <AdminDashboardScreen />,
+	"admin-menu": () => <AdminMenuScreen />,
+	"admin-tables": () => <AdminTablesScreen />,
+	"admin-employees": () => <AdminEmployeesScreen />,
+	"admin-suppliers": () => <AdminSuppliersScreen />,
+	"admin-expenses": () => <AdminExpensesScreen />,
+	"admin-cash": () => <AdminCashScreen />,
+	"admin-accounting": () => <AdminAccountingScreen />,
+	"admin-invoices": () => <AdminInvoicesScreen />,
+	"admin-mercadopago": () => <AdminMPConfigScreen />,
+	"admin-afip": () => <AdminAFIPConfigScreen />,
+	"admin-delivery": () => <AdminDeliveryScreen />,
 };
 
 export default function TutorialPage() {
@@ -70,7 +70,7 @@ export default function TutorialPage() {
 	}
 
 	const role = roles.find((r) => r.id === screen.roleId);
-	const component = screenComponents[screen.id];
+	const ScreenComponent = screenComponents[screen.id];
 
 	return (
 		<Layout
@@ -91,7 +91,7 @@ export default function TutorialPage() {
 			</div>
 
 			{/* Simulated screen */}
-			<div className="mb-32">{component}</div>
+			<div className="mb-32">{ScreenComponent && <ScreenComponent />}</div>
 
 			{/* Tutorial overlay */}
 			<TutorialOverlay steps={screen.steps} screenName={screen.name} />
