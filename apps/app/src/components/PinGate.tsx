@@ -116,6 +116,7 @@ export default function PinGate({
 					storageKey,
 					JSON.stringify({
 						...staff,
+						pin: digits.join(""),
 						createdAt: Date.now(),
 					}),
 				);

@@ -48,7 +48,7 @@ import { helpContent } from "@/lib/help-content";
 
 function getStaffPin(): string {
 	try {
-		const raw = localStorage.getItem("myway-pos-staff");
+		const raw = localStorage.getItem("pos-staff");
 		if (!raw) return "";
 		return JSON.parse(raw)?.pin ?? "";
 	} catch {
