@@ -1,7 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireStaffRole } from "@/lib/auth-check";
 
-export async function GET(req: Request) {
+const STAFF_ROLES = ["admin", "manager", "cashier"];
+
+export async function GET(req: NextRequest) {
+	const auth = await requireStaffRole(req, STAFF_ROLES);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const { searchParams } = new URL(req.url);
 		const categoryId = searchParams.get("categoryId");
@@ -31,7 +37,10 @@ export async function GET(req: Request) {
 	}
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+	const authPost = await requireStaffRole(req, STAFF_ROLES);
+	if (!authPost.ok) return authPost.response;
+
 	try {
 		const body = await req.json();
 		const {

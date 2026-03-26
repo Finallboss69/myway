@@ -20,6 +20,11 @@ const nextConfig: NextConfig = {
 						key: "Permissions-Policy",
 						value: "camera=(), microphone=(), geolocation=(self)",
 					},
+					{
+						key: "Content-Security-Policy",
+						value:
+							"default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.mercadopago.com https://*.supabase.co; frame-src 'none'; object-src 'none'; base-uri 'self';",
+					},
 				],
 			},
 		];

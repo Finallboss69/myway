@@ -1,12 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireStaffRole } from "@/lib/auth-check";
 
-export async function GET(req: Request) {
+const STAFF_ROLES = ["admin", "manager"];
+
+export async function GET(req: NextRequest) {
+	const auth = await requireStaffRole(req, STAFF_ROLES);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const { searchParams } = new URL(req.url);
 		const from = searchParams.get("from");
 		const to = searchParams.get("to");
-		const limit = parseInt(searchParams.get("limit") || "30");
+		const rawLimit = parseInt(searchParams.get("limit") || "30", 10);
+		const limit = Number.isFinite(rawLimit)
+			? Math.min(Math.max(rawLimit, 1), 100)
+			: 30;
 
 		const where: Record<string, unknown> = {};
 		if (from || to) {
@@ -28,7 +37,10 @@ export async function GET(req: Request) {
 }
 
 // POST /api/daily-reports/generate — generate report for a date
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+	const authPost = await requireStaffRole(req, STAFF_ROLES);
+	if (!authPost.ok) return authPost.response;
+
 	try {
 		const { date: dateStr } = await req.json();
 		if (!dateStr || isNaN(new Date(dateStr).getTime())) {

@@ -148,45 +148,47 @@ export async function POST(request: NextRequest) {
 		const resolvedItems: { name: string; qty: number; price: number }[] = [];
 		let serverTotal = 0;
 
-		for (const item of clientItems) {
-			let itemName = item.name ?? "Unknown";
-			let itemPrice: number;
+		// Collect all productIds for a single batch query (avoids N+1)
+		const productIds = clientItems
+			.map((item) => item.productId)
+			.filter((id): id is string => Boolean(id));
 
-			if (item.productId) {
-				// Look up actual price from database
-				const product = await db.product.findUnique({
-					where: { id: item.productId },
-				});
-				if (!product) {
-					return NextResponse.json(
-						{ error: `Producto no encontrado: ${item.productId}` },
-						{ status: 400 },
-					);
-				}
-				if (!product.isAvailable) {
-					return NextResponse.json(
-						{
-							error: `Producto no disponible: ${product.name}`,
-						},
-						{ status: 400 },
-					);
-				}
-				itemName = product.name;
-				itemPrice = product.price;
-			} else {
-				// Reject items without productId — never trust client prices
+		if (productIds.length !== clientItems.length) {
+			const missingIdx = clientItems.findIndex((item) => !item.productId);
+			return NextResponse.json(
+				{
+					error: `Producto "${clientItems[missingIdx]?.name ?? "Unknown"}" requiere productId válido`,
+				},
+				{ status: 400 },
+			);
+		}
+
+		const products = await db.product.findMany({
+			where: { id: { in: productIds } },
+		});
+		const productMap = new Map(products.map((p) => [p.id, p]));
+
+		for (const item of clientItems) {
+			const product = productMap.get(item.productId!);
+			if (!product) {
 				return NextResponse.json(
-					{ error: `Producto "${itemName}" requiere productId válido` },
+					{ error: `Producto no encontrado: ${item.productId}` },
+					{ status: 400 },
+				);
+			}
+			if (!product.isAvailable) {
+				return NextResponse.json(
+					{ error: `Producto no disponible: ${product.name}` },
 					{ status: 400 },
 				);
 			}
 
 			resolvedItems.push({
-				name: itemName,
+				name: product.name,
 				qty: item.qty,
-				price: itemPrice,
+				price: product.price,
 			});
-			serverTotal += itemPrice * item.qty;
+			serverTotal += product.price * item.qty;
 		}
 
 		// Create order with server-calculated total

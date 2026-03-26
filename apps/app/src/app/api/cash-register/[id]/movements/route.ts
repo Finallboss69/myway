@@ -1,10 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireStaffRole } from "@/lib/auth-check";
+
+const ALLOWED_ROLES = ["admin", "manager", "cashier"];
 
 export async function POST(
-	req: Request,
+	req: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
+	const auth = await requireStaffRole(req, ALLOWED_ROLES);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const { id } = await params;
 		const body = await req.json();

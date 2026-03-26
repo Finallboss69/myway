@@ -9,7 +9,12 @@ import { getMpMerchantOrder } from "@/lib/mercadopago";
  */
 async function verifyMpSignature(request: NextRequest): Promise<boolean> {
 	const secret = await getWebhookSecret();
-	if (!secret) return true; // No secret configured — skip in dev
+	if (!secret) {
+		console.warn(
+			"[webhook/mercadopago] No webhook secret configured — rejecting",
+		);
+		return false;
+	}
 
 	const xSignature = request.headers.get("x-signature");
 	const xRequestId = request.headers.get("x-request-id");

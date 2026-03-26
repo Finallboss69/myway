@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireStaffRole } from "@/lib/auth-check";
 
 export async function PATCH(
 	request: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
+	const auth = await requireStaffRole(request, [
+		"admin",
+		"manager",
+		"repartidor",
+	]);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const { id } = await params;
 		const body = (await request.json()) as { lat: number; lng: number };

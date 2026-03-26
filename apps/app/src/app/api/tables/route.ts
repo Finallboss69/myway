@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireStaffRole } from "@/lib/auth-check";
+
+const ADMIN_ROLES = ["admin", "manager"];
 
 export async function GET() {
 	try {
@@ -18,6 +21,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+	const auth = await requireStaffRole(request, ADMIN_ROLES);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const body = (await request.json()) as {
 			number: number;

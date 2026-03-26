@@ -39,6 +39,7 @@ model Account {
   session_state     String?
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -47,6 +48,8 @@ model Session {
   userId       String
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expires      DateTime
+
+  @@index([userId])
 }
 
 model VerificationToken {
@@ -81,6 +84,8 @@ model Table {
   shape    String  @default("square")
   rotation Float   @default(0)
   orders   Order[]
+
+  @@index([zoneId])
 }
 
 model Category {
@@ -92,6 +97,8 @@ model Category {
   parent   Category? @relation("CategoryTree", fields: [parentId], references: [id])
   children Category[] @relation("CategoryTree")
   products Product[]
+
+  @@index([parentId])
 }
 
 model Product {
@@ -187,6 +194,8 @@ model DeliveryOrderItem {
   name            String
   qty             Int
   price           Float
+
+  @@index([deliveryOrderId])
 }
 
 // ─── Inventory & Recipes ─────────────────────────────────────
@@ -240,6 +249,7 @@ model PriceHistory {
   notes        String?
 
   @@index([ingredientId])
+  @@index([supplierId])
 }
 
 // ─── Suppliers & Procurement ─────────────────────────────────
@@ -302,6 +312,8 @@ model SupplierInvoiceItem {
   unitPrice   Float
   ivaRate     Float           @default(21)
   subtotal    Float
+
+  @@index([invoiceId])
 }
 
 // ─── AFIP & Invoicing ────────────────────────────────────────
@@ -355,6 +367,8 @@ model InvoiceItem {
   unitPrice   Float
   ivaRate     Float   @default(21)
   subtotal    Float
+
+  @@index([invoiceId])
 }
 
 // ─── Expenses & Budgets ──────────────────────────────────────
@@ -369,6 +383,8 @@ model ExpenseCategory {
   children       ExpenseCategory[]  @relation("ExpenseCategoryTree")
   expenses       Expense[]
   budgetMonthly  Float?
+
+  @@index([parentId])
 }
 
 model Expense {

@@ -1,7 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createElectronicInvoice } from "@/lib/afip";
+import { requireStaffRole } from "@/lib/auth-check";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+	const auth = await requireStaffRole(req, ["admin", "manager"]);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const body = await req.json();
 		const { type, customerCuit, customerName, items, orderId } = body;

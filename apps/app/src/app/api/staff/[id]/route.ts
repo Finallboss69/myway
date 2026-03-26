@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireStaffRole } from "@/lib/auth-check";
 
 export async function PATCH(
 	request: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
+	const auth = await requireStaffRole(request, ["admin", "manager"]);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const { id } = await params;
 		const existing = await db.staff.findUnique({ where: { id } });
@@ -18,6 +22,13 @@ export async function PATCH(
 		const data: Record<string, unknown> = {};
 		for (const key of allowed) {
 			if (key in body) data[key] = body[key];
+		}
+		// Validate PIN format if provided
+		if (typeof data.pin === "string" && !/^\d{4,6}$/.test(data.pin)) {
+			return NextResponse.json(
+				{ error: "PIN debe ser 4-6 dígitos" },
+				{ status: 400 },
+			);
 		}
 		const member = await db.staff.update({
 			where: { id },
@@ -35,9 +46,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-	_request: NextRequest,
+	request: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
+	const authDel = await requireStaffRole(request, ["admin"]);
+	if (!authDel.ok) return authDel.response;
+
 	try {
 		const { id } = await params;
 		const existing = await db.staff.findUnique({ where: { id } });

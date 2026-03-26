@@ -1,7 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireStaffRole } from "@/lib/auth-check";
 
-export async function GET(req: Request) {
+const ALLOWED_ROLES = ["admin", "manager", "cashier"];
+
+export async function GET(req: NextRequest) {
 	try {
 		const { searchParams } = new URL(req.url);
 		const supplierId = searchParams.get("supplierId");
@@ -25,7 +28,10 @@ export async function GET(req: Request) {
 	}
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+	const auth = await requireStaffRole(req, ALLOWED_ROLES);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const body = await req.json();
 		const {

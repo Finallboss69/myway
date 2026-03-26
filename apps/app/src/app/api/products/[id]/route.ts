@@ -1,5 +1,8 @@
 import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { requireStaffRole } from "@/lib/auth-check";
+
+const ADMIN_ROLES = ["admin", "manager"];
 
 export async function GET(
 	_req: NextRequest,
@@ -30,6 +33,9 @@ export async function PATCH(
 	req: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
+	const auth = await requireStaffRole(req, ADMIN_ROLES);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const { id } = await params;
 		const existing = await db.product.findUnique({ where: { id } });
@@ -66,9 +72,12 @@ export async function PATCH(
 }
 
 export async function DELETE(
-	_req: NextRequest,
+	req: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
+	const auth = await requireStaffRole(req, ADMIN_ROLES);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const { id } = await params;
 		const existing = await db.product.findUnique({ where: { id } });

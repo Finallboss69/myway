@@ -1,10 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { requireStaffRole } from "@/lib/auth-check";
+
+const STAFF_ROLES = ["admin", "manager", "cashier"];
 
 export async function GET(
-	_req: Request,
+	req: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
+	const auth = await requireStaffRole(req, STAFF_ROLES);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const { id } = await params;
 		const register = await db.cashRegister.findUnique({
@@ -27,9 +33,12 @@ export async function GET(
 }
 
 export async function PATCH(
-	req: Request,
+	req: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
+	const authPatch = await requireStaffRole(req, STAFF_ROLES);
+	if (!authPatch.ok) return authPatch.response;
+
 	try {
 		const { id } = await params;
 		const body = await req.json();

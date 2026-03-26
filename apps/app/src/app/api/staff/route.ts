@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomInt } from "crypto";
 import { db } from "@/lib/db";
+import { requireStaffRole } from "@/lib/auth-check";
 
 export async function GET() {
 	try {
@@ -17,6 +19,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+	const auth = await requireStaffRole(request, ["admin", "manager"]);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const body = (await request.json()) as {
 			name: string;
@@ -57,7 +62,7 @@ export async function POST(request: NextRequest) {
 				name: body.name.trim(),
 				role: body.role,
 				avatar: body.avatar,
-				pin: body.pin ?? String(Math.floor(100000 + Math.random() * 900000)),
+				pin: body.pin ?? String(randomInt(100000, 999999)),
 			},
 			omit: { pin: true },
 		});
