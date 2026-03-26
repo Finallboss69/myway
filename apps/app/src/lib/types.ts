@@ -22,7 +22,7 @@ export type DeliveryStatus =
 	| "en_camino"
 	| "delivered"
 	| "cancelled";
-export type PaymentMethod = "cash" | "mercadopago" | "card";
+export type PaymentMethod = "cash" | "mercadopago" | "card" | "transfer";
 export type StaffRole =
 	| "waiter"
 	| "bar"

@@ -18,6 +18,7 @@ import {
 	LayoutGrid,
 	ListOrdered,
 	LogOut,
+	ArrowRightLeft,
 } from "lucide-react";
 import { formatCurrency, elapsedMinutes } from "@/lib/utils";
 import type {
@@ -32,7 +33,7 @@ import { apiFetch } from "@/lib/api";
 import HelpButton from "@/components/HelpButton";
 import { helpContent } from "@/lib/help-content";
 
-type PaymentMethod = "cash" | "mercadopago" | "card";
+type PaymentMethod = "cash" | "mercadopago" | "card" | "transfer";
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
@@ -1387,6 +1388,16 @@ export default function TableDetailPage({
 										amount={total}
 										accentColor="#8b5cf6"
 										onClick={() => handleCloseTable("card")}
+									/>
+									<PayButton
+										icon={
+											<ArrowRightLeft size={20} style={{ color: "#fbbf24" }} />
+										}
+										label="Transferencia"
+										sub="Alias bancario"
+										amount={total}
+										accentColor="#f59e0b"
+										onClick={() => handleCloseTable("transfer")}
 									/>
 								</div>
 							</div>

@@ -8,6 +8,7 @@ const ALLOWED_KEYS = [
 	"mp_user_id",
 	"mp_external_pos_id",
 	"mp_webhook_secret",
+	"transfer_alias",
 ] as const;
 
 const SECRET_KEYS = new Set(["mp_access_token", "mp_webhook_secret"]);

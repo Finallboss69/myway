@@ -47,6 +47,13 @@ const FIELDS = [
 		help: "Clave secreta para verificar notificaciones (Integraciones → Webhooks)",
 		secret: true,
 	},
+	{
+		key: "transfer_alias",
+		label: "Alias de Transferencia",
+		placeholder: "mi.alias.mp",
+		help: "Alias bancario para que los clientes paguen por transferencia",
+		secret: false,
+	},
 ] as const;
 
 function getStaffPin(): string {
@@ -135,7 +142,7 @@ export default function MercadoPagoSettingsPage() {
 						MercadoPago
 					</h1>
 					<p className="font-body text-xs text-ink-tertiary">
-						Configurá tus credenciales para cobrar con QR
+						Configurá credenciales para cobrar con QR y transferencia
 					</p>
 				</div>
 			</div>

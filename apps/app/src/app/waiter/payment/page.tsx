@@ -21,6 +21,8 @@ import {
 	Terminal,
 	Loader2,
 	RefreshCw,
+	ArrowRightLeft,
+	Copy,
 } from "lucide-react";
 import clsx from "clsx";
 import { formatCurrency } from "@/lib/utils";
@@ -46,7 +48,7 @@ interface Order {
 	items: OrderItem[];
 }
 
-type PaymentMethod = "cash" | "mercadopago" | "card";
+type PaymentMethod = "cash" | "mercadopago" | "card" | "transfer";
 
 const IVA_RATE = 0.21;
 
@@ -243,6 +245,18 @@ function PaymentContent() {
 	const [cashReceived, setCashReceived] = useState("");
 	const [submitting, setSubmitting] = useState(false);
 	const [success, setSuccess] = useState(false);
+	const [transferAlias, setTransferAlias] = useState("");
+	const [aliasCopied, setAliasCopied] = useState(false);
+
+	useEffect(() => {
+		fetch("/api/settings?key=transfer_alias")
+			.then((r) => (r.ok ? r.json() : []))
+			.then((data: { key: string; value: string }[]) => {
+				const found = data.find((s) => s.key === "transfer_alias");
+				if (found) setTransferAlias(found.value);
+			})
+			.catch(() => {});
+	}, []);
 
 	useEffect(() => {
 		if (!tableId) {
@@ -474,7 +488,7 @@ function PaymentContent() {
 									Método de pago
 								</span>
 							</div>
-							<div className="p-3 grid grid-cols-3 gap-2.5">
+							<div className="p-3 grid grid-cols-2 gap-2.5">
 								{(
 									[
 										{ key: "cash" as const, icon: Banknote, label: "Efectivo" },
@@ -484,6 +498,11 @@ function PaymentContent() {
 											label: "MercadoPago",
 										},
 										{ key: "card" as const, icon: Terminal, label: "Tarjeta" },
+										{
+											key: "transfer" as const,
+											icon: ArrowRightLeft,
+											label: "Transferencia",
+										},
 									] as const
 								).map(({ key, icon: Icon, label }) => {
 									const isActive = method === key;
@@ -607,6 +626,60 @@ function PaymentContent() {
 											</p>
 										</div>
 									</div>
+								</div>
+							)}
+
+							{/* Transfer: show alias */}
+							{method === "transfer" && (
+								<div className="px-4 pb-4 animate-slide-down">
+									<div className="divider mb-4" />
+									{transferAlias ? (
+										<div className="flex flex-col items-center gap-3">
+											<div className="w-full p-4 rounded-xl border border-surface-3 bg-surface-2 text-center">
+												<p className="font-display text-[10px] text-ink-tertiary uppercase tracking-widest mb-2">
+													Alias para transferir
+												</p>
+												<p
+													className="font-kds text-2xl text-brand-500 tracking-wider select-all"
+													style={{
+														textShadow: "0 0 20px rgba(245,158,11,0.3)",
+													}}
+												>
+													{transferAlias}
+												</p>
+											</div>
+											<button
+												onClick={() => {
+													navigator.clipboard.writeText(transferAlias);
+													setAliasCopied(true);
+													setTimeout(() => setAliasCopied(false), 2000);
+												}}
+												className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-2 border border-surface-3 font-display text-xs text-ink-secondary hover:bg-surface-3 transition-colors"
+											>
+												{aliasCopied ? (
+													<CheckCircle2
+														size={14}
+														className="text-emerald-400"
+													/>
+												) : (
+													<Copy size={14} />
+												)}
+												{aliasCopied ? "Copiado" : "Copiar alias"}
+											</button>
+											<p className="font-display text-[10px] text-ink-tertiary text-center">
+												El cliente transfiere a este alias y confirmás el pago
+											</p>
+										</div>
+									) : (
+										<div className="text-center py-4">
+											<p className="font-display text-xs text-ink-tertiary">
+												Alias no configurado
+											</p>
+											<p className="font-display text-[10px] text-ink-tertiary mt-1">
+												Pedile al admin que configure el alias en Ajustes
+											</p>
+										</div>
+									)}
 								</div>
 							)}
 						</div>

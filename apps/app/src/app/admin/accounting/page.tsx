@@ -14,6 +14,7 @@ import {
 	DollarSign,
 	Users,
 	AlertTriangle,
+	ArrowRightLeft,
 } from "lucide-react";
 import { formatCurrency, elapsedMinutes, formatTime } from "@/lib/utils";
 import type { Order, PaymentMethod } from "@/lib/types";
@@ -61,6 +62,13 @@ function PaymentModal({
 			sub: "Debito o credito",
 			icon: CreditCard,
 			color: "#8b5cf6",
+		},
+		{
+			method: "transfer",
+			label: "Transferencia",
+			sub: "Alias bancario",
+			icon: ArrowRightLeft,
+			color: "#f59e0b",
 		},
 	];
 

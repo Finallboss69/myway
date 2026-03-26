@@ -25,6 +25,9 @@ import {
 	GripVertical,
 	Loader2,
 	RefreshCw,
+	ArrowRightLeft,
+	Copy,
+	CheckCircle2,
 } from "lucide-react";
 import { formatCurrency, elapsedMinutes } from "@/lib/utils";
 import type {
@@ -976,6 +979,21 @@ function TableDetailPanel({
 	const [mpLoading, setMpLoading] = useState(false);
 	const [mpError, setMpError] = useState<string | null>(null);
 	const mpPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+	const [transferAlias, setTransferAlias] = useState("");
+	const [aliasCopied, setAliasCopied] = useState(false);
+
+	// Fetch transfer alias
+	useEffect(() => {
+		fetch("/api/settings", { headers: { "x-staff-pin": getStaffPin() } })
+			.then((r) => (r.ok ? r.json() : []))
+			.then((data: { key: string; value: string }[]) => {
+				const found = Array.isArray(data)
+					? data.find((s) => s.key === "transfer_alias")
+					: null;
+				if (found) setTransferAlias(found.value);
+			})
+			.catch(() => {});
+	}, []);
 
 	// Cleanup MP polling on unmount
 	useEffect(() => {
@@ -1498,7 +1516,50 @@ function TableDetailPanel({
 								onClick={() => onCloseTable("card")}
 								disabled={closing}
 							/>
+							<PayButton
+								icon={<ArrowRightLeft size={16} style={{ color: "#fbbf24" }} />}
+								label="Transferencia"
+								sub="Alias bancario"
+								amount={total}
+								accentColor="#f59e0b"
+								onClick={() => onCloseTable("transfer")}
+								disabled={closing}
+							/>
 						</div>
+
+						{/* Transfer alias display */}
+						{transferAlias && (
+							<div className="flex items-center gap-3 mt-2 px-3 py-2.5 rounded-xl bg-surface-2 border border-surface-3">
+								<div className="flex-1 min-w-0">
+									<div
+										className="font-display text-ink-tertiary uppercase tracking-widest"
+										style={{ fontSize: 8, letterSpacing: "0.2em" }}
+									>
+										Alias
+									</div>
+									<div
+										className="font-kds text-brand-500 truncate"
+										style={{ fontSize: 16 }}
+									>
+										{transferAlias}
+									</div>
+								</div>
+								<button
+									onClick={() => {
+										navigator.clipboard.writeText(transferAlias);
+										setAliasCopied(true);
+										setTimeout(() => setAliasCopied(false), 2000);
+									}}
+									className="shrink-0 p-2 rounded-lg hover:bg-surface-3 transition-colors"
+								>
+									{aliasCopied ? (
+										<CheckCircle2 size={14} className="text-emerald-400" />
+									) : (
+										<Copy size={14} className="text-ink-tertiary" />
+									)}
+								</button>
+							</div>
+						)}
 
 						{/* MP QR Display */}
 						{mpLoading && (
