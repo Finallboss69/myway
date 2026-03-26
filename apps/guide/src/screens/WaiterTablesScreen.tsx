@@ -321,7 +321,7 @@ export default function WaiterTablesScreen() {
 								? "table-card-occupied"
 								: i === 1
 									? "table-card-available"
-									: i === 0
+									: i === 2
 										? "table-total"
 										: undefined
 						}

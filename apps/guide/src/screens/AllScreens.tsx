@@ -1710,7 +1710,7 @@ export function POSSalonScreen() {
 											: sc.bg,
 										border: `2px solid ${sc.border}`,
 										boxShadow: `0 0 12px ${sc.border}30`,
-										borderRadius: isPool ? 12 : 12,
+										borderRadius: 12,
 									}}
 								>
 									<span
