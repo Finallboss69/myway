@@ -1,3 +1,7 @@
 .vercel
 .playwright-mcp/
 .next
+e2e-tests/
+apps/app/e2e/report/
+apps/app/e2e/screenshots/
+apps/app/test-results/
