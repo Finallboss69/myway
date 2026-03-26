@@ -5,9 +5,12 @@ import { requireStaffRole } from "@/lib/auth-check";
 const ALLOWED_ROLES = ["admin", "manager", "cashier"];
 
 export async function GET(
-	_req: Request,
+	req: NextRequest,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
+	const auth = await requireStaffRole(req, ALLOWED_ROLES);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const { id } = await params;
 		const supplier = await db.supplier.findUnique({

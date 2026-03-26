@@ -7,14 +7,11 @@ import { getMpMerchantOrder } from "@/lib/mercadopago";
  * Verify MercadoPago webhook signature (HMAC-SHA256).
  * Returns true if signature is valid or if no webhook secret is configured (dev mode).
  */
-async function verifyMpSignature(request: NextRequest): Promise<boolean> {
+async function verifyMpSignature(
+	request: NextRequest,
+): Promise<boolean | "no_secret"> {
 	const secret = await getWebhookSecret();
-	if (!secret) {
-		console.warn(
-			"[webhook/mercadopago] No webhook secret configured — rejecting",
-		);
-		return false;
-	}
+	if (!secret) return "no_secret";
 
 	const xSignature = request.headers.get("x-signature");
 	const xRequestId = request.headers.get("x-request-id");
@@ -55,8 +52,17 @@ export async function POST(request: NextRequest) {
 	// Always respond 200 immediately — MP retries on non-2xx
 	try {
 		// Verify webhook signature when secret is configured
-		const sigValid = await verifyMpSignature(request);
-		if (!sigValid) {
+		const sigResult = await verifyMpSignature(request);
+		if (sigResult === "no_secret") {
+			console.error(
+				"[webhook/mercadopago] mp_webhook_secret not configured — returning 503 so MP retries",
+			);
+			return NextResponse.json(
+				{ error: "Webhook secret not configured" },
+				{ status: 503 },
+			);
+		}
+		if (!sigResult) {
 			console.warn("[webhook/mercadopago] Invalid signature — rejected");
 			return NextResponse.json({ received: true });
 		}

@@ -5,6 +5,9 @@ import { requireStaffRole } from "@/lib/auth-check";
 const ALLOWED_ROLES = ["admin", "manager", "cashier"];
 
 export async function GET(req: NextRequest) {
+	const auth = await requireStaffRole(req, ALLOWED_ROLES);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const { searchParams } = new URL(req.url);
 		const supplierId = searchParams.get("supplierId");
