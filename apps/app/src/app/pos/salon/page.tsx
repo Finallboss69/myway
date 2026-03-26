@@ -984,7 +984,7 @@ function TableDetailPanel({
 
 	// Fetch transfer alias
 	useEffect(() => {
-		fetch("/api/settings", { headers: { "x-staff-pin": getStaffPin() } })
+		fetch("/api/settings/public")
 			.then((r) => (r.ok ? r.json() : []))
 			.then((data: { key: string; value: string }[]) => {
 				const found = Array.isArray(data)
@@ -1545,10 +1545,14 @@ function TableDetailPanel({
 									</div>
 								</div>
 								<button
-									onClick={() => {
-										navigator.clipboard.writeText(transferAlias);
-										setAliasCopied(true);
-										setTimeout(() => setAliasCopied(false), 2000);
+									onClick={async () => {
+										try {
+											await navigator.clipboard.writeText(transferAlias);
+											setAliasCopied(true);
+											setTimeout(() => setAliasCopied(false), 2000);
+										} catch {
+											/* clipboard not available */
+										}
 									}}
 									className="shrink-0 p-2 rounded-lg hover:bg-surface-3 transition-colors"
 								>

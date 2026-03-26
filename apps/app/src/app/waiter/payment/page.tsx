@@ -48,7 +48,7 @@ interface Order {
 	items: OrderItem[];
 }
 
-type PaymentMethod = "cash" | "mercadopago" | "card" | "transfer";
+import type { PaymentMethod } from "@/lib/types";
 
 const IVA_RATE = 0.21;
 
@@ -249,10 +249,12 @@ function PaymentContent() {
 	const [aliasCopied, setAliasCopied] = useState(false);
 
 	useEffect(() => {
-		fetch("/api/settings?key=transfer_alias")
+		fetch("/api/settings/public")
 			.then((r) => (r.ok ? r.json() : []))
 			.then((data: { key: string; value: string }[]) => {
-				const found = data.find((s) => s.key === "transfer_alias");
+				const found = Array.isArray(data)
+					? data.find((s) => s.key === "transfer_alias")
+					: null;
 				if (found) setTransferAlias(found.value);
 			})
 			.catch(() => {});
@@ -649,10 +651,14 @@ function PaymentContent() {
 												</p>
 											</div>
 											<button
-												onClick={() => {
-													navigator.clipboard.writeText(transferAlias);
-													setAliasCopied(true);
-													setTimeout(() => setAliasCopied(false), 2000);
+												onClick={async () => {
+													try {
+														await navigator.clipboard.writeText(transferAlias);
+														setAliasCopied(true);
+														setTimeout(() => setAliasCopied(false), 2000);
+													} catch {
+														/* clipboard not available */
+													}
 												}}
 												className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-2 border border-surface-3 font-display text-xs text-ink-secondary hover:bg-surface-3 transition-colors"
 											>

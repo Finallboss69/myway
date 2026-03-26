@@ -28,12 +28,11 @@ import type {
 	Product,
 	Category,
 	Zone,
+	PaymentMethod,
 } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
 import HelpButton from "@/components/HelpButton";
 import { helpContent } from "@/lib/help-content";
-
-type PaymentMethod = "cash" | "mercadopago" | "card" | "transfer";
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
 
