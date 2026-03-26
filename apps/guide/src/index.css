@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+:root {
+	--bg-primary: #0a0a0f;
+	--bg-secondary: #12121a;
+	--bg-card: #1a1a26;
+	--bg-elevated: #222233;
+	--brand: #a78bfa;
+	--brand-glow: rgba(167, 139, 250, 0.25);
+	--ink: #e2e2f0;
+	--ink-secondary: #9090a8;
+	--ink-faint: #55556a;
+	--success: #34d399;
+	--warning: #fbbf24;
+	--danger: #f87171;
+	--info: #60a5fa;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	background: var(--bg-primary);
+	color: var(--ink);
+	font-family: "Inter", system-ui, sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+
+/* Pulse animation for hotspots */
+@keyframes hotspot-pulse {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 var(--brand-glow);
+	}
+	50% {
+		box-shadow: 0 0 0 8px transparent;
+	}
+}
+.hotspot-pulse {
+	animation: hotspot-pulse 2s ease-in-out infinite;
+}
+
+/* Glow ring for active tutorial element */
+@keyframes glow-ring {
+	0%,
+	100% {
+		box-shadow:
+			0 0 0 3px var(--brand),
+			0 0 20px var(--brand-glow);
+	}
+	50% {
+		box-shadow:
+			0 0 0 5px var(--brand),
+			0 0 30px var(--brand-glow);
+	}
+}
+.glow-ring {
+	animation: glow-ring 1.5s ease-in-out infinite;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+	width: 6px;
+}
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+::-webkit-scrollbar-thumb {
+	background: var(--ink-faint);
+	border-radius: 3px;
+}
