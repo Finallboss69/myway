@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Delete, Check, LogIn, LogOut } from "lucide-react";
 
 interface StaffSession {
@@ -49,7 +49,12 @@ export default function PinGate({
 	title = "Ingresá tu PIN",
 	subtitle,
 }: PinGateProps) {
-	const roles = allowedRoles ?? EMPTY_ROLES;
+	// Memoize to prevent useEffect infinite loop from new array refs
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	const roles = useMemo(
+		() => allowedRoles ?? EMPTY_ROLES,
+		[JSON.stringify(allowedRoles)],
+	);
 
 	const [authed, setAuthed] = useState<StaffSession | null>(null);
 	const [checking, setChecking] = useState(true);

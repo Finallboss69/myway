@@ -81,6 +81,16 @@ const SHAPE_LABELS: Record<TableShape, string> = {
 
 // --- Helpers ---
 
+function getAdminPin(): string {
+	try {
+		const raw = localStorage.getItem("myway-admin-staff");
+		if (!raw) return "";
+		return JSON.parse(raw)?.pin ?? "";
+	} catch {
+		return "";
+	}
+}
+
 function snapToGrid(v: number): number {
 	return Math.round(v / GRID_SIZE) * GRID_SIZE;
 }
@@ -329,7 +339,10 @@ export default function AdminTablesPage() {
 				saveTimers.current.delete(id);
 				await fetch(`/api/tables/${id}`, {
 					method: "PATCH",
-					headers: { "Content-Type": "application/json" },
+					headers: {
+						"Content-Type": "application/json",
+						"x-staff-pin": getAdminPin(),
+					},
 					body: JSON.stringify(data),
 				});
 			}, 300),
@@ -484,7 +497,10 @@ export default function AdminTablesPage() {
 
 		const res = await fetch("/api/tables", {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json",
+				"x-staff-pin": getAdminPin(),
+			},
 			body: JSON.stringify({
 				number: newNumber,
 				zoneId: activeZoneId,
@@ -515,7 +531,10 @@ export default function AdminTablesPage() {
 				setTimeout(() => setConfirmDeleteId(null), 3000);
 				return;
 			}
-			const res = await fetch(`/api/tables/${id}`, { method: "DELETE" });
+			const res = await fetch(`/api/tables/${id}`, {
+				method: "DELETE",
+				headers: { "x-staff-pin": getAdminPin() },
+			});
 			if (res.ok) {
 				setTables((prev) => prev.filter((t) => t.id !== id));
 				if (selectedId === id) setSelectedId(null);
@@ -542,7 +561,10 @@ export default function AdminTablesPage() {
 		if (!newZoneName.trim()) return;
 		const res = await fetch("/api/zones", {
 			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			headers: {
+				"Content-Type": "application/json",
+				"x-staff-pin": getAdminPin(),
+			},
 			body: JSON.stringify({ name: newZoneName.trim() }),
 		});
 		if (res.ok) {
@@ -1045,6 +1067,7 @@ export default function AdminTablesPage() {
 											<div
 												key={table.id}
 												onMouseDown={(e) => handleMouseDown(e, table.id)}
+												onClick={(e) => e.stopPropagation()}
 												style={{
 													position: "absolute",
 													left: table.x * zoom,
