@@ -25,6 +25,7 @@ import {
 	AlertCircle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { getAdminPin } from "@/lib/admin-pin";
 
 interface ExpenseCategory {
 	id: string;
@@ -77,6 +78,7 @@ const CC = [
 	"#14b8a6",
 	"#64748b",
 ];
+
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
 const td = () => new Date().toISOString().slice(0, 10);
 const som = () => {
@@ -545,7 +547,10 @@ export default function ExpensesPage() {
 			isRecurring: ef.isRecurring,
 			recurringDay: ef.recurringDay ? parseInt(ef.recurringDay) : null,
 		};
-		const h = { "Content-Type": "application/json" };
+		const h = {
+			"Content-Type": "application/json",
+			"x-staff-pin": getAdminPin(),
+		};
 		if (edE)
 			await fetch(`/api/expenses/${edE.id}`, {
 				method: "PATCH",
@@ -562,7 +567,10 @@ export default function ExpensesPage() {
 		mE();
 	};
 	const dE = async (id: string) => {
-		await fetch(`/api/expenses/${id}`, { method: "DELETE" });
+		await fetch(`/api/expenses/${id}`, {
+			method: "DELETE",
+			headers: { "x-staff-pin": getAdminPin() },
+		});
 		setDelId(null);
 		mE();
 	};
@@ -590,7 +598,10 @@ export default function ExpensesPage() {
 			budgetMonthly: cf.budgetMonthly ? parseFloat(cf.budgetMonthly) : null,
 			parentId: cf.parentId || null,
 		};
-		const h = { "Content-Type": "application/json" };
+		const h = {
+			"Content-Type": "application/json",
+			"x-staff-pin": getAdminPin(),
+		};
 		if (edC)
 			await fetch(`/api/expense-categories/${edC.id}`, {
 				method: "PATCH",
@@ -607,7 +618,10 @@ export default function ExpensesPage() {
 		mC();
 	};
 	const dC = async (id: string) => {
-		await fetch(`/api/expense-categories/${id}`, { method: "DELETE" });
+		await fetch(`/api/expense-categories/${id}`, {
+			method: "DELETE",
+			headers: { "x-staff-pin": getAdminPin() },
+		});
 		mC();
 	};
 

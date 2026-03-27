@@ -25,6 +25,7 @@ import {
 	PieChart,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { getAdminPin, staffHeaders } from "@/lib/admin-pin";
 
 const f = (u: string) => fetch(u).then((r) => r.json());
 type E = React.ElementType;
@@ -464,7 +465,7 @@ export default function AnalyticsPage() {
 		try {
 			const r = await fetch("/api/daily-reports", {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: staffHeaders(),
 				body: JSON.stringify({ date: rDate }),
 			});
 			if (!r.ok) throw new Error("e");

@@ -5,6 +5,8 @@ import { Menu } from "lucide-react";
 import AdminSidebar from "./AdminSidebar";
 import PinGate from "@/components/PinGate";
 
+const ADMIN_ROLES: string[] = ["admin", "manager"];
+
 export default function AdminLayout({
 	children,
 }: {
@@ -15,7 +17,7 @@ export default function AdminLayout({
 	return (
 		<PinGate
 			storageKey="myway-admin-staff"
-			allowedRoles={["admin", "manager"]}
+			allowedRoles={ADMIN_ROLES}
 			subtitle="Panel de Administración"
 		>
 			<div

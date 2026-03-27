@@ -24,6 +24,7 @@ import {
 	Hash,
 	Maximize2,
 } from "lucide-react";
+import { getAdminPin } from "@/lib/admin-pin";
 
 // --- Types ---
 
@@ -80,16 +81,6 @@ const SHAPE_LABELS: Record<TableShape, string> = {
 };
 
 // --- Helpers ---
-
-function getAdminPin(): string {
-	try {
-		const raw = localStorage.getItem("myway-admin-staff");
-		if (!raw) return "";
-		return JSON.parse(raw)?.pin ?? "";
-	} catch {
-		return "";
-	}
-}
 
 function snapToGrid(v: number): number {
 	return Math.round(v / GRID_SIZE) * GRID_SIZE;

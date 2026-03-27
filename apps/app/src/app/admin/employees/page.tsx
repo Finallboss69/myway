@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import type { Staff, StaffRole } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
+import { getAdminPin, staffHeaders } from "@/lib/admin-pin";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -674,6 +675,7 @@ export default function EmployeesPage() {
 			if (editingStaff) {
 				await apiFetch(`/api/staff/${editingStaff.id}`, {
 					method: "PATCH",
+					headers: staffHeaders(),
 					body: JSON.stringify({
 						name: form.name,
 						role: form.role,
@@ -684,6 +686,7 @@ export default function EmployeesPage() {
 			} else {
 				await apiFetch("/api/staff", {
 					method: "POST",
+					headers: staffHeaders(),
 					body: JSON.stringify({
 						name: form.name,
 						role: form.role,
@@ -705,7 +708,10 @@ export default function EmployeesPage() {
 		if (!deleteTarget) return;
 		setDeleting(true);
 		try {
-			await apiFetch(`/api/staff/${deleteTarget.id}`, { method: "DELETE" });
+			await apiFetch(`/api/staff/${deleteTarget.id}`, {
+				method: "DELETE",
+				headers: staffHeaders(),
+			});
 			setDeleteTarget(null);
 			await fetchStaff();
 		} catch (e) {

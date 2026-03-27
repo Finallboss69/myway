@@ -2,6 +2,8 @@
 
 import PinGate from "@/components/PinGate";
 
+const KITCHEN_ROLES: string[] = ["admin", "manager", "kitchen"];
+
 export default function KitchenLayout({
 	children,
 }: {
@@ -11,7 +13,7 @@ export default function KitchenLayout({
 		<PinGate
 			storageKey="myway-kitchen-staff"
 			subtitle="Cocina"
-			allowedRoles={["admin", "manager", "kitchen"]}
+			allowedRoles={KITCHEN_ROLES}
 		>
 			{children}
 		</PinGate>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import HelpButton from "@/components/HelpButton";
 import { helpContent } from "@/lib/help-content";
+import { getAdminPin, staffHeaders } from "@/lib/admin-pin";
 import {
 	Settings,
 	Shield,
@@ -115,7 +116,7 @@ export default function AfipConfigPage() {
 
 			const res = await fetch("/api/afip-config", {
 				method: "PUT",
-				headers: { "Content-Type": "application/json" },
+				headers: staffHeaders(),
 				body: JSON.stringify(body),
 			});
 			if (!res.ok) throw new Error("Error guardando");

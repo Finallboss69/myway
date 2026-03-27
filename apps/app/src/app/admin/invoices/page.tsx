@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
+import { staffHeaders } from "@/lib/admin-pin";
 import { printDocument, printCurrency } from "@/lib/print";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -442,6 +443,7 @@ function InvoiceRow({
 		try {
 			await apiFetch("/api/afip/invoice", {
 				method: "POST",
+				headers: staffHeaders(),
 				body: JSON.stringify({
 					type: inv.type,
 					customerCuit: inv.customerCuit,
@@ -803,6 +805,7 @@ function NewInvoiceModal({
 		try {
 			await apiFetch("/api/invoices", {
 				method: "POST",
+				headers: staffHeaders(),
 				body: JSON.stringify({
 					type,
 					customerCuit: customerCuit || undefined,
@@ -833,6 +836,7 @@ function NewInvoiceModal({
 		try {
 			await apiFetch("/api/afip/invoice", {
 				method: "POST",
+				headers: staffHeaders(),
 				body: JSON.stringify({
 					type,
 					customerCuit: customerCuit || undefined,

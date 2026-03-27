@@ -19,6 +19,7 @@ import {
 import { formatCurrency, elapsedMinutes, formatTime } from "@/lib/utils";
 import type { Order, PaymentMethod } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
+import { getAdminPin } from "@/lib/admin-pin";
 
 // ─── Payment modal ────────────────────────────────────────────────────────────
 
@@ -484,6 +485,7 @@ export default function AccountingPage() {
 		try {
 			await apiFetch(`/api/orders/${paymentModal.id}/close`, {
 				method: "POST",
+				headers: { "x-staff-pin": getAdminPin() },
 				body: JSON.stringify({ paymentMethod: method }),
 			});
 			setPaymentModal(null);

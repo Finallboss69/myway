@@ -20,6 +20,7 @@ import {
 import { formatCurrency, elapsedMinutes } from "@/lib/utils";
 import type { DeliveryOrder, DeliveryStatus } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
+import { getAdminPin, staffHeaders } from "@/lib/admin-pin";
 
 // --- Helpers ----------------------------------------------------------------
 
@@ -603,6 +604,7 @@ function NewOrderModal({
 		try {
 			await apiFetch("/api/delivery", {
 				method: "POST",
+				headers: staffHeaders(),
 				body: JSON.stringify({
 					customerName: form.customerName,
 					address: form.address,
@@ -835,6 +837,7 @@ export default function DeliveryPage() {
 		try {
 			await apiFetch(`/api/delivery/${id}`, {
 				method: "PATCH",
+				headers: staffHeaders(),
 				body: JSON.stringify({ status }),
 			});
 		} catch (e) {

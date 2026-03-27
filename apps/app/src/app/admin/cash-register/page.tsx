@@ -29,6 +29,7 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import { printDocument, printCurrency } from "@/lib/print";
+import { getAdminPin } from "@/lib/admin-pin";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1299,6 +1300,7 @@ export default function CashRegisterPage() {
 		try {
 			await apiFetch("/api/cash-register", {
 				method: "POST",
+				headers: { "x-staff-pin": getAdminPin() },
 				body: JSON.stringify({ openingBalance: balance }),
 			});
 			await fetchData();
@@ -1318,6 +1320,7 @@ export default function CashRegisterPage() {
 		try {
 			await apiFetch(`/api/cash-register/${activeRegister.id}/movements`, {
 				method: "POST",
+				headers: { "x-staff-pin": getAdminPin() },
 				body: JSON.stringify(data),
 			});
 			setModal(null);
@@ -1335,6 +1338,7 @@ export default function CashRegisterPage() {
 		try {
 			await apiFetch(`/api/cash-register/${activeRegister.id}`, {
 				method: "PATCH",
+				headers: { "x-staff-pin": getAdminPin() },
 				body: JSON.stringify({
 					status: "closed",
 					closingBalance: actualBalance,

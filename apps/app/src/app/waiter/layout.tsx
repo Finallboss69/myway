@@ -2,6 +2,8 @@
 
 import PinGate from "@/components/PinGate";
 
+const WAITER_ROLES: string[] = ["admin", "manager", "waiter"];
+
 export default function WaiterLayout({
 	children,
 }: {
@@ -11,7 +13,7 @@ export default function WaiterLayout({
 		<PinGate
 			storageKey="myway-waiter-staff"
 			subtitle="Sistema de Mozos"
-			allowedRoles={["admin", "manager", "waiter"]}
+			allowedRoles={WAITER_ROLES}
 		>
 			{children}
 		</PinGate>

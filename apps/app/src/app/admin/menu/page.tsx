@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
+import { staffHeaders } from "@/lib/admin-pin";
 
 /* ─── Types ───────────────────────────────────────────────────────────────── */
 interface Category {
@@ -431,11 +432,13 @@ export default function MenuPage() {
 			if (editId)
 				await apiFetch(`/api/products/${editId}`, {
 					method: "PATCH",
+					headers: staffHeaders(),
 					body: JSON.stringify(body),
 				});
 			else
 				await apiFetch("/api/products", {
 					method: "POST",
+					headers: staffHeaders(),
 					body: JSON.stringify(body),
 				});
 			resetForm();
@@ -449,12 +452,16 @@ export default function MenuPage() {
 
 	const delProduct = async (id: string) => {
 		if (!confirm("Eliminar este producto?")) return;
-		await apiFetch(`/api/products/${id}`, { method: "DELETE" });
+		await apiFetch(`/api/products/${id}`, {
+			method: "DELETE",
+			headers: staffHeaders(),
+		});
 		await mut("/api/products", "/api/cost-calculator");
 	};
 	const toggleAvail = async (p: Product) => {
 		await apiFetch(`/api/products/${p.id}`, {
 			method: "PATCH",
+			headers: staffHeaders(),
 			body: JSON.stringify({ isAvailable: !p.isAvailable }),
 		});
 		await mutate("/api/products");
@@ -464,6 +471,7 @@ export default function MenuPage() {
 			products.map((p) =>
 				apiFetch(`/api/products/${p.id}`, {
 					method: "PATCH",
+					headers: staffHeaders(),
 					body: JSON.stringify({ isAvailable: v }),
 				}),
 			),
@@ -477,6 +485,7 @@ export default function MenuPage() {
 		try {
 			await apiFetch("/api/recipe-ingredients", {
 				method: "POST",
+				headers: staffHeaders(),
 				body: JSON.stringify({
 					productId: recProdId,
 					ingredientId: riForm.ingredientId,
@@ -498,7 +507,10 @@ export default function MenuPage() {
 	};
 
 	const removeRI = async (riId: string) => {
-		await apiFetch(`/api/recipe-ingredients/${riId}`, { method: "DELETE" });
+		await apiFetch(`/api/recipe-ingredients/${riId}`, {
+			method: "DELETE",
+			headers: staffHeaders(),
+		});
 		await mut(
 			`/api/recipe-ingredients?productId=${recProdId}`,
 			"/api/products",

@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
+import { getAdminPin, staffHeaders } from "@/lib/admin-pin";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -473,11 +474,13 @@ function TabProveedores() {
 			if (modal === "new") {
 				await apiFetch("/api/suppliers", {
 					method: "POST",
+					headers: staffHeaders(),
 					body: JSON.stringify(form),
 				});
 			} else if (modal && typeof modal === "object") {
 				await apiFetch(`/api/suppliers/${modal.id}`, {
 					method: "PATCH",
+					headers: staffHeaders(),
 					body: JSON.stringify(form),
 				});
 			}
@@ -490,7 +493,10 @@ function TabProveedores() {
 	const del = useCallback(
 		async (id: string) => {
 			if (!confirm("Eliminar proveedor?")) return;
-			await apiFetch(`/api/suppliers/${id}`, { method: "DELETE" });
+			await apiFetch(`/api/suppliers/${id}`, {
+				method: "DELETE",
+				headers: staffHeaders(),
+			});
 			mutS();
 		},
 		[mutS],
@@ -874,11 +880,13 @@ function TabCategorias() {
 			if (modal === "new") {
 				await apiFetch("/api/supplier-categories", {
 					method: "POST",
+					headers: staffHeaders(),
 					body: JSON.stringify(form),
 				});
 			} else if (modal && typeof modal === "object") {
 				await apiFetch(`/api/supplier-categories/${modal.id}`, {
 					method: "PUT",
+					headers: staffHeaders(),
 					body: JSON.stringify(form),
 				});
 			}
@@ -891,7 +899,10 @@ function TabCategorias() {
 	const del = useCallback(
 		async (id: string) => {
 			if (!confirm("Eliminar categoría?")) return;
-			await apiFetch(`/api/supplier-categories/${id}`, { method: "DELETE" });
+			await apiFetch(`/api/supplier-categories/${id}`, {
+				method: "DELETE",
+				headers: staffHeaders(),
+			});
 			mutate();
 		},
 		[mutate],
@@ -1111,11 +1122,13 @@ function TabIngredientes() {
 			if (modal === "new") {
 				await apiFetch("/api/ingredients", {
 					method: "POST",
+					headers: staffHeaders(),
 					body: JSON.stringify(form),
 				});
 			} else if (modal && typeof modal === "object") {
 				await apiFetch(`/api/ingredients/${modal.id}`, {
 					method: "PATCH",
+					headers: staffHeaders(),
 					body: JSON.stringify(form),
 				});
 			}
@@ -1128,7 +1141,10 @@ function TabIngredientes() {
 	const del = useCallback(
 		async (id: string) => {
 			if (!confirm("Eliminar ingrediente?")) return;
-			await apiFetch(`/api/ingredients/${id}`, { method: "DELETE" });
+			await apiFetch(`/api/ingredients/${id}`, {
+				method: "DELETE",
+				headers: staffHeaders(),
+			});
 			mutI();
 		},
 		[mutI],
