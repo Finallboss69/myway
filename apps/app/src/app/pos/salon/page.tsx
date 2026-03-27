@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import QRCode from "react-qr-code";
 import {
 	LayoutGrid,
@@ -11,6 +12,7 @@ import {
 	Clock,
 	Users,
 	ChevronRight,
+	ChevronDown,
 	Plus,
 	Minus,
 	X,
@@ -20,8 +22,6 @@ import {
 	Banknote,
 	Smartphone,
 	ShoppingCart,
-	UtensilsCrossed,
-	Wine,
 	GripVertical,
 	Loader2,
 	RefreshCw,
@@ -647,18 +647,43 @@ function QuickItem({ product }: { product: Product }) {
 	);
 }
 
-// ─── Quick Panels (Comidas / Bebidas) ────────────────────────────────────────
+// ─── Quick Panels (Accordion by category) ───────────────────────────────────
 
-function QuickPanels({ products }: { products: Product[] }) {
-	const comidas = products.filter(
-		(p) => p.target === "kitchen" && p.isAvailable,
-	);
-	const bebidas = products.filter((p) => p.target === "bar" && p.isAvailable);
+function QuickPanels({
+	products,
+	categories,
+}: {
+	products: Product[];
+	categories: Category[];
+}) {
+	const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+
+	const available = products.filter((p) => p.isAvailable);
+
+	// Build ordered list of categories that have available products
+	const catsWithProducts = useMemo(() => {
+		const countMap = new Map<string, number>();
+		for (const p of available) {
+			countMap.set(p.categoryId, (countMap.get(p.categoryId) ?? 0) + 1);
+		}
+		return categories
+			.filter((c) => (countMap.get(c.id) ?? 0) > 0)
+			.map((c) => ({ ...c, count: countMap.get(c.id) ?? 0 }));
+	}, [available, categories]);
+
+	const toggleCat = (catId: string) => {
+		setOpenCats((prev) => {
+			const next = new Set(prev);
+			if (next.has(catId)) next.delete(catId);
+			else next.add(catId);
+			return next;
+		});
+	};
 
 	return (
 		<div
 			style={{
-				width: 210,
+				width: 220,
 				display: "flex",
 				flexDirection: "column",
 				borderRight: "1px solid var(--s3)",
@@ -667,127 +692,130 @@ function QuickPanels({ products }: { products: Product[] }) {
 				flexShrink: 0,
 			}}
 		>
-			{/* Comidas panel */}
+			{/* Header */}
 			<div
 				style={{
-					flex: 1,
-					display: "flex",
-					flexDirection: "column",
-					overflow: "hidden",
+					padding: "14px 14px 10px",
 					borderBottom: "1px solid var(--s3)",
+					display: "flex",
+					alignItems: "center",
+					gap: 6,
 				}}
 			>
-				<div
+				<ShoppingCart size={13} style={{ color: "#f59e0b" }} />
+				<span
+					className="font-display uppercase tracking-widest"
 					style={{
-						padding: "14px 14px 10px",
-						borderBottom: "1px solid var(--s3)",
-						display: "flex",
-						alignItems: "center",
-						gap: 6,
+						fontSize: 9,
+						letterSpacing: "0.3em",
+						color: "#f59e0b",
 					}}
 				>
-					<UtensilsCrossed size={13} style={{ color: "#10b981" }} />
-					<span
-						className="font-display uppercase tracking-widest"
-						style={{
-							fontSize: 9,
-							letterSpacing: "0.3em",
-							color: "#10b981",
-						}}
-					>
-						Comidas
-					</span>
-					<span
-						style={{
-							marginLeft: "auto",
-							background: "rgba(16,185,129,0.15)",
-							color: "#10b981",
-							fontFamily: "var(--font-syne)",
-							fontWeight: 700,
-							fontSize: 9,
-							borderRadius: "99px",
-							padding: "1px 6px",
-						}}
-					>
-						{comidas.length}
-					</span>
-				</div>
-				<div
-					className="flex flex-col gap-1.5 overflow-y-auto"
-					style={{ flex: 1, padding: "8px 8px" }}
+					Menú rápido
+				</span>
+				<span
+					style={{
+						marginLeft: "auto",
+						background: "rgba(245,158,11,0.15)",
+						color: "#f59e0b",
+						fontFamily: "var(--font-syne)",
+						fontWeight: 700,
+						fontSize: 9,
+						borderRadius: "99px",
+						padding: "1px 6px",
+					}}
 				>
-					{comidas.length === 0 ? (
-						<div
-							className="text-ink-disabled font-body text-center py-6"
-							style={{ fontSize: 11 }}
-						>
-							Sin comidas disponibles
-						</div>
-					) : (
-						comidas.map((p) => <QuickItem key={p.id} product={p} />)
-					)}
-				</div>
+					{available.length}
+				</span>
 			</div>
 
-			{/* Bebidas panel */}
-			<div
-				style={{
-					flex: 1,
-					display: "flex",
-					flexDirection: "column",
-					overflow: "hidden",
-				}}
-			>
-				<div
-					style={{
-						padding: "14px 14px 10px",
-						borderBottom: "1px solid var(--s3)",
-						display: "flex",
-						alignItems: "center",
-						gap: 6,
-					}}
-				>
-					<Wine size={13} style={{ color: "#60a5fa" }} />
-					<span
-						className="font-display uppercase tracking-widest"
-						style={{
-							fontSize: 9,
-							letterSpacing: "0.3em",
-							color: "#60a5fa",
-						}}
-					>
-						Bebidas
-					</span>
-					<span
-						style={{
-							marginLeft: "auto",
-							background: "rgba(96,165,250,0.15)",
-							color: "#60a5fa",
-							fontFamily: "var(--font-syne)",
-							fontWeight: 700,
-							fontSize: 9,
-							borderRadius: "99px",
-							padding: "1px 6px",
-						}}
-					>
-						{bebidas.length}
-					</span>
-				</div>
-				<div
-					className="flex flex-col gap-1.5 overflow-y-auto"
-					style={{ flex: 1, padding: "8px 8px" }}
-				>
-					{bebidas.length === 0 ? (
-						<div
-							className="text-ink-disabled font-body text-center py-6"
-							style={{ fontSize: 11 }}
-						>
-							Sin bebidas disponibles
+			{/* Accordion list */}
+			<div className="flex-1 overflow-y-auto" style={{ padding: "4px 0" }}>
+				{catsWithProducts.map((cat) => {
+					const isOpen = openCats.has(cat.id);
+					const catProducts = available.filter((p) => p.categoryId === cat.id);
+					const isKitchen = catProducts[0]?.target === "kitchen";
+					const accentColor = isKitchen ? "#10b981" : "#60a5fa";
+
+					return (
+						<div key={cat.id}>
+							{/* Category header — clickable */}
+							<button
+								onClick={() => toggleCat(cat.id)}
+								style={{
+									width: "100%",
+									display: "flex",
+									alignItems: "center",
+									gap: 6,
+									padding: "9px 12px",
+									background: isOpen ? `${accentColor}0c` : "transparent",
+									border: "none",
+									borderBottom: "1px solid var(--s2)",
+									cursor: "pointer",
+									textAlign: "left",
+									transition: "background 0.15s",
+								}}
+								onMouseEnter={(e) => {
+									if (!isOpen) e.currentTarget.style.background = "var(--s2)";
+								}}
+								onMouseLeave={(e) => {
+									if (!isOpen) e.currentTarget.style.background = "transparent";
+								}}
+							>
+								<span style={{ fontSize: 14, flexShrink: 0 }}>{cat.icon}</span>
+								<span
+									className="font-display truncate"
+									style={{
+										flex: 1,
+										fontSize: 11,
+										fontWeight: 600,
+										color: isOpen ? accentColor : "#a3a3a3",
+										letterSpacing: "0.02em",
+									}}
+								>
+									{cat.name}
+								</span>
+								<span
+									style={{
+										fontSize: 9,
+										fontFamily: "var(--font-syne)",
+										fontWeight: 700,
+										color: "#555",
+										marginRight: 2,
+									}}
+								>
+									{cat.count}
+								</span>
+								<ChevronDown
+									size={12}
+									style={{
+										color: isOpen ? accentColor : "#444",
+										flexShrink: 0,
+										transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+										transition: "transform 0.2s",
+									}}
+								/>
+							</button>
+
+							{/* Expanded product list */}
+							{isOpen && (
+								<div
+									style={{
+										padding: "6px 8px 8px",
+										display: "flex",
+										flexDirection: "column",
+										gap: 4,
+										borderBottom: `1px solid ${accentColor}20`,
+									}}
+								>
+									{catProducts.map((p) => (
+										<QuickItem key={p.id} product={p} />
+									))}
+								</div>
+							)}
 						</div>
-					) : (
-						bebidas.map((p) => <QuickItem key={p.id} product={p} />)
-					)}
-				</div>
+					);
+				})}
 			</div>
 		</div>
 	);
@@ -1806,6 +1834,7 @@ function TableDetailPanel({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SalonPage() {
+	const router = useRouter();
 	const [activeZone, setActiveZone] = useState("");
 	const [tables, setTables] = useState<Table[]>([]);
 	const [zones, setZones] = useState<Zone[]>([]);
@@ -1918,8 +1947,7 @@ export default function SalonPage() {
 	};
 
 	const handleSelectTable = (tableId: string) => {
-		setSelectedTableId((prev) => (prev === tableId ? null : tableId));
-		setCart([]);
+		router.push(`/pos/salon/${tableId}`);
 	};
 
 	const handleAddToCart = (product: Product) => {
@@ -2178,7 +2206,7 @@ export default function SalonPage() {
 				<div className="flex flex-1" style={{ gap: 0, overflow: "hidden" }}>
 					{/* Quick panels: Comidas / Bebidas */}
 					<div className="quick-panels">
-						<QuickPanels products={products} />
+						<QuickPanels products={products} categories={categories} />
 					</div>
 
 					{/* Floor map area */}
