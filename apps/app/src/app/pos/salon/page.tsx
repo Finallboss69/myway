@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import QRCode from "react-qr-code";
 import {
 	LayoutGrid,
 	ListOrdered,
@@ -13,21 +12,9 @@ import {
 	Users,
 	ChevronRight,
 	ChevronDown,
-	Plus,
-	Minus,
-	X,
-	Send,
 	Check,
-	CreditCard,
-	Banknote,
-	Smartphone,
 	ShoppingCart,
 	GripVertical,
-	Loader2,
-	RefreshCw,
-	ArrowRightLeft,
-	Copy,
-	CheckCircle2,
 } from "lucide-react";
 import { formatCurrency, elapsedMinutes } from "@/lib/utils";
 import type {
@@ -37,24 +24,10 @@ import type {
 	TableShape,
 	Product,
 	Category,
-	CartItem,
-	PaymentMethod,
 } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
 import HelpButton from "@/components/HelpButton";
 import { helpContent } from "@/lib/help-content";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function getStaffPin(): string {
-	try {
-		const raw = localStorage.getItem("pos-staff");
-		if (!raw) return "";
-		return JSON.parse(raw)?.pin ?? "";
-	} catch {
-		return "";
-	}
-}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -658,7 +631,10 @@ function QuickPanels({
 }) {
 	const [openCats, setOpenCats] = useState<Set<string>>(new Set());
 
-	const available = products.filter((p) => p.isAvailable);
+	const available = useMemo(
+		() => products.filter((p) => p.isAvailable),
+		[products],
+	);
 
 	// Build ordered list of categories that have available products
 	const catsWithProducts = useMemo(() => {
@@ -858,981 +834,6 @@ function Toast({ message, visible }: { message: string; visible: boolean }) {
 	);
 }
 
-// ─── Item status badge ───────────────────────────────────────────────────────
-
-function ItemStatusBadge({ status }: { status: string }) {
-	const map: Record<string, { label: string; color: string }> = {
-		pending: { label: "Pendiente", color: "#f59e0b" },
-		preparing: { label: "Preparando", color: "#3b82f6" },
-		ready: { label: "Listo", color: "#10b981" },
-		delivered: { label: "Entregado", color: "#555" },
-	};
-	const s = map[status] ?? map.pending;
-	return (
-		<span
-			className="font-display uppercase"
-			style={{
-				fontSize: 8,
-				letterSpacing: "0.12em",
-				color: s.color,
-				padding: "1px 6px",
-				borderRadius: 4,
-				background: `${s.color}18`,
-				border: `1px solid ${s.color}30`,
-			}}
-		>
-			{s.label}
-		</span>
-	);
-}
-
-// ─── Payment button ──────────────────────────────────────────────────────────
-
-function PayButton({
-	icon,
-	label,
-	sub,
-	amount,
-	accentColor,
-	onClick,
-	disabled,
-}: {
-	icon: React.ReactNode;
-	label: string;
-	sub: string;
-	amount: number;
-	accentColor: string;
-	onClick: () => void;
-	disabled?: boolean;
-}) {
-	return (
-		<button
-			className="flex items-center gap-3 rounded-xl w-full transition-all"
-			style={{
-				padding: "10px 12px",
-				background: "var(--s2)",
-				border: "1px solid var(--s3)",
-				cursor: disabled ? "not-allowed" : "pointer",
-				textAlign: "left",
-				color: "#f5f5f5",
-				opacity: disabled ? 0.5 : 1,
-			}}
-			onMouseEnter={(e) => {
-				if (disabled) return;
-				const el = e.currentTarget;
-				el.style.borderColor = accentColor;
-				el.style.background = `${accentColor}0e`;
-			}}
-			onMouseLeave={(e) => {
-				const el = e.currentTarget;
-				el.style.borderColor = "var(--s3)";
-				el.style.background = "var(--s2)";
-			}}
-			onClick={onClick}
-			disabled={disabled}
-		>
-			<div
-				style={{
-					width: 34,
-					height: 34,
-					borderRadius: 10,
-					background: `${accentColor}18`,
-					border: `1px solid ${accentColor}30`,
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					flexShrink: 0,
-				}}
-			>
-				{icon}
-			</div>
-			<div className="flex-1">
-				<div
-					className="font-display"
-					style={{ fontSize: 12, fontWeight: 600, color: "#f5f5f5" }}
-				>
-					{label}
-				</div>
-				<div className="text-ink-tertiary font-body" style={{ fontSize: 10 }}>
-					{sub}
-				</div>
-			</div>
-			<span
-				className="font-kds"
-				style={{ fontSize: 16, color: accentColor, lineHeight: 1 }}
-			>
-				{formatCurrency(amount)}
-			</span>
-		</button>
-	);
-}
-
-// ─── Table Detail Panel (slide-over right) ───────────────────────────────────
-
-function TableDetailPanel({
-	table,
-	zone,
-	orders: tableOrders,
-	products,
-	categories,
-	cart,
-	onAddToCart,
-	onUpdateCartQty,
-	onRemoveFromCart,
-	onSubmitCart,
-	onCloseTable,
-	onClose,
-	sending,
-	closing,
-}: {
-	table: Table;
-	zone?: Zone;
-	orders: Order[];
-	products: Product[];
-	categories: Category[];
-	cart: CartItem[];
-	onAddToCart: (product: Product) => void;
-	onUpdateCartQty: (productId: string, qty: number) => void;
-	onRemoveFromCart: (productId: string) => void;
-	onSubmitCart: () => void;
-	onCloseTable: (method: PaymentMethod) => void;
-	onClose: () => void;
-	sending: boolean;
-	closing: boolean;
-}) {
-	const [activeCategory, setActiveCategory] = useState<string | null>(null);
-	const [mpQr, setMpQr] = useState<{ qrData: string; extRef: string } | null>(
-		null,
-	);
-	const [mpLoading, setMpLoading] = useState(false);
-	const [mpError, setMpError] = useState<string | null>(null);
-	const mpPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-	const [transferAlias, setTransferAlias] = useState("");
-	const [aliasCopied, setAliasCopied] = useState(false);
-
-	// Fetch transfer alias
-	useEffect(() => {
-		fetch("/api/settings/public")
-			.then((r) => (r.ok ? r.json() : []))
-			.then((data: { key: string; value: string }[]) => {
-				const found = Array.isArray(data)
-					? data.find((s) => s.key === "transfer_alias")
-					: null;
-				if (found) setTransferAlias(found.value);
-			})
-			.catch(() => {});
-	}, []);
-
-	// Cleanup MP polling on unmount
-	useEffect(() => {
-		return () => {
-			if (mpPollRef.current) clearInterval(mpPollRef.current);
-		};
-	}, []);
-
-	const handleMpPayment = async () => {
-		const orderIds = tableOrders.map((o) => o.id);
-		if (orderIds.length === 0) return;
-		setMpLoading(true);
-		setMpError(null);
-		setMpQr(null);
-		try {
-			const res = await fetch("/api/payments/mp", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					"x-staff-pin": getStaffPin(),
-				},
-				body: JSON.stringify({ orderIds }),
-			});
-			const data = await res.json();
-			if (!res.ok) {
-				setMpError(data.error ?? "Error al generar QR");
-				return;
-			}
-			setMpQr({ qrData: data.qrData, extRef: data.externalReference });
-
-			// Start polling for payment confirmation
-			if (mpPollRef.current) clearInterval(mpPollRef.current);
-			mpPollRef.current = setInterval(async () => {
-				try {
-					const sr = await fetch(
-						`/api/payments/mp?externalReference=${encodeURIComponent(data.externalReference)}`,
-					);
-					if (sr.ok) {
-						const sd = await sr.json();
-						if (sd.status === "paid") {
-							if (mpPollRef.current) clearInterval(mpPollRef.current);
-							setMpQr(null);
-							onCloseTable("mercadopago");
-						}
-					}
-				} catch {
-					/* ignore */
-				}
-			}, 3000);
-		} catch {
-			setMpError("Error de conexión");
-		} finally {
-			setMpLoading(false);
-		}
-	};
-
-	const allOrderItems = tableOrders.flatMap((o) => o.items);
-	const filteredProducts = activeCategory
-		? products.filter((p) => p.categoryId === activeCategory)
-		: products;
-
-	const orderSubtotal = allOrderItems.reduce((s, i) => s + i.qty * i.price, 0);
-	const cartSubtotal = cart.reduce((s, i) => s + i.qty * i.price, 0);
-	const combinedSubtotal = orderSubtotal + cartSubtotal;
-	const iva = Math.round(combinedSubtotal * 0.21);
-	const total = combinedSubtotal + iva;
-
-	const elapsed =
-		tableOrders.length > 0
-			? elapsedMinutes(
-					tableOrders.reduce(
-						(oldest, o) => (o.createdAt < oldest ? o.createdAt : oldest),
-						tableOrders[0].createdAt,
-					),
-				)
-			: 0;
-
-	const status = table.status;
-
-	return (
-		<div
-			style={{
-				width: 380,
-				borderLeft: "1px solid var(--s3)",
-				background: "var(--s0)",
-				display: "flex",
-				flexDirection: "column",
-				overflow: "hidden",
-				flexShrink: 0,
-				animation: "slideInRight 0.25s cubic-bezier(0.16,1,0.3,1)",
-			}}
-		>
-			{/* Header */}
-			<div
-				style={{
-					padding: "16px 18px",
-					borderBottom: "1px solid var(--s3)",
-					display: "flex",
-					alignItems: "center",
-					gap: 12,
-					background: "var(--s1)",
-				}}
-			>
-				<div className="flex-1 min-w-0">
-					<div className="flex items-center gap-3">
-						<span
-							className="font-kds text-ink-primary"
-							style={{ fontSize: 32, lineHeight: 1 }}
-						>
-							Mesa {table.number}
-						</span>
-						<span
-							className="font-display text-ink-tertiary uppercase"
-							style={{ fontSize: 10, letterSpacing: "0.15em" }}
-						>
-							{zone?.name ?? ""}
-						</span>
-					</div>
-					<div className="flex items-center gap-2 mt-1">
-						<span
-							style={{
-								fontSize: 9,
-								fontFamily: "var(--font-syne)",
-								fontWeight: 700,
-								letterSpacing: "0.1em",
-								textTransform: "uppercase",
-								color:
-									status === "occupied"
-										? "#f59e0b"
-										: status === "available"
-											? "#10b981"
-											: "#8b5cf6",
-								padding: "1px 6px",
-								borderRadius: 4,
-								background:
-									status === "occupied"
-										? "rgba(245,158,11,0.12)"
-										: status === "available"
-											? "rgba(16,185,129,0.12)"
-											: "rgba(139,92,246,0.12)",
-							}}
-						>
-							{status === "occupied"
-								? "Ocupada"
-								: status === "available"
-									? "Libre"
-									: "Reservada"}
-						</span>
-						{elapsed > 0 && (
-							<span className="flex items-center gap-1">
-								<Clock
-									size={10}
-									style={{
-										color:
-											elapsed > 20
-												? "#ef4444"
-												: elapsed > 10
-													? "#f59e0b"
-													: "#6b6b6b",
-									}}
-								/>
-								<span
-									className="font-kds"
-									style={{
-										fontSize: 14,
-										color:
-											elapsed > 20
-												? "#ef4444"
-												: elapsed > 10
-													? "#f59e0b"
-													: "#a3a3a3",
-									}}
-								>
-									{elapsed}m
-								</span>
-							</span>
-						)}
-					</div>
-				</div>
-				<button
-					onClick={onClose}
-					style={{
-						width: 32,
-						height: 32,
-						borderRadius: 8,
-						border: "1px solid var(--s3)",
-						background: "var(--s2)",
-						color: "#6b6b6b",
-						cursor: "pointer",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-					}}
-				>
-					<X size={14} />
-				</button>
-			</div>
-
-			{/* Scrollable body */}
-			<div className="flex-1 overflow-y-auto" style={{ padding: "0" }}>
-				{/* Current order items */}
-				{allOrderItems.length > 0 && (
-					<section style={{ padding: "14px 16px 0" }}>
-						<div
-							className="font-display text-ink-tertiary uppercase tracking-widest mb-2"
-							style={{ fontSize: 9, letterSpacing: "0.25em" }}
-						>
-							Orden #{tableOrders[0]?.id.slice(-6)}
-						</div>
-						<div className="flex flex-col gap-1.5">
-							{allOrderItems.map((item) => {
-								const borderColor =
-									item.status === "preparing"
-										? "#3b82f6"
-										: item.status === "ready"
-											? "#10b981"
-											: item.status === "delivered"
-												? "#333"
-												: "#f59e0b";
-								return (
-									<div
-										key={item.id}
-										className="flex items-center gap-2 rounded-lg"
-										style={{
-											padding: "8px 10px",
-											background:
-												item.status === "delivered"
-													? "rgba(255,255,255,0.015)"
-													: "var(--s2)",
-											border: "1px solid var(--s3)",
-											borderLeft: `3px solid ${borderColor}`,
-											opacity: item.status === "delivered" ? 0.55 : 1,
-										}}
-									>
-										<span style={{ fontSize: 12, flexShrink: 0 }}>
-											{item.target === "kitchen" ? "🍳" : "🍹"}
-										</span>
-										<div className="flex-1 min-w-0">
-											<div
-												className="font-body text-ink-primary truncate"
-												style={{ fontSize: 12, fontWeight: 500 }}
-											>
-												{item.name}
-											</div>
-											<ItemStatusBadge status={item.status} />
-										</div>
-										<span
-											className="font-kds text-ink-tertiary"
-											style={{ fontSize: 14 }}
-										>
-											x{item.qty}
-										</span>
-										<span
-											className="font-kds text-ink-secondary"
-											style={{ fontSize: 13, minWidth: 56, textAlign: "right" }}
-										>
-											{formatCurrency(item.qty * item.price)}
-										</span>
-									</div>
-								);
-							})}
-						</div>
-					</section>
-				)}
-
-				{/* Cart items (unsent) */}
-				{cart.length > 0 && (
-					<section style={{ padding: "10px 16px 0" }}>
-						{allOrderItems.length > 0 && (
-							<div
-								style={{
-									height: 1,
-									background:
-										"linear-gradient(90deg, transparent, rgba(245,158,11,0.3) 50%, transparent)",
-									margin: "6px 0 10px",
-								}}
-							/>
-						)}
-						<div
-							className="font-display text-ink-tertiary uppercase tracking-widest mb-2"
-							style={{ fontSize: 9, letterSpacing: "0.25em" }}
-						>
-							En carrito — sin enviar
-						</div>
-						<div className="flex flex-col gap-1.5">
-							{cart.map((item) => (
-								<div
-									key={item.productId}
-									className="flex items-center gap-2 rounded-lg"
-									style={{
-										padding: "8px 10px",
-										background: "rgba(245,158,11,0.05)",
-										border: "1px solid rgba(245,158,11,0.22)",
-									}}
-								>
-									<span style={{ fontSize: 12, flexShrink: 0 }}>
-										{item.target === "kitchen" ? "🍳" : "🍹"}
-									</span>
-									<div className="flex-1 min-w-0">
-										<div
-											className="font-body text-ink-primary truncate"
-											style={{ fontSize: 12, fontWeight: 500 }}
-										>
-											{item.name}
-										</div>
-									</div>
-									<div className="flex items-center gap-1">
-										<button
-											style={{
-												width: 24,
-												height: 24,
-												borderRadius: 6,
-												border: "1px solid var(--s4)",
-												background: "var(--s3)",
-												color: "#a3a3a3",
-												cursor: "pointer",
-												display: "flex",
-												alignItems: "center",
-												justifyContent: "center",
-											}}
-											onClick={() =>
-												onUpdateCartQty(item.productId, item.qty - 1)
-											}
-										>
-											<Minus size={10} />
-										</button>
-										<span
-											className="font-kds text-ink-primary"
-											style={{
-												width: 20,
-												textAlign: "center",
-												fontSize: 16,
-											}}
-										>
-											{item.qty}
-										</span>
-										<button
-											style={{
-												width: 24,
-												height: 24,
-												borderRadius: 6,
-												border: "1px solid rgba(245,158,11,0.3)",
-												background: "rgba(245,158,11,0.1)",
-												color: "#f59e0b",
-												cursor: "pointer",
-												display: "flex",
-												alignItems: "center",
-												justifyContent: "center",
-											}}
-											onClick={() =>
-												onUpdateCartQty(item.productId, item.qty + 1)
-											}
-										>
-											<Plus size={10} />
-										</button>
-									</div>
-									<span
-										className="font-kds text-brand-500"
-										style={{ fontSize: 13, minWidth: 50, textAlign: "right" }}
-									>
-										{formatCurrency(item.qty * item.price)}
-									</span>
-									<button
-										style={{
-											width: 20,
-											height: 20,
-											borderRadius: 4,
-											border: "none",
-											background: "transparent",
-											color: "#555",
-											cursor: "pointer",
-											display: "flex",
-											alignItems: "center",
-											justifyContent: "center",
-										}}
-										onMouseEnter={(e) => {
-											(e.currentTarget as HTMLButtonElement).style.color =
-												"#ef4444";
-										}}
-										onMouseLeave={(e) => {
-											(e.currentTarget as HTMLButtonElement).style.color =
-												"#555";
-										}}
-										onClick={() => onRemoveFromCart(item.productId)}
-									>
-										<X size={11} />
-									</button>
-								</div>
-							))}
-						</div>
-						<button
-							className="w-full justify-center rounded-xl font-display uppercase"
-							style={{
-								display: "flex",
-								alignItems: "center",
-								gap: 6,
-								padding: "10px 12px",
-								marginTop: 8,
-								background: "rgba(16,185,129,0.12)",
-								border: "1px solid rgba(16,185,129,0.35)",
-								color: "#34d399",
-								fontSize: 11,
-								fontWeight: 700,
-								letterSpacing: "0.1em",
-								cursor: "pointer",
-								opacity: sending ? 0.7 : 1,
-							}}
-							onClick={onSubmitCart}
-							disabled={sending}
-						>
-							<Send size={13} />
-							Enviar {cart.length} item{cart.length !== 1 ? "s" : ""}
-						</button>
-					</section>
-				)}
-
-				{/* Totals */}
-				{(allOrderItems.length > 0 || cart.length > 0) && (
-					<section style={{ padding: "12px 16px 0" }}>
-						<div
-							style={{
-								background: "var(--s2)",
-								border: "1px solid var(--s3)",
-								borderRadius: 12,
-								padding: "14px 14px",
-							}}
-						>
-							<div className="flex items-center justify-between mb-1">
-								<span
-									className="text-ink-tertiary font-body"
-									style={{ fontSize: 11 }}
-								>
-									Subtotal
-								</span>
-								<span
-									className="text-ink-secondary font-body"
-									style={{ fontSize: 11 }}
-								>
-									{formatCurrency(combinedSubtotal)}
-								</span>
-							</div>
-							<div className="flex items-center justify-between mb-2">
-								<span
-									className="text-ink-tertiary font-body"
-									style={{ fontSize: 11 }}
-								>
-									IVA (21%)
-								</span>
-								<span
-									className="text-ink-secondary font-body"
-									style={{ fontSize: 11 }}
-								>
-									{formatCurrency(iva)}
-								</span>
-							</div>
-							<div
-								style={{
-									height: 1,
-									background:
-										"linear-gradient(90deg, transparent, rgba(245,158,11,0.3) 50%, transparent)",
-									marginBottom: 8,
-								}}
-							/>
-							<div className="flex items-center justify-between">
-								<span
-									className="font-display text-ink-primary uppercase tracking-widest"
-									style={{ fontSize: 10, letterSpacing: "0.2em" }}
-								>
-									TOTAL
-								</span>
-								<span
-									className="font-kds text-brand-500"
-									style={{
-										fontSize: 32,
-										lineHeight: 1,
-										textShadow: "0 0 20px rgba(245,158,11,0.35)",
-									}}
-								>
-									{formatCurrency(total)}
-								</span>
-							</div>
-						</div>
-					</section>
-				)}
-
-				{/* Payment options */}
-				{allOrderItems.length > 0 && (
-					<section style={{ padding: "12px 16px 0" }}>
-						<div
-							className="font-display text-ink-tertiary uppercase tracking-widest mb-2"
-							style={{ fontSize: 9, letterSpacing: "0.25em" }}
-						>
-							Cobrar con
-						</div>
-						<div className="flex flex-col gap-1.5">
-							<PayButton
-								icon={<Banknote size={16} style={{ color: "#34d399" }} />}
-								label="Efectivo"
-								sub="Pago en mano"
-								amount={total}
-								accentColor="#10b981"
-								onClick={() => onCloseTable("cash")}
-								disabled={closing}
-							/>
-							<PayButton
-								icon={<Smartphone size={16} style={{ color: "#60a5fa" }} />}
-								label="MercadoPago"
-								sub="QR / Link de pago"
-								amount={total}
-								accentColor="#3b82f6"
-								onClick={handleMpPayment}
-								disabled={closing || mpLoading}
-							/>
-							<PayButton
-								icon={<CreditCard size={16} style={{ color: "#a78bfa" }} />}
-								label="Tarjeta"
-								sub="Débito / Crédito"
-								amount={total}
-								accentColor="#8b5cf6"
-								onClick={() => onCloseTable("card")}
-								disabled={closing}
-							/>
-							<PayButton
-								icon={<ArrowRightLeft size={16} style={{ color: "#fbbf24" }} />}
-								label="Transferencia"
-								sub="Alias bancario"
-								amount={total}
-								accentColor="#f59e0b"
-								onClick={() => onCloseTable("transfer")}
-								disabled={closing}
-							/>
-						</div>
-
-						{/* Transfer alias display */}
-						{transferAlias && (
-							<div className="flex items-center gap-3 mt-2 px-3 py-2.5 rounded-xl bg-surface-2 border border-surface-3">
-								<div className="flex-1 min-w-0">
-									<div
-										className="font-display text-ink-tertiary uppercase tracking-widest"
-										style={{ fontSize: 8, letterSpacing: "0.2em" }}
-									>
-										Alias
-									</div>
-									<div
-										className="font-kds text-brand-500 truncate"
-										style={{ fontSize: 16 }}
-									>
-										{transferAlias}
-									</div>
-								</div>
-								<button
-									onClick={async () => {
-										try {
-											await navigator.clipboard.writeText(transferAlias);
-											setAliasCopied(true);
-											setTimeout(() => setAliasCopied(false), 2000);
-										} catch {
-											/* clipboard not available */
-										}
-									}}
-									className="shrink-0 p-2 rounded-lg hover:bg-surface-3 transition-colors"
-								>
-									{aliasCopied ? (
-										<CheckCircle2 size={14} className="text-emerald-400" />
-									) : (
-										<Copy size={14} className="text-ink-tertiary" />
-									)}
-								</button>
-							</div>
-						)}
-
-						{/* MP QR Display */}
-						{mpLoading && (
-							<div className="flex items-center justify-center gap-2 mt-3 py-4">
-								<Loader2 size={16} className="text-blue-400 animate-spin" />
-								<span className="font-display text-xs text-ink-tertiary">
-									Generando QR...
-								</span>
-							</div>
-						)}
-						{mpError && (
-							<div className="flex flex-col items-center gap-2 mt-3">
-								<p className="font-display text-xs text-red-400">{mpError}</p>
-								<button
-									onClick={handleMpPayment}
-									className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2 border border-surface-3 font-display text-[10px] text-ink-secondary"
-								>
-									<RefreshCw size={12} /> Reintentar
-								</button>
-							</div>
-						)}
-						{mpQr && (
-							<div className="flex flex-col items-center gap-3 mt-3 py-4">
-								<div className="rounded-xl p-3" style={{ background: "#fff" }}>
-									<QRCode value={mpQr.qrData} size={160} level="M" />
-								</div>
-								<div className="flex items-center gap-2">
-									<div
-										className="w-2 h-2 rounded-full animate-pulse"
-										style={{ background: "#009ee3" }}
-									/>
-									<span
-										className="font-display text-[11px]"
-										style={{ color: "#009ee3" }}
-									>
-										Esperando pago...
-									</span>
-								</div>
-								<button
-									onClick={handleMpPayment}
-									className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-display text-[10px] text-ink-tertiary hover:text-ink-secondary"
-								>
-									<RefreshCw size={11} /> Regenerar QR
-								</button>
-							</div>
-						)}
-					</section>
-				)}
-
-				{/* Add products */}
-				<section style={{ padding: "12px 16px 16px" }}>
-					<div
-						className="font-display text-ink-tertiary uppercase tracking-widest mb-2"
-						style={{ fontSize: 9, letterSpacing: "0.25em" }}
-					>
-						Añadir productos
-					</div>
-
-					{/* Category pills */}
-					<div
-						className="flex gap-1.5 flex-wrap mb-3"
-						style={{ maxHeight: 80, overflow: "auto" }}
-					>
-						<button
-							onClick={() => setActiveCategory(null)}
-							style={{
-								padding: "5px 12px",
-								borderRadius: 8,
-								border:
-									activeCategory === null
-										? "1px solid rgba(245,158,11,0.5)"
-										: "1px solid var(--s4)",
-								background:
-									activeCategory === null
-										? "rgba(245,158,11,0.15)"
-										: "var(--s2)",
-								color: activeCategory === null ? "#f59e0b" : "#6b6b6b",
-								fontFamily: "var(--font-syne)",
-								fontSize: 10,
-								fontWeight: 700,
-								cursor: "pointer",
-							}}
-						>
-							Todo
-						</button>
-						{categories.map((cat) => {
-							const active = activeCategory === cat.id;
-							return (
-								<button
-									key={cat.id}
-									onClick={() => setActiveCategory(active ? null : cat.id)}
-									style={{
-										padding: "5px 12px",
-										borderRadius: 8,
-										border: active
-											? "1px solid rgba(245,158,11,0.5)"
-											: "1px solid var(--s4)",
-										background: active ? "rgba(245,158,11,0.15)" : "var(--s2)",
-										color: active ? "#f59e0b" : "#6b6b6b",
-										fontFamily: "var(--font-syne)",
-										fontSize: 10,
-										fontWeight: 700,
-										cursor: "pointer",
-									}}
-								>
-									{cat.icon} {cat.name}
-								</button>
-							);
-						})}
-					</div>
-
-					{/* Product grid */}
-					<div
-						className="grid gap-1.5"
-						style={{ gridTemplateColumns: "repeat(2, 1fr)" }}
-					>
-						{filteredProducts
-							.filter((p) => p.isAvailable)
-							.map((product) => {
-								const inCart = cart.find((i) => i.productId === product.id);
-								return (
-									<button
-										key={product.id}
-										style={{
-											padding: "10px 10px",
-											borderRadius: 10,
-											border: inCart
-												? "1px solid rgba(245,158,11,0.5)"
-												: "1px solid var(--s3)",
-											background: inCart
-												? "rgba(245,158,11,0.06)"
-												: "var(--s2)",
-											cursor: "pointer",
-											textAlign: "left",
-											transition: "all 0.12s",
-											position: "relative",
-											display: "flex",
-											flexDirection: "column",
-											gap: 4,
-										}}
-										onMouseEnter={(e) => {
-											if (!inCart) {
-												e.currentTarget.style.borderColor =
-													"rgba(245,158,11,0.3)";
-												e.currentTarget.style.background = "var(--s3)";
-											}
-										}}
-										onMouseLeave={(e) => {
-											if (!inCart) {
-												e.currentTarget.style.borderColor = "var(--s3)";
-												e.currentTarget.style.background = "var(--s2)";
-											}
-										}}
-										onClick={() => onAddToCart(product)}
-									>
-										<div
-											className="font-body text-ink-primary"
-											style={{
-												fontSize: 11,
-												fontWeight: 600,
-												lineHeight: 1.3,
-											}}
-										>
-											{product.name}
-										</div>
-										<div className="flex items-center justify-between mt-auto">
-											<span
-												className="font-kds text-brand-500"
-												style={{ fontSize: 18, lineHeight: 1 }}
-											>
-												{formatCurrency(product.price)}
-											</span>
-											<div
-												style={{
-													width: 22,
-													height: 22,
-													borderRadius: 6,
-													background: inCart
-														? "#f59e0b"
-														: "rgba(245,158,11,0.12)",
-													display: "flex",
-													alignItems: "center",
-													justifyContent: "center",
-													color: inCart ? "#080808" : "#f59e0b",
-												}}
-											>
-												<Plus size={11} />
-											</div>
-										</div>
-										{inCart && (
-											<div
-												style={{
-													position: "absolute",
-													top: 5,
-													right: 5,
-													background: "#f59e0b",
-													color: "#080808",
-													fontFamily: "var(--font-bebas)",
-													fontSize: 12,
-													lineHeight: 1,
-													borderRadius: "99px",
-													padding: "1px 5px",
-												}}
-											>
-												{inCart.qty}
-											</div>
-										)}
-									</button>
-								);
-							})}
-					</div>
-				</section>
-
-				{/* Empty state */}
-				{allOrderItems.length === 0 && cart.length === 0 && (
-					<div
-						className="flex flex-col items-center justify-center text-center"
-						style={{ padding: "32px 16px" }}
-					>
-						<div style={{ fontSize: 32, marginBottom: 8 }}>🛒</div>
-						<div
-							className="font-display uppercase text-ink-disabled"
-							style={{ fontSize: 10, letterSpacing: "0.2em" }}
-						>
-							Mesa sin pedidos
-						</div>
-						<div
-							className="text-ink-disabled font-body mt-1"
-							style={{ fontSize: 11 }}
-						>
-							Arrastrá productos o elegí del menú abajo
-						</div>
-					</div>
-				)}
-			</div>
-		</div>
-	);
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
 export default function SalonPage() {
 	const router = useRouter();
 	const [activeZone, setActiveZone] = useState("");
@@ -1844,11 +845,6 @@ export default function SalonPage() {
 	const zoneInitialized = useRef(false);
 	const [staffName, setStaffName] = useState<string>("");
 
-	// Table detail panel state
-	const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
-	const [cart, setCart] = useState<CartItem[]>([]);
-	const [sending, setSending] = useState(false);
-	const [closing, setClosing] = useState(false);
 	const [toastVisible, setToastVisible] = useState(false);
 	const [toastMsg, setToastMsg] = useState("");
 
@@ -1923,21 +919,6 @@ export default function SalonPage() {
 		[orders],
 	);
 
-	const selectedTable = selectedTableId
-		? (tables.find((t) => t.id === selectedTableId) ?? null)
-		: null;
-	const selectedZone = selectedTable
-		? zones.find((z) => z.id === selectedTable.zoneId)
-		: undefined;
-	const selectedTableOrders = selectedTableId
-		? orders.filter(
-				(o) =>
-					o.tableId === selectedTableId &&
-					o.status !== "closed" &&
-					o.status !== "cancelled",
-			)
-		: [];
-
 	const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const showToast = (msg: string) => {
 		if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -1950,116 +931,14 @@ export default function SalonPage() {
 		router.push(`/pos/salon/${tableId}`);
 	};
 
-	const handleAddToCart = (product: Product) => {
-		setCart((prev) => {
-			const existing = prev.find((i) => i.productId === product.id);
-			if (existing) {
-				return prev.map((i) =>
-					i.productId === product.id ? { ...i, qty: i.qty + 1 } : i,
-				);
-			}
-			return [
-				...prev,
-				{
-					productId: product.id,
-					name: product.name,
-					price: product.price,
-					qty: 1,
-					target: product.target,
-				},
-			];
-		});
-	};
-
-	const handleUpdateCartQty = (productId: string, qty: number) => {
-		if (qty <= 0) {
-			setCart((prev) => prev.filter((i) => i.productId !== productId));
-		} else {
-			setCart((prev) =>
-				prev.map((i) => (i.productId === productId ? { ...i, qty } : i)),
-			);
-		}
-	};
-
-	const handleRemoveFromCart = (productId: string) => {
-		setCart((prev) => prev.filter((i) => i.productId !== productId));
-	};
-
-	const handleSubmitCart = async () => {
-		if (!cart.length || sending || !selectedTableId) return;
-		setSending(true);
-		try {
-			await apiFetch("/api/orders", {
-				method: "POST",
-				body: JSON.stringify({
-					tableId: selectedTableId,
-					waiterName: staffName || "Cajero",
-					items: cart.map((i) => ({
-						productId: i.productId,
-						name: i.name,
-						qty: i.qty,
-						price: i.price,
-						target: i.target,
-					})),
-				}),
-			});
-			setCart([]);
-			await fetchData();
-			showToast(`Pedido enviado a cocina/bar`);
-		} catch (e) {
-			console.error(e);
-		} finally {
-			setSending(false);
-		}
-	};
-
-	const handleCloseTable = async (method: PaymentMethod) => {
-		if (closing || selectedTableOrders.length === 0) return;
-		setClosing(true);
-		try {
-			// Close all open orders for this table
-			await Promise.all(
-				selectedTableOrders.map((o) =>
-					apiFetch(`/api/orders/${o.id}/close`, {
-						method: "POST",
-						body: JSON.stringify({ paymentMethod: method }),
-					}),
-				),
-			);
-			showToast("Mesa cerrada — ¡Hasta pronto!");
-			setSelectedTableId(null);
-			setCart([]);
-			await fetchData();
-		} catch (e) {
-			console.error(e);
-		} finally {
-			setClosing(false);
-		}
-	};
-
-	// Drag-and-drop: product dropped onto a table — always add to cart
+	// Drag-and-drop: navigate to table detail page
 	const handleDropProduct = (tableId: string, productId: string) => {
 		const product = products.find((p) => p.id === productId);
 		if (!product) return;
-
-		if (tableId !== selectedTableId) {
-			// Switch to this table and start a fresh cart with the dropped item
-			setSelectedTableId(tableId);
-			setCart([
-				{
-					productId: product.id,
-					name: product.name,
-					price: product.price,
-					qty: 1,
-					target: product.target,
-				},
-			]);
-		} else {
-			handleAddToCart(product);
-		}
 		showToast(
 			`${product.name} → Mesa ${tables.find((t) => t.id === tableId)?.number}`,
 		);
+		router.push(`/pos/salon/${tableId}`);
 	};
 
 	return (
@@ -2266,7 +1145,7 @@ export default function SalonPage() {
 						<FloorCanvas
 							tables={zoneTables}
 							getTableOrder={getTableOrder}
-							selectedTableId={selectedTableId}
+							selectedTableId={null}
 							onSelectTable={handleSelectTable}
 							onDropProduct={handleDropProduct}
 						/>
@@ -2325,253 +1204,231 @@ export default function SalonPage() {
 						</div>
 					</div>
 
-					{/* Right panel: Table detail or default stats */}
-					{selectedTable ? (
-						<TableDetailPanel
-							table={selectedTable}
-							zone={selectedZone}
-							orders={selectedTableOrders}
-							products={products}
-							categories={categories}
-							cart={cart}
-							onAddToCart={handleAddToCart}
-							onUpdateCartQty={handleUpdateCartQty}
-							onRemoveFromCart={handleRemoveFromCart}
-							onSubmitCart={handleSubmitCart}
-							onCloseTable={handleCloseTable}
-							onClose={() => {
-								setSelectedTableId(null);
-								setCart([]);
-							}}
-							sending={sending}
-							closing={closing}
-						/>
-					) : (
-						<aside
-							className="pos-right-panel"
+					{/* Right panel: Stats */}
+					<aside
+						className="pos-right-panel"
+						style={{
+							width: 290,
+							borderLeft: "1px solid var(--s3)",
+							background: "var(--s1)",
+							display: "flex",
+							flexDirection: "column",
+							gap: 0,
+							overflow: "hidden",
+						}}
+					>
+						{/* Revenue block */}
+						<div
 							style={{
-								width: 290,
-								borderLeft: "1px solid var(--s3)",
-								background: "var(--s1)",
-								display: "flex",
-								flexDirection: "column",
-								gap: 0,
-								overflow: "hidden",
+								padding: "22px 20px 18px",
+								borderBottom: "1px solid var(--s3)",
 							}}
 						>
-							{/* Revenue block */}
+							<div className="flex items-center gap-2 mb-3">
+								<TrendingUp size={13} className="text-ink-disabled" />
+								<span
+									className="font-display text-ink-disabled uppercase tracking-widest"
+									style={{ fontSize: 9, letterSpacing: "0.3em" }}
+								>
+									Ingresos hoy
+								</span>
+							</div>
 							<div
+								className="font-kds text-brand-500"
 								style={{
-									padding: "22px 20px 18px",
-									borderBottom: "1px solid var(--s3)",
+									fontSize: 40,
+									lineHeight: 1,
+									textShadow: "0 0 24px rgba(245,158,11,0.3)",
 								}}
 							>
-								<div className="flex items-center gap-2 mb-3">
-									<TrendingUp size={13} className="text-ink-disabled" />
+								{formatCurrency(todayRevenue)}
+							</div>
+							<div
+								className="font-body text-ink-tertiary mt-1.5"
+								style={{ fontSize: 11 }}
+							>
+								{todayOrderCount} pedidos hoy ·{" "}
+								<span className="text-ink-secondary">
+									ticket {formatCurrency(avgTicket)}
+								</span>
+							</div>
+						</div>
+
+						{/* Active orders */}
+						<div
+							style={{
+								padding: "16px 16px 8px",
+								borderBottom: "1px solid var(--s3)",
+							}}
+						>
+							<div
+								className="font-display text-ink-disabled uppercase tracking-widest mb-3 flex items-center justify-between"
+								style={{
+									fontSize: 9,
+									letterSpacing: "0.3em",
+								}}
+							>
+								<span>Pedidos activos</span>
+								{activeOrders.length > 0 && (
 									<span
-										className="font-display text-ink-disabled uppercase tracking-widest"
-										style={{ fontSize: 9, letterSpacing: "0.3em" }}
+										style={{
+											background: "rgba(245,158,11,0.15)",
+											color: "#f59e0b",
+											border: "1px solid rgba(245,158,11,0.3)",
+											fontFamily: "var(--font-syne)",
+											fontWeight: 700,
+											fontSize: 9,
+											borderRadius: "99px",
+											padding: "2px 8px",
+											letterSpacing: "0.08em",
+										}}
 									>
-										Ingresos hoy
+										{activeOrders.length}
 									</span>
-								</div>
-								<div
-									className="font-kds text-brand-500"
-									style={{
-										fontSize: 40,
-										lineHeight: 1,
-										textShadow: "0 0 24px rgba(245,158,11,0.3)",
-									}}
-								>
-									{formatCurrency(todayRevenue)}
-								</div>
-								<div
-									className="font-body text-ink-tertiary mt-1.5"
-									style={{ fontSize: 11 }}
-								>
-									{todayOrderCount} pedidos hoy ·{" "}
-									<span className="text-ink-secondary">
-										ticket {formatCurrency(avgTicket)}
-									</span>
-								</div>
-							</div>
-
-							{/* Active orders */}
-							<div
-								style={{
-									padding: "16px 16px 8px",
-									borderBottom: "1px solid var(--s3)",
-								}}
-							>
-								<div
-									className="font-display text-ink-disabled uppercase tracking-widest mb-3 flex items-center justify-between"
-									style={{
-										fontSize: 9,
-										letterSpacing: "0.3em",
-									}}
-								>
-									<span>Pedidos activos</span>
-									{activeOrders.length > 0 && (
-										<span
-											style={{
-												background: "rgba(245,158,11,0.15)",
-												color: "#f59e0b",
-												border: "1px solid rgba(245,158,11,0.3)",
-												fontFamily: "var(--font-syne)",
-												fontWeight: 700,
-												fontSize: 9,
-												borderRadius: "99px",
-												padding: "2px 8px",
-												letterSpacing: "0.08em",
-											}}
-										>
-											{activeOrders.length}
-										</span>
-									)}
-								</div>
-							</div>
-
-							<div
-								className="flex flex-col gap-0 overflow-y-auto"
-								style={{ flex: 1, padding: "8px 10px" }}
-							>
-								{activeOrders.length === 0 ? (
-									<div
-										className="flex flex-col items-center justify-center text-center py-8"
-										style={{ color: "#444" }}
-									>
-										<div
-											style={{
-												fontSize: 28,
-												marginBottom: 8,
-											}}
-										>
-											<svg
-												width="28"
-												height="28"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="#444"
-												strokeWidth="1.5"
-												strokeLinecap="round"
-												strokeLinejoin="round"
-											>
-												<path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" />
-											</svg>
-										</div>
-										<div
-											className="font-display uppercase"
-											style={{
-												fontSize: 10,
-												letterSpacing: "0.2em",
-											}}
-										>
-											Sin pedidos activos
-										</div>
-									</div>
-								) : (
-									activeOrders.map((order) => {
-										const borderColor =
-											order.status === "preparing"
-												? "#3b82f6"
-												: order.status === "ready"
-													? "#10b981"
-													: "#f59e0b";
-										const elapsed = elapsedMinutes(order.createdAt);
-										const orderTotal = order.items.reduce(
-											(s, i) => s + i.qty * i.price,
-											0,
-										);
-										return (
-											<div
-												key={order.id}
-												className="rounded-xl mb-2 transition-all"
-												style={{
-													padding: "12px 14px",
-													background: "var(--s2)",
-													border: "1px solid var(--s3)",
-													borderLeft: `3px solid ${borderColor}`,
-													cursor: "pointer",
-												}}
-												onClick={() => handleSelectTable(order.tableId)}
-												onMouseEnter={(e) => {
-													(e.currentTarget as HTMLDivElement).style.background =
-														"var(--s3)";
-												}}
-												onMouseLeave={(e) => {
-													(e.currentTarget as HTMLDivElement).style.background =
-														"var(--s2)";
-												}}
-											>
-												<div className="flex items-center justify-between mb-1.5">
-													<div className="flex items-center gap-2">
-														<span
-															className="font-kds text-ink-primary"
-															style={{
-																fontSize: 26,
-																lineHeight: 1,
-															}}
-														>
-															Mesa {order.tableNumber}
-														</span>
-													</div>
-													<div className="flex items-center gap-1.5">
-														<Clock
-															size={10}
-															style={{
-																color: "#6b6b6b",
-															}}
-														/>
-														<span
-															className="font-kds"
-															style={{
-																fontSize: 16,
-																color:
-																	elapsed > 20
-																		? "#ef4444"
-																		: elapsed > 10
-																			? "#f59e0b"
-																			: "#6b6b6b",
-															}}
-														>
-															{elapsed}m
-														</span>
-													</div>
-												</div>
-												<div className="flex items-center justify-between">
-													<span
-														className="font-body text-ink-tertiary"
-														style={{
-															fontSize: 11,
-														}}
-													>
-														{order.items.length} item
-														{order.items.length !== 1 ? "s" : ""}
-													</span>
-													<div className="flex items-center gap-2">
-														<span
-															className="font-kds text-brand-500"
-															style={{
-																fontSize: 15,
-															}}
-														>
-															{formatCurrency(orderTotal)}
-														</span>
-														<ChevronRight
-															size={12}
-															style={{
-																color: "#444",
-															}}
-														/>
-													</div>
-												</div>
-											</div>
-										);
-									})
 								)}
 							</div>
-						</aside>
-					)}
+						</div>
+
+						<div
+							className="flex flex-col gap-0 overflow-y-auto"
+							style={{ flex: 1, padding: "8px 10px" }}
+						>
+							{activeOrders.length === 0 ? (
+								<div
+									className="flex flex-col items-center justify-center text-center py-8"
+									style={{ color: "#444" }}
+								>
+									<div
+										style={{
+											fontSize: 28,
+											marginBottom: 8,
+										}}
+									>
+										<svg
+											width="28"
+											height="28"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="#444"
+											strokeWidth="1.5"
+											strokeLinecap="round"
+											strokeLinejoin="round"
+										>
+											<path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" />
+										</svg>
+									</div>
+									<div
+										className="font-display uppercase"
+										style={{
+											fontSize: 10,
+											letterSpacing: "0.2em",
+										}}
+									>
+										Sin pedidos activos
+									</div>
+								</div>
+							) : (
+								activeOrders.map((order) => {
+									const borderColor =
+										order.status === "preparing"
+											? "#3b82f6"
+											: order.status === "ready"
+												? "#10b981"
+												: "#f59e0b";
+									const elapsed = elapsedMinutes(order.createdAt);
+									const orderTotal = order.items.reduce(
+										(s, i) => s + i.qty * i.price,
+										0,
+									);
+									return (
+										<div
+											key={order.id}
+											className="rounded-xl mb-2 transition-all"
+											style={{
+												padding: "12px 14px",
+												background: "var(--s2)",
+												border: "1px solid var(--s3)",
+												borderLeft: `3px solid ${borderColor}`,
+												cursor: "pointer",
+											}}
+											onClick={() => handleSelectTable(order.tableId)}
+											onMouseEnter={(e) => {
+												(e.currentTarget as HTMLDivElement).style.background =
+													"var(--s3)";
+											}}
+											onMouseLeave={(e) => {
+												(e.currentTarget as HTMLDivElement).style.background =
+													"var(--s2)";
+											}}
+										>
+											<div className="flex items-center justify-between mb-1.5">
+												<div className="flex items-center gap-2">
+													<span
+														className="font-kds text-ink-primary"
+														style={{
+															fontSize: 26,
+															lineHeight: 1,
+														}}
+													>
+														Mesa {order.tableNumber}
+													</span>
+												</div>
+												<div className="flex items-center gap-1.5">
+													<Clock
+														size={10}
+														style={{
+															color: "#6b6b6b",
+														}}
+													/>
+													<span
+														className="font-kds"
+														style={{
+															fontSize: 16,
+															color:
+																elapsed > 20
+																	? "#ef4444"
+																	: elapsed > 10
+																		? "#f59e0b"
+																		: "#6b6b6b",
+														}}
+													>
+														{elapsed}m
+													</span>
+												</div>
+											</div>
+											<div className="flex items-center justify-between">
+												<span
+													className="font-body text-ink-tertiary"
+													style={{
+														fontSize: 11,
+													}}
+												>
+													{order.items.length} item
+													{order.items.length !== 1 ? "s" : ""}
+												</span>
+												<div className="flex items-center gap-2">
+													<span
+														className="font-kds text-brand-500"
+														style={{
+															fontSize: 15,
+														}}
+													>
+														{formatCurrency(orderTotal)}
+													</span>
+													<ChevronRight
+														size={12}
+														style={{
+															color: "#444",
+														}}
+													/>
+												</div>
+											</div>
+										</div>
+									);
+								})
+							)}
+						</div>
+					</aside>
 				</div>
 			</div>
 
