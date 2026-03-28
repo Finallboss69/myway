@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, use } from "react";
+import { useState, useEffect, useCallback, useRef, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -32,6 +32,7 @@ import type {
 } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
 import { posHeaders } from "@/lib/admin-pin";
+import QRCode from "react-qr-code";
 import HelpButton from "@/components/HelpButton";
 import { helpContent } from "@/lib/help-content";
 
@@ -337,6 +338,12 @@ export default function TableDetailPage({
 	const [sending, setSending] = useState(false);
 	const [closing, setClosing] = useState(false);
 	const [staffName, setStaffName] = useState<string>("");
+	const [mpModal, setMpModal] = useState(false);
+	const [mpQrData, setMpQrData] = useState<string | null>(null);
+	const [mpRef, setMpRef] = useState<string | null>(null);
+	const [mpLoading, setMpLoading] = useState(false);
+	const [mpError, setMpError] = useState("");
+	const mpPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	useEffect(() => {
 		try {
 			const stored = localStorage.getItem("pos-staff");
@@ -495,6 +502,79 @@ export default function TableDetailPage({
 			setClosing(false);
 		}
 	};
+
+	// ── MercadoPago QR flow ──
+	const stopMpPoll = useCallback(() => {
+		if (mpPollRef.current) {
+			clearInterval(mpPollRef.current);
+			mpPollRef.current = null;
+		}
+	}, []);
+
+	const handleMpPayment = async () => {
+		if (activeOrders.length === 0) return;
+		setMpLoading(true);
+		setMpError("");
+		setMpQrData(null);
+		setMpModal(true);
+
+		try {
+			const res = await apiFetch<{
+				qrData: string;
+				externalReference: string;
+				amount: number;
+			}>("/api/payments/mp", {
+				method: "POST",
+				headers: posHeaders(),
+				body: JSON.stringify({
+					orderIds: activeOrders.map((o) => o.id),
+				}),
+			});
+			setMpQrData(res.qrData);
+			setMpRef(res.externalReference);
+
+			// Poll payment status every 4 seconds
+			mpPollRef.current = setInterval(async () => {
+				try {
+					const status = await apiFetch<{ status: string }>(
+						`/api/payments/mp?externalReference=${res.externalReference}`,
+						{ headers: posHeaders() },
+					);
+					if (status.status === "approved" || status.status === "paid") {
+						stopMpPoll();
+						// Close the orders
+						for (const o of activeOrders) {
+							await apiFetch(`/api/orders/${o.id}/close`, {
+								method: "POST",
+								headers: posHeaders(),
+								body: JSON.stringify({ paymentMethod: "mercadopago" }),
+							});
+						}
+						setMpModal(false);
+						showToast("Pago con MercadoPago confirmado");
+						setTimeout(() => router.push("/pos/salon"), 900);
+					}
+				} catch {
+					// keep polling
+				}
+			}, 4000);
+		} catch (e) {
+			setMpError(e instanceof Error ? e.message : "Error al generar QR");
+		} finally {
+			setMpLoading(false);
+		}
+	};
+
+	const handleCloseMpModal = () => {
+		stopMpPoll();
+		setMpModal(false);
+		setMpQrData(null);
+		setMpRef(null);
+		setMpError("");
+	};
+
+	// Cleanup poll on unmount
+	useEffect(() => stopMpPoll, [stopMpPoll]);
 
 	if (!table) {
 		return (
@@ -1381,7 +1461,7 @@ export default function TableDetailPage({
 										sub="QR / Link de pago"
 										amount={total}
 										accentColor="#3b82f6"
-										onClick={() => handleCloseTable("mercadopago")}
+										onClick={handleMpPayment}
 									/>
 									<PayButton
 										icon={<CreditCard size={20} style={{ color: "#a78bfa" }} />}
@@ -1436,6 +1516,119 @@ export default function TableDetailPage({
 					</div>
 				</div>
 			</div>
+
+			{/* MercadoPago QR Modal */}
+			{mpModal && (
+				<div
+					style={{
+						position: "fixed",
+						inset: 0,
+						zIndex: 9999,
+						background: "rgba(0,0,0,0.7)",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+					}}
+					onClick={handleCloseMpModal}
+				>
+					<div
+						style={{
+							background: "var(--s1)",
+							borderRadius: 20,
+							padding: "32px 28px",
+							maxWidth: 380,
+							width: "90%",
+							textAlign: "center",
+							border: "1px solid var(--s3)",
+							boxShadow: "0 0 60px rgba(59,130,246,0.2)",
+						}}
+						onClick={(e) => e.stopPropagation()}
+					>
+						<div
+							className="font-display uppercase tracking-widest text-ink-secondary"
+							style={{ fontSize: 11, letterSpacing: "0.25em", marginBottom: 6 }}
+						>
+							MercadoPago
+						</div>
+						<div
+							className="font-kds"
+							style={{ fontSize: 36, color: "#3b82f6", lineHeight: 1.1 }}
+						>
+							{formatCurrency(total)}
+						</div>
+						<div
+							className="text-ink-tertiary font-body"
+							style={{ fontSize: 12, marginBottom: 20 }}
+						>
+							Mesa {table?.number} — Escaneá el QR para pagar
+						</div>
+
+						{mpLoading && (
+							<div style={{ padding: "40px 0" }}>
+								<div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin mx-auto" />
+								<div className="text-ink-disabled text-xs mt-3">
+									Generando QR...
+								</div>
+							</div>
+						)}
+
+						{mpError && (
+							<div
+								style={{
+									padding: "20px 16px",
+									background: "rgba(239,68,68,0.1)",
+									borderRadius: 12,
+									color: "#ef4444",
+									fontSize: 13,
+									marginBottom: 16,
+								}}
+							>
+								{mpError}
+							</div>
+						)}
+
+						{mpQrData && (
+							<>
+								<div
+									style={{
+										background: "#fff",
+										borderRadius: 16,
+										padding: 20,
+										display: "inline-block",
+										marginBottom: 16,
+									}}
+								>
+									<QRCode value={mpQrData} size={220} />
+								</div>
+								<div
+									className="flex items-center justify-center gap-2 text-blue-400"
+									style={{ fontSize: 12 }}
+								>
+									<div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+									Esperando pago...
+								</div>
+							</>
+						)}
+
+						<button
+							onClick={handleCloseMpModal}
+							style={{
+								marginTop: 20,
+								padding: "10px 24px",
+								borderRadius: 10,
+								border: "1px solid var(--s3)",
+								background: "transparent",
+								color: "var(--ink-secondary)",
+								fontSize: 12,
+								fontWeight: 600,
+								cursor: "pointer",
+							}}
+						>
+							Cancelar
+						</button>
+					</div>
+				</div>
+			)}
 
 			<Toast message={toastMsg} visible={toastVisible} />
 			<HelpButton {...helpContent.posTableDetail} variant="float" />
