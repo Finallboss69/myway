@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
-import { staffHeaders } from "@/lib/admin-pin";
+import { getAdminPin, staffHeaders } from "@/lib/admin-pin";
 
 /* ─── Types ───────────────────────────────────────────────────────────────── */
 interface Category {
@@ -82,7 +82,11 @@ interface CostAnalysis {
 	};
 }
 
-const fetcher = (u: string) => fetch(u).then((r) => r.json());
+const fetcher = (u: string) =>
+	fetch(u, { headers: { "x-staff-pin": getAdminPin() } }).then((r) => {
+		if (!r.ok) throw new Error(`${r.status}`);
+		return r.json();
+	});
 const mc = (m: number) => (m < 30 ? "#ef4444" : m < 50 ? "#f59e0b" : "#10b981");
 type TabKey = "productos" | "recetas" | "costos";
 

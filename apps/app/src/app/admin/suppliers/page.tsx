@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
-import { staffHeaders } from "@/lib/admin-pin";
+import { getAdminPin, staffHeaders } from "@/lib/admin-pin";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -92,7 +92,11 @@ const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
 	{ key: "historial", label: "HISTORIAL PRECIOS", icon: TrendingUp },
 ];
 
-const fetcher = (u: string) => fetch(u).then((r) => r.json());
+const fetcher = (u: string) =>
+	fetch(u, { headers: { "x-staff-pin": getAdminPin() } }).then((r) => {
+		if (!r.ok) throw new Error(`${r.status}`);
+		return r.json();
+	});
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("es-AR");
 
 /* ── Shared Components ─────────────────────────────────────── */

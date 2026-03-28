@@ -31,6 +31,7 @@ import type {
 	PaymentMethod,
 } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
+import { posHeaders } from "@/lib/admin-pin";
 import HelpButton from "@/components/HelpButton";
 import { helpContent } from "@/lib/help-content";
 
@@ -451,6 +452,7 @@ export default function TableDetailPage({
 		try {
 			await apiFetch("/api/orders", {
 				method: "POST",
+				headers: posHeaders(),
 				body: JSON.stringify({
 					tableId,
 					waiterName: "Cajero",
@@ -483,6 +485,7 @@ export default function TableDetailPage({
 		try {
 			await apiFetch(`/api/orders/${order.id}/close`, {
 				method: "POST",
+				headers: posHeaders(),
 				body: JSON.stringify({ paymentMethod: method }),
 			});
 			showToast("Mesa cerrada — ¡Hasta pronto!");

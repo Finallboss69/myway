@@ -79,7 +79,11 @@ const CC = [
 	"#64748b",
 ];
 
-const fetcher = (u: string) => fetch(u).then((r) => r.json());
+const fetcher = (u: string) =>
+	fetch(u, { headers: { "x-staff-pin": getAdminPin() } }).then((r) => {
+		if (!r.ok) throw new Error(`${r.status}`);
+		return r.json();
+	});
 const td = () => new Date().toISOString().slice(0, 10);
 const som = () => {
 	const d = new Date();

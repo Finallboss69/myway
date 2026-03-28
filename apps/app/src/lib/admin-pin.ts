@@ -1,15 +1,24 @@
 /**
- * Read the staff PIN from localStorage for admin API auth headers.
- * Used by admin pages to add `x-staff-pin` to mutating requests.
+ * Read a staff PIN from localStorage by storage key.
  */
-export function getAdminPin(): string {
+function getPin(storageKey: string): string {
 	try {
-		const raw = localStorage.getItem("myway-admin-staff");
+		const raw = localStorage.getItem(storageKey);
 		if (!raw) return "";
 		return JSON.parse(raw)?.pin ?? "";
 	} catch {
 		return "";
 	}
+}
+
+/** Admin staff PIN (from "myway-admin-staff" key). */
+export function getAdminPin(): string {
+	return getPin("myway-admin-staff");
+}
+
+/** POS staff PIN (from "pos-staff" key). */
+export function getPosPin(): string {
+	return getPin("pos-staff");
 }
 
 /** Convenience headers object for fetch calls that need staff auth. */
@@ -19,6 +28,17 @@ export function staffHeaders(
 	return {
 		"Content-Type": "application/json",
 		"x-staff-pin": getAdminPin(),
+		...extra,
+	};
+}
+
+/** POS-specific headers with PIN from "pos-staff" key. */
+export function posHeaders(
+	extra?: Record<string, string>,
+): Record<string, string> {
+	return {
+		"Content-Type": "application/json",
+		"x-staff-pin": getPosPin(),
 		...extra,
 	};
 }
