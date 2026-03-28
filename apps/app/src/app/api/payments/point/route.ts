@@ -8,10 +8,11 @@ import {
 import { requireStaffRole } from "@/lib/auth-check";
 
 const STAFF_ROLES = ["admin", "manager", "cashier", "waiter"];
+const SAFE_ID = /^[A-Za-z0-9_\-]{4,128}$/;
 
 /**
  * POST /api/payments/point — Create a Point (posnet) payment intent
- * Body: { orderIds: string[], deviceId: string }
+ * Body: { orderIds: string[], deviceId?: string }
  */
 export async function POST(request: NextRequest) {
 	const auth = await requireStaffRole(request, STAFF_ROLES);
@@ -49,6 +50,12 @@ export async function POST(request: NextRequest) {
 				{ status: 400 },
 			);
 		}
+		if (!SAFE_ID.test(deviceId)) {
+			return NextResponse.json(
+				{ error: "Device ID inválido" },
+				{ status: 400 },
+			);
+		}
 
 		const orders = await db.order.findMany({
 			where: { id: { in: orderIds } },
@@ -71,7 +78,7 @@ export async function POST(request: NextRequest) {
 		}
 
 		const externalReference = `myway-point-${orders[0].tableId}-${Date.now()}`;
-		const tableNumber = orders[0].tableNumber;
+		const tableNumber = orders[0].tableNumber ?? "??";
 
 		const intent = await createPointPaymentIntent(
 			deviceId,
@@ -100,9 +107,11 @@ export async function POST(request: NextRequest) {
 			state: intent.state,
 		});
 	} catch (error) {
-		const msg = error instanceof Error ? error.message : "Error desconocido";
 		console.error("[payments/point POST]", error);
-		return NextResponse.json({ error: msg }, { status: 500 });
+		return NextResponse.json(
+			{ error: "Error al procesar el pago con tarjeta" },
+			{ status: 500 },
+		);
 	}
 }
 
@@ -115,8 +124,8 @@ export async function GET(request: NextRequest) {
 
 	try {
 		const intentId = new URL(request.url).searchParams.get("intentId");
-		if (!intentId) {
-			return NextResponse.json({ error: "intentId required" }, { status: 400 });
+		if (!intentId || !SAFE_ID.test(intentId)) {
+			return NextResponse.json({ error: "intentId inválido" }, { status: 400 });
 		}
 
 		const intent = await getPointPaymentIntent(intentId);
@@ -146,8 +155,8 @@ export async function DELETE(request: NextRequest) {
 		const intentId = url.searchParams.get("intentId");
 		let deviceId = url.searchParams.get("deviceId");
 
-		if (!intentId) {
-			return NextResponse.json({ error: "intentId required" }, { status: 400 });
+		if (!intentId || !SAFE_ID.test(intentId)) {
+			return NextResponse.json({ error: "intentId inválido" }, { status: 400 });
 		}
 		if (!deviceId) {
 			const setting = await db.setting.findUnique({
@@ -155,8 +164,8 @@ export async function DELETE(request: NextRequest) {
 			});
 			deviceId = setting?.value ?? null;
 		}
-		if (!deviceId) {
-			return NextResponse.json({ error: "deviceId required" }, { status: 400 });
+		if (!deviceId || !SAFE_ID.test(deviceId)) {
+			return NextResponse.json({ error: "deviceId inválido" }, { status: 400 });
 		}
 
 		await cancelPointPaymentIntent(deviceId, intentId);

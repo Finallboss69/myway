@@ -637,19 +637,27 @@ export default function TableDetailPage({
 					);
 					setPointState(status.state);
 
-					if (status.state === "FINISHED" || status.state === "PROCESSED") {
+					if (
+						(status.state === "FINISHED" || status.state === "PROCESSED") &&
+						status.payment?.id
+					) {
 						pointClosing = true;
 						stopPointPoll();
-						for (const o of activeOrders) {
-							await apiFetch(`/api/orders/${o.id}/close`, {
-								method: "POST",
-								headers: posHeaders(),
-								body: JSON.stringify({ paymentMethod: "card" }),
-							});
-						}
+						await Promise.all(
+							activeOrders.map((o) =>
+								apiFetch(`/api/orders/${o.id}/close`, {
+									method: "POST",
+									headers: posHeaders(),
+									body: JSON.stringify({ paymentMethod: "card" }),
+								}),
+							),
+						);
 						setPointModal(false);
 						showToast("Pago con tarjeta confirmado");
 						setTimeout(() => router.push("/pos/salon"), 900);
+					} else if (status.state === "FINISHED" && !status.payment?.id) {
+						stopPointPoll();
+						setPointError("Pago rechazado por el terminal");
 					} else if (status.state === "CANCELED" || status.state === "ERROR") {
 						stopPointPoll();
 						setPointError(

@@ -256,10 +256,16 @@ function PointTerminal({
 				if (res.ok) {
 					const data = await res.json();
 					setState(data.state);
-					if (data.state === "FINISHED" || data.state === "PROCESSED") {
+					if (
+						(data.state === "FINISHED" || data.state === "PROCESSED") &&
+						data.payment?.id
+					) {
 						closed = true;
 						if (pollRef.current) clearInterval(pollRef.current);
 						onPaidRef.current();
+					} else if (data.state === "FINISHED" && !data.payment?.id) {
+						if (pollRef.current) clearInterval(pollRef.current);
+						setError("Pago rechazado por el terminal");
 					} else if (data.state === "CANCELED" || data.state === "ERROR") {
 						if (pollRef.current) clearInterval(pollRef.current);
 						setError(

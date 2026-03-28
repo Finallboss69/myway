@@ -104,9 +104,12 @@ export async function listPointDevices(): Promise<
 
 	const res = await fetch(
 		"https://api.mercadopago.com/point/integration-api/devices",
-		{ headers: { Authorization: `Bearer ${settings.accessToken}` } },
+		{
+			signal: AbortSignal.timeout(8000),
+			headers: { Authorization: `Bearer ${settings.accessToken}` },
+		},
 	);
-	if (!res.ok) throw new Error(`MP devices error ${res.status}`);
+	if (!res.ok) throw new Error("Error al listar dispositivos Point");
 	const data = (await res.json()) as {
 		devices: {
 			id: string;
@@ -144,9 +147,10 @@ export async function createPointPaymentIntent(
 	if (!settings) throw new Error("MercadoPago no está configurado");
 
 	const res = await fetch(
-		`https://api.mercadopago.com/point/integration-api/devices/${deviceId}/payment-intents`,
+		`https://api.mercadopago.com/point/integration-api/devices/${encodeURIComponent(deviceId)}/payment-intents`,
 		{
 			method: "POST",
+			signal: AbortSignal.timeout(10000),
 			headers: {
 				Authorization: `Bearer ${settings.accessToken}`,
 				"Content-Type": "application/json",
@@ -164,7 +168,8 @@ export async function createPointPaymentIntent(
 
 	if (!res.ok) {
 		const body = await res.text();
-		throw new Error(`MP Point error ${res.status}: ${body}`);
+		console.error(`[MP Point create] ${res.status}: ${body}`);
+		throw new Error("Error al crear intento de pago en el terminal");
 	}
 
 	return (await res.json()) as PointPaymentIntent;
@@ -177,10 +182,13 @@ export async function getPointPaymentIntent(
 	if (!settings) throw new Error("MercadoPago no está configurado");
 
 	const res = await fetch(
-		`https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`,
-		{ headers: { Authorization: `Bearer ${settings.accessToken}` } },
+		`https://api.mercadopago.com/point/integration-api/payment-intents/${encodeURIComponent(intentId)}`,
+		{
+			signal: AbortSignal.timeout(8000),
+			headers: { Authorization: `Bearer ${settings.accessToken}` },
+		},
 	);
-	if (!res.ok) throw new Error(`MP Point status error ${res.status}`);
+	if (!res.ok) throw new Error("Error al consultar estado del terminal");
 	return (await res.json()) as PointPaymentIntent;
 }
 
@@ -192,14 +200,15 @@ export async function cancelPointPaymentIntent(
 	if (!settings) throw new Error("MercadoPago no está configurado");
 
 	const res = await fetch(
-		`https://api.mercadopago.com/point/integration-api/devices/${deviceId}/payment-intents/${intentId}`,
+		`https://api.mercadopago.com/point/integration-api/devices/${encodeURIComponent(deviceId)}/payment-intents/${encodeURIComponent(intentId)}`,
 		{
 			method: "DELETE",
+			signal: AbortSignal.timeout(8000),
 			headers: { Authorization: `Bearer ${settings.accessToken}` },
 		},
 	);
 	if (!res.ok && res.status !== 404) {
-		throw new Error(`MP Point cancel error ${res.status}`);
+		throw new Error("Error al cancelar intento de pago");
 	}
 }
 

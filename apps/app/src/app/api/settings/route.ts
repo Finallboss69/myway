@@ -7,6 +7,7 @@ const ALLOWED_KEYS = [
 	"mp_access_token",
 	"mp_user_id",
 	"mp_external_pos_id",
+	"mp_device_id",
 	"mp_webhook_secret",
 	"transfer_alias",
 ] as const;
