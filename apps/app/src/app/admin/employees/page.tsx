@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import type { Staff, StaffRole } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
-import { getAdminPin, staffHeaders } from "@/lib/admin-pin";
+import { staffHeaders } from "@/lib/admin-pin";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

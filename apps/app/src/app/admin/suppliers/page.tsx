@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
-import { getAdminPin, staffHeaders } from "@/lib/admin-pin";
+import { staffHeaders } from "@/lib/admin-pin";
 
 /* ── Types ─────────────────────────────────────────────────── */
 

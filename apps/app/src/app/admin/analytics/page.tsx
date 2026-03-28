@@ -25,7 +25,7 @@ import {
 	PieChart,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { getAdminPin, staffHeaders } from "@/lib/admin-pin";
+import { staffHeaders } from "@/lib/admin-pin";
 
 const f = (u: string) => fetch(u).then((r) => r.json());
 type E = React.ElementType;

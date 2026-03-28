@@ -56,16 +56,7 @@ const FIELDS = [
 	},
 ] as const;
 
-function getStaffPin(): string {
-	try {
-		const raw = localStorage.getItem("myway-admin-staff");
-		if (!raw) return "";
-		const session = JSON.parse(raw);
-		return session?.pin ?? "";
-	} catch {
-		return "";
-	}
-}
+import { getAdminPin } from "@/lib/admin-pin";
 
 export default function MercadoPagoSettingsPage() {
 	const [values, setValues] = useState<Record<string, string>>({});
@@ -77,7 +68,7 @@ export default function MercadoPagoSettingsPage() {
 
 	useEffect(() => {
 		fetch("/api/settings", {
-			headers: { "x-staff-pin": getStaffPin() },
+			headers: { "x-staff-pin": getAdminPin() },
 		})
 			.then((r) => r.json())
 			.then((data: SettingRow[]) => {
@@ -100,7 +91,7 @@ export default function MercadoPagoSettingsPage() {
 				method: "PUT",
 				headers: {
 					"Content-Type": "application/json",
-					"x-staff-pin": getStaffPin(),
+					"x-staff-pin": getAdminPin(),
 				},
 				body: JSON.stringify({ key, value: value.trim() }),
 			});

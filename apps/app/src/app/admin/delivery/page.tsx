@@ -20,7 +20,7 @@ import {
 import { formatCurrency, elapsedMinutes } from "@/lib/utils";
 import type { DeliveryOrder, DeliveryStatus } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
-import { getAdminPin, staffHeaders } from "@/lib/admin-pin";
+import { staffHeaders } from "@/lib/admin-pin";
 
 // --- Helpers ----------------------------------------------------------------
 

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import HelpButton from "@/components/HelpButton";
 import { helpContent } from "@/lib/help-content";
-import { getAdminPin, staffHeaders } from "@/lib/admin-pin";
+import { staffHeaders } from "@/lib/admin-pin";
 import {
 	Settings,
 	Shield,
