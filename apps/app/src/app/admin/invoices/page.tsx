@@ -465,6 +465,7 @@ function InvoiceRow({
 			});
 			if (!result.afipResult.success) {
 				setAuthError(result.afipResult.error || "AFIP no autorizo la factura");
+				return;
 			}
 			onRefresh();
 		} catch (e) {

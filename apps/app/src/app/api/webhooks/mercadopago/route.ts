@@ -49,7 +49,7 @@ async function getWebhookSecret(): Promise<string | null> {
  * We verify the order status and close the local order if paid.
  */
 export async function POST(request: NextRequest) {
-	// Always respond 200 immediately — MP retries on non-2xx
+	// Respond 200 on success, 400 on invalid signature — MP retries on non-2xx
 	try {
 		// Verify webhook signature when secret is configured
 		const sigResult = await verifyMpSignature(request);

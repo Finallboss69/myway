@@ -49,18 +49,9 @@ interface Order {
 }
 
 import type { PaymentMethod } from "@/lib/types";
+import { getWaiterPin } from "@/lib/admin-pin";
 
 const IVA_RATE = 0.21;
-
-function getStaffPin(): string {
-	try {
-		const raw = localStorage.getItem("myway-waiter-staff");
-		if (!raw) return "";
-		return JSON.parse(raw)?.pin ?? "";
-	} catch {
-		return "";
-	}
-}
 
 // ─── MercadoPago QR Component ─────────────────────────────────────────────────
 
@@ -87,7 +78,7 @@ function MercadoPagoQR({
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					"x-staff-pin": getStaffPin(),
+					"x-staff-pin": getWaiterPin(),
 				},
 				body: JSON.stringify({ orderIds }),
 			});
@@ -118,7 +109,7 @@ function MercadoPagoQR({
 				const res = await fetch(
 					`/api/payments/mp?externalReference=${encodeURIComponent(extRef)}`,
 					{
-						headers: { "x-staff-pin": getStaffPin() },
+						headers: { "x-staff-pin": getWaiterPin() },
 					},
 				);
 				if (res.ok) {
@@ -299,20 +290,29 @@ function PaymentContent() {
 		setSubmitting(true);
 		try {
 			// Close all active orders for the table
-			await Promise.all(
+			const responses = await Promise.all(
 				orders.map((o) =>
 					fetch(`/api/orders/${o.id}/close`, {
 						method: "POST",
 						headers: {
 							"Content-Type": "application/json",
-							"x-staff-pin": getStaffPin(),
+							"x-staff-pin": getWaiterPin(),
 						},
 						body: JSON.stringify({ paymentMethod: method }),
 					}),
 				),
 			);
+			const failed = responses.filter((r) => !r.ok);
+			if (failed.length > 0) {
+				const err = await failed[0]
+					.json()
+					.catch(() => ({ error: "Error al cerrar orden" }));
+				throw new Error(err.error ?? "Error al cerrar orden");
+			}
 			setSuccess(true);
 			setTimeout(() => router.push("/waiter/tables"), 2500);
+		} catch (e) {
+			alert(e instanceof Error ? e.message : "Error al cerrar la orden");
 		} finally {
 			setSubmitting(false);
 		}
