@@ -26,6 +26,7 @@ import type {
 	Category,
 } from "@/lib/types";
 import { apiFetch } from "@/lib/api";
+import { posHeaders } from "@/lib/admin-pin";
 import HelpButton from "@/components/HelpButton";
 import { helpContent } from "@/lib/help-content";
 
@@ -931,14 +932,36 @@ export default function SalonPage() {
 		router.push(`/pos/salon/${tableId}`);
 	};
 
-	// Drag-and-drop: navigate to table detail page
-	const handleDropProduct = (tableId: string, productId: string) => {
+	// Drag-and-drop: create order directly (marks table occupied + sends to kitchen/bar)
+	const handleDropProduct = async (tableId: string, productId: string) => {
 		const product = products.find((p) => p.id === productId);
 		if (!product) return;
-		showToast(
-			`${product.name} → Mesa ${tables.find((t) => t.id === tableId)?.number}`,
-		);
-		router.push(`/pos/salon/${tableId}`);
+		const table = tables.find((t) => t.id === tableId);
+		if (!table) return;
+
+		try {
+			await apiFetch("/api/orders", {
+				method: "POST",
+				headers: posHeaders(),
+				body: JSON.stringify({
+					tableId,
+					waiterName: staffName || undefined,
+					items: [
+						{
+							productId: product.id,
+							name: product.name,
+							qty: 1,
+							price: product.price,
+							target: product.target,
+						},
+					],
+				}),
+			});
+			showToast(`${product.name} → Mesa ${table.number}`);
+			fetchData();
+		} catch (e) {
+			showToast(e instanceof Error ? e.message : "Error al enviar comanda");
+		}
 	};
 
 	return (
