@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 		}
 		if (!sigResult) {
 			console.warn("[webhook/mercadopago] Invalid signature — rejected");
-			return NextResponse.json({ received: true });
+			return NextResponse.json({ error: "invalid signature" }, { status: 400 });
 		}
 		const url = new URL(request.url);
 		const topic = url.searchParams.get("topic");

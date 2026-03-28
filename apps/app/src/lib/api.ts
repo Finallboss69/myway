@@ -3,8 +3,8 @@ export async function apiFetch<T>(
 	options?: RequestInit,
 ): Promise<T> {
 	const res = await fetch(url, {
-		headers: { "Content-Type": "application/json", ...options?.headers },
 		...options,
+		headers: { "Content-Type": "application/json", ...options?.headers },
 	});
 	if (!res.ok) {
 		const err = await res.json().catch(() => ({ error: "Network error" }));

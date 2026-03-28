@@ -118,30 +118,37 @@ export class AfipService {
 	async createInvoice(data: AfipInvoiceData): Promise<AfipInvoiceResult> {
 		const typeCode = INVOICE_TYPE_CODES[data.type] ?? 6;
 
-		// Calculate totals
+		// Calculate totals per IVA rate
 		let neto = 0;
 		let iva21 = 0;
 		let iva105 = 0;
+		let neto21 = 0;
+		let neto105 = 0;
 		const ivaArray: { Id: number; BaseImp: number; Importe: number }[] = [];
 
 		for (const item of data.items) {
 			neto += item.subtotal;
 			const ivaAmount = item.subtotal * (item.ivaRate / 100);
-			if (item.ivaRate === 21) iva21 += ivaAmount;
-			else if (item.ivaRate === 10.5) iva105 += ivaAmount;
+			if (item.ivaRate === 21) {
+				iva21 += ivaAmount;
+				neto21 += item.subtotal;
+			} else if (item.ivaRate === 10.5) {
+				iva105 += ivaAmount;
+				neto105 += item.subtotal;
+			}
 		}
 
 		if (iva21 > 0) {
 			ivaArray.push({
 				Id: IVA_CONDITION_CODES[21],
-				BaseImp: Math.round(neto * 100) / 100,
+				BaseImp: Math.round(neto21 * 100) / 100,
 				Importe: Math.round(iva21 * 100) / 100,
 			});
 		}
 		if (iva105 > 0) {
 			ivaArray.push({
 				Id: IVA_CONDITION_CODES[10.5],
-				BaseImp: Math.round(neto * 100) / 100,
+				BaseImp: Math.round(neto105 * 100) / 100,
 				Importe: Math.round(iva105 * 100) / 100,
 			});
 		}
@@ -259,6 +266,7 @@ export function resetAfipService(): void {
 export async function createElectronicInvoice(
 	data: AfipInvoiceData,
 	orderId?: string,
+	existingInvoiceId?: string,
 ): Promise<{ invoice: unknown; afipResult: AfipInvoiceResult }> {
 	const service = await getAfipService();
 	const config = await db.afipConfig.findUnique({ where: { id: "singleton" } });
@@ -287,41 +295,54 @@ export async function createElectronicInvoice(
 		puntoVenta,
 	});
 
-	// Save to DB
-	const invoice = await db.invoice.create({
-		data: {
-			orderId: orderId || null,
-			number: afipResult.invoiceNumber ?? nextNumber,
-			type: data.type,
-			puntoVenta,
-			cae: afipResult.cae || null,
-			caeExpiry: afipResult.caeExpiry
-				? new Date(
-						afipResult.caeExpiry.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3"),
-					)
-				: null,
-			customerCuit: data.customerCuit || null,
-			customerName: data.customerName || null,
-			subtotal,
-			iva21,
-			iva105,
-			total: subtotal + iva21 + iva105,
-			afipResponse: afipResult.afipResponse
-				? JSON.stringify(afipResult.afipResponse)
-				: null,
-			status: afipResult.success ? "authorized" : "draft",
-			items: {
-				create: data.items.map((it) => ({
-					description: it.description,
-					quantity: it.quantity,
-					unitPrice: it.unitPrice,
-					ivaRate: it.ivaRate,
-					subtotal: it.subtotal,
-				})),
+	// Save to DB — update existing invoice or create new one
+	const invoiceData = {
+		orderId: orderId || null,
+		number: afipResult.invoiceNumber ?? nextNumber,
+		type: data.type,
+		puntoVenta,
+		cae: afipResult.cae || null,
+		caeExpiry: afipResult.caeExpiry
+			? new Date(
+					afipResult.caeExpiry.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3"),
+				)
+			: null,
+		customerCuit: data.customerCuit || null,
+		customerName: data.customerName || null,
+		subtotal,
+		iva21,
+		iva105,
+		total: subtotal + iva21 + iva105,
+		afipResponse: afipResult.afipResponse
+			? JSON.stringify(afipResult.afipResponse)
+			: null,
+		status: afipResult.success ? "authorized" : "draft",
+	};
+
+	let invoice;
+	if (existingInvoiceId) {
+		invoice = await db.invoice.update({
+			where: { id: existingInvoiceId },
+			data: invoiceData,
+			include: { items: true },
+		});
+	} else {
+		invoice = await db.invoice.create({
+			data: {
+				...invoiceData,
+				items: {
+					create: data.items.map((it) => ({
+						description: it.description,
+						quantity: it.quantity,
+						unitPrice: it.unitPrice,
+						ivaRate: it.ivaRate,
+						subtotal: it.subtotal,
+					})),
+				},
 			},
-		},
-		include: { items: true },
-	});
+			include: { items: true },
+		});
+	}
 
 	return { invoice, afipResult };
 }

@@ -438,27 +438,37 @@ function InvoiceRow({
 	const StatusIcon = statusStyle.icon;
 	const [authorizing, setAuthorizing] = useState(false);
 
+	const [authError, setAuthError] = useState("");
+
 	const handleAuthorize = async () => {
 		setAuthorizing(true);
+		setAuthError("");
 		try {
-			await apiFetch("/api/afip/invoice", {
+			const result = await apiFetch<{
+				afipResult: { success: boolean; error?: string };
+			}>("/api/afip/invoice", {
 				method: "POST",
 				headers: staffHeaders(),
 				body: JSON.stringify({
 					type: inv.type,
 					customerCuit: inv.customerCuit,
 					customerName: inv.customerName,
+					invoiceId: inv.id,
 					items: inv.items.map((it) => ({
 						description: it.description,
 						quantity: it.quantity,
 						unitPrice: it.unitPrice,
 						ivaRate: it.ivaRate,
+						subtotal: it.quantity * it.unitPrice,
 					})),
 				}),
 			});
+			if (!result.afipResult.success) {
+				setAuthError(result.afipResult.error || "AFIP no autorizo la factura");
+			}
 			onRefresh();
-		} catch {
-			/* silent */
+		} catch (e) {
+			setAuthError(e instanceof Error ? e.message : "Error al emitir con AFIP");
 		} finally {
 			setAuthorizing(false);
 		}
@@ -699,6 +709,22 @@ function InvoiceRow({
 								{JSON.stringify(JSON.parse(inv.afipResponse), null, 2)}
 							</pre>
 						</details>
+					)}
+
+					{/* AFIP authorization error */}
+					{authError && (
+						<div
+							className="flex items-center gap-2 p-3 rounded-lg"
+							style={{
+								background: "rgba(248,113,113,0.08)",
+								border: "1px solid rgba(248,113,113,0.25)",
+							}}
+						>
+							<AlertCircle size={14} style={{ color: "#f87171" }} />
+							<span className="font-body text-sm" style={{ color: "#f87171" }}>
+								{authError}
+							</span>
+						</div>
 					)}
 
 					{/* Authorize draft button */}

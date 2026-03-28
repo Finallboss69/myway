@@ -42,3 +42,19 @@ export function posHeaders(
 		...extra,
 	};
 }
+
+/** Waiter staff PIN (from "myway-waiter-staff" key). */
+export function getWaiterPin(): string {
+	return getPin("myway-waiter-staff");
+}
+
+/** Waiter-specific headers with PIN from "myway-waiter-staff" key. */
+export function waiterHeaders(
+	extra?: Record<string, string>,
+): Record<string, string> {
+	return {
+		"Content-Type": "application/json",
+		"x-staff-pin": getWaiterPin(),
+		...extra,
+	};
+}

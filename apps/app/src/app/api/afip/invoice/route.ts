@@ -8,7 +8,8 @@ export async function POST(req: NextRequest) {
 
 	try {
 		const body = await req.json();
-		const { type, customerCuit, customerName, items, orderId } = body;
+		const { type, customerCuit, customerName, items, orderId, invoiceId } =
+			body;
 		if (!type || !items?.length) {
 			return NextResponse.json(
 				{ error: "type and items required" },
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest) {
 		const result = await createElectronicInvoice(
 			{ type, puntoVenta: 0, customerCuit, customerName, items },
 			orderId,
+			invoiceId,
 		);
 		return NextResponse.json(result, { status: 201 });
 	} catch (e) {

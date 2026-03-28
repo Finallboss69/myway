@@ -117,6 +117,9 @@ function MercadoPagoQR({
 			try {
 				const res = await fetch(
 					`/api/payments/mp?externalReference=${encodeURIComponent(extRef)}`,
+					{
+						headers: { "x-staff-pin": getStaffPin() },
+					},
 				);
 				if (res.ok) {
 					const data = await res.json();
@@ -300,7 +303,10 @@ function PaymentContent() {
 				orders.map((o) =>
 					fetch(`/api/orders/${o.id}/close`, {
 						method: "POST",
-						headers: { "Content-Type": "application/json" },
+						headers: {
+							"Content-Type": "application/json",
+							"x-staff-pin": getStaffPin(),
+						},
 						body: JSON.stringify({ paymentMethod: method }),
 					}),
 				),

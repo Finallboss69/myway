@@ -109,6 +109,9 @@ export async function POST(request: NextRequest) {
  * GET /api/payments/mp?externalReference=xxx — Check payment status
  */
 export async function GET(request: NextRequest) {
+	const auth = await requireStaffRole(request, STAFF_ROLES);
+	if (!auth.ok) return auth.response;
+
 	try {
 		const ref = new URL(request.url).searchParams.get("externalReference");
 		if (!ref) {

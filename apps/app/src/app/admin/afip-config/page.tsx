@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import HelpButton from "@/components/HelpButton";
 import { helpContent } from "@/lib/help-content";
-import { staffHeaders } from "@/lib/admin-pin";
+import { staffHeaders, getAdminPin } from "@/lib/admin-pin";
 import {
 	Settings,
 	Shield,
@@ -74,7 +74,9 @@ export default function AfipConfigPage() {
 
 	const fetchConfig = useCallback(async () => {
 		try {
-			const res = await fetch("/api/afip-config");
+			const res = await fetch("/api/afip-config", {
+				headers: { "x-staff-pin": getAdminPin() },
+			});
 			const data = await res.json();
 			setConfig(data);
 			setCuit(data.cuit || "");
