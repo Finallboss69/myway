@@ -344,6 +344,13 @@ export default function TableDetailPage({
 	const [mpLoading, setMpLoading] = useState(false);
 	const [mpError, setMpError] = useState("");
 	const mpPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+	// Point (posnet / tarjeta)
+	const [pointModal, setPointModal] = useState(false);
+	const [pointIntentId, setPointIntentId] = useState<string | null>(null);
+	const [pointState, setPointState] = useState<string>("");
+	const [pointLoading, setPointLoading] = useState(false);
+	const [pointError, setPointError] = useState("");
+	const pointPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	useEffect(() => {
 		try {
 			const stored = localStorage.getItem("pos-staff");
@@ -575,6 +582,102 @@ export default function TableDetailPage({
 
 	// Cleanup poll on unmount
 	useEffect(() => stopMpPoll, [stopMpPoll]);
+
+	// ── Point (posnet / tarjeta) flow ──
+	const stopPointPoll = useCallback(() => {
+		if (pointPollRef.current) {
+			clearInterval(pointPollRef.current);
+			pointPollRef.current = null;
+		}
+	}, []);
+
+	const handlePointPayment = async () => {
+		if (activeOrders.length === 0) return;
+		setPointLoading(true);
+		setPointError("");
+		setPointIntentId(null);
+		setPointState("");
+		setPointModal(true);
+
+		try {
+			const res = await apiFetch<{
+				intentId: string;
+				deviceId: string;
+				amount: number;
+				state: string;
+			}>("/api/payments/point", {
+				method: "POST",
+				headers: posHeaders(),
+				body: JSON.stringify({
+					orderIds: activeOrders.map((o) => o.id),
+				}),
+			});
+			setPointIntentId(res.intentId);
+			setPointState(res.state);
+
+			// Poll status every 3 seconds
+			pointPollRef.current = setInterval(async () => {
+				try {
+					const status = await apiFetch<{
+						state: string;
+						payment?: { id: number };
+					}>(`/api/payments/point?intentId=${res.intentId}`, {
+						headers: posHeaders(),
+					});
+					setPointState(status.state);
+
+					if (status.state === "FINISHED" || status.state === "PROCESSED") {
+						stopPointPoll();
+						// Close orders
+						for (const o of activeOrders) {
+							await apiFetch(`/api/orders/${o.id}/close`, {
+								method: "POST",
+								headers: posHeaders(),
+								body: JSON.stringify({ paymentMethod: "card" }),
+							});
+						}
+						setPointModal(false);
+						showToast("Pago con tarjeta confirmado");
+						setTimeout(() => router.push("/pos/salon"), 900);
+					} else if (status.state === "CANCELED" || status.state === "ERROR") {
+						stopPointPoll();
+						setPointError(
+							status.state === "CANCELED"
+								? "Pago cancelado desde el posnet"
+								: "Error en el posnet",
+						);
+					}
+				} catch {
+					// keep polling
+				}
+			}, 3000);
+		} catch (e) {
+			setPointError(
+				e instanceof Error ? e.message : "Error al enviar al posnet",
+			);
+		} finally {
+			setPointLoading(false);
+		}
+	};
+
+	const handleClosePointModal = async () => {
+		if (pointIntentId) {
+			try {
+				await apiFetch(`/api/payments/point?intentId=${pointIntentId}`, {
+					method: "DELETE",
+					headers: posHeaders(),
+				});
+			} catch {
+				// ignore cancel errors
+			}
+		}
+		stopPointPoll();
+		setPointModal(false);
+		setPointIntentId(null);
+		setPointError("");
+	};
+
+	useEffect(() => stopPointPoll, [stopPointPoll]);
 
 	if (!table) {
 		return (
@@ -1466,10 +1569,10 @@ export default function TableDetailPage({
 									<PayButton
 										icon={<CreditCard size={20} style={{ color: "#a78bfa" }} />}
 										label="Tarjeta"
-										sub="Débito / Crédito"
+										sub="Point / Posnet"
 										amount={total}
 										accentColor="#8b5cf6"
-										onClick={() => handleCloseTable("card")}
+										onClick={handlePointPayment}
 									/>
 									<PayButton
 										icon={
@@ -1614,6 +1717,130 @@ export default function TableDetailPage({
 							onClick={handleCloseMpModal}
 							style={{
 								marginTop: 20,
+								padding: "10px 24px",
+								borderRadius: 10,
+								border: "1px solid var(--s3)",
+								background: "transparent",
+								color: "var(--ink-secondary)",
+								fontSize: 12,
+								fontWeight: 600,
+								cursor: "pointer",
+							}}
+						>
+							Cancelar
+						</button>
+					</div>
+				</div>
+			)}
+
+			{/* Point / Posnet Modal */}
+			{pointModal && (
+				<div
+					style={{
+						position: "fixed",
+						inset: 0,
+						zIndex: 9999,
+						background: "rgba(0,0,0,0.7)",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+					}}
+					onClick={handleClosePointModal}
+				>
+					<div
+						style={{
+							background: "var(--s1)",
+							borderRadius: 20,
+							padding: "32px 28px",
+							maxWidth: 380,
+							width: "90%",
+							textAlign: "center",
+							border: "1px solid var(--s3)",
+							boxShadow: "0 0 60px rgba(139,92,246,0.2)",
+						}}
+						onClick={(e) => e.stopPropagation()}
+					>
+						<div
+							className="font-display uppercase tracking-widest text-ink-secondary"
+							style={{ fontSize: 11, letterSpacing: "0.25em", marginBottom: 6 }}
+						>
+							Pago con Tarjeta
+						</div>
+						<div
+							className="font-kds"
+							style={{ fontSize: 36, color: "#8b5cf6", lineHeight: 1.1 }}
+						>
+							{formatCurrency(total)}
+						</div>
+						<div
+							className="text-ink-tertiary font-body"
+							style={{ fontSize: 12, marginBottom: 20 }}
+						>
+							Mesa {table?.number} — Esperando posnet
+						</div>
+
+						{pointLoading && (
+							<div style={{ padding: "40px 0" }}>
+								<div className="w-8 h-8 rounded-full border-2 border-purple-500 border-t-transparent animate-spin mx-auto" />
+								<div className="text-ink-disabled text-xs mt-3">
+									Enviando al posnet...
+								</div>
+							</div>
+						)}
+
+						{pointError && (
+							<div
+								style={{
+									padding: "20px 16px",
+									background: "rgba(239,68,68,0.1)",
+									borderRadius: 12,
+									color: "#ef4444",
+									fontSize: 13,
+									marginBottom: 16,
+								}}
+							>
+								{pointError}
+							</div>
+						)}
+
+						{pointIntentId && !pointError && !pointLoading && (
+							<>
+								<div
+									style={{
+										padding: "24px 16px",
+										background: "rgba(139,92,246,0.08)",
+										borderRadius: 16,
+										border: "1px solid rgba(139,92,246,0.2)",
+										marginBottom: 16,
+									}}
+								>
+									<CreditCard
+										size={40}
+										className="mx-auto mb-3"
+										style={{ color: "#a78bfa" }}
+									/>
+									<div className="font-display text-sm font-semibold text-ink-primary mb-1">
+										{pointState === "OPEN" || pointState === "ON_TERMINAL"
+											? "Pasá la tarjeta por el posnet"
+											: pointState === "PROCESSING"
+												? "Procesando pago..."
+												: pointState}
+									</div>
+									<div
+										className="flex items-center justify-center gap-2 text-purple-400"
+										style={{ fontSize: 12 }}
+									>
+										<div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+										Esperando respuesta del terminal
+									</div>
+								</div>
+							</>
+						)}
+
+						<button
+							onClick={handleClosePointModal}
+							style={{
+								marginTop: 8,
 								padding: "10px 24px",
 								borderRadius: 10,
 								border: "1px solid var(--s3)",

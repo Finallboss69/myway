@@ -185,6 +185,156 @@ function MercadoPagoQR({
 	);
 }
 
+// ─── Point (posnet / tarjeta) Component ──────────────────────────────────────
+
+function PointTerminal({
+	orderIds,
+	onPaid,
+}: {
+	orderIds: string[];
+	onPaid: () => void;
+}) {
+	const [intentId, setIntentId] = useState<string | null>(null);
+	const [state, setState] = useState<string>("");
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+	const createIntent = useCallback(async () => {
+		setLoading(true);
+		setError(null);
+		setIntentId(null);
+		setState("");
+		try {
+			const res = await fetch("/api/payments/point", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"x-staff-pin": getWaiterPin(),
+				},
+				body: JSON.stringify({ orderIds }),
+			});
+			const data = await res.json();
+			if (!res.ok) {
+				setError(data.error ?? "Error al enviar al posnet");
+				return;
+			}
+			setIntentId(data.intentId);
+			setState(data.state);
+		} catch {
+			setError("Error de conexión");
+		} finally {
+			setLoading(false);
+		}
+	}, [orderIds]);
+
+	// Auto-create on mount
+	useEffect(() => {
+		if (orderIds.length > 0) createIntent();
+	}, [orderIds, createIntent]);
+
+	// Poll status
+	useEffect(() => {
+		if (!intentId) return;
+		const check = async () => {
+			try {
+				const res = await fetch(
+					`/api/payments/point?intentId=${encodeURIComponent(intentId)}`,
+					{ headers: { "x-staff-pin": getWaiterPin() } },
+				);
+				if (res.ok) {
+					const data = await res.json();
+					setState(data.state);
+					if (data.state === "FINISHED" || data.state === "PROCESSED") {
+						if (pollRef.current) clearInterval(pollRef.current);
+						onPaid();
+					} else if (data.state === "CANCELED" || data.state === "ERROR") {
+						if (pollRef.current) clearInterval(pollRef.current);
+						setError(
+							data.state === "CANCELED"
+								? "Pago cancelado desde el terminal"
+								: "Error en el terminal",
+						);
+					}
+				}
+			} catch {
+				/* ignore */
+			}
+		};
+		pollRef.current = setInterval(check, 3000);
+		return () => {
+			if (pollRef.current) clearInterval(pollRef.current);
+		};
+	}, [intentId, onPaid]);
+
+	// Cancel intent on unmount
+	useEffect(() => {
+		return () => {
+			if (intentId) {
+				fetch(`/api/payments/point?intentId=${intentId}`, {
+					method: "DELETE",
+					headers: { "x-staff-pin": getWaiterPin() },
+				}).catch(() => {});
+			}
+		};
+	}, [intentId]);
+
+	if (loading) {
+		return (
+			<div className="flex flex-col items-center gap-3 py-6">
+				<Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+				<p className="font-display text-xs text-ink-tertiary">
+					Enviando al posnet...
+				</p>
+			</div>
+		);
+	}
+
+	if (error) {
+		return (
+			<div className="flex flex-col items-center gap-3 py-4">
+				<p className="font-display text-xs text-red-400 text-center">{error}</p>
+				<button
+					onClick={createIntent}
+					className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface-2 border border-surface-3 font-display text-xs text-ink-secondary hover:bg-surface-3 transition-colors"
+				>
+					<RefreshCw size={14} />
+					Reintentar
+				</button>
+			</div>
+		);
+	}
+
+	if (!intentId) return null;
+
+	return (
+		<div className="flex flex-col items-center gap-3 py-4">
+			<div
+				className="w-16 h-16 rounded-2xl flex items-center justify-center"
+				style={{
+					background: "rgba(139,92,246,0.1)",
+					border: "1px solid rgba(139,92,246,0.25)",
+				}}
+			>
+				<Terminal className="w-8 h-8 text-purple-400" />
+			</div>
+			<p className="font-display text-sm font-semibold text-ink-primary">
+				{state === "OPEN" || state === "ON_TERMINAL"
+					? "Pasá la tarjeta por el posnet"
+					: state === "PROCESSING"
+						? "Procesando pago..."
+						: "Esperando terminal..."}
+			</p>
+			<div className="flex items-center gap-2">
+				<div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+				<span className="font-display text-[11px] text-purple-400">
+					Esperando respuesta
+				</span>
+			</div>
+		</div>
+	);
+}
+
 // ─── Confetti dots overlay ────────────────────────────────────────────────────
 
 function ConfettiOverlay() {
@@ -617,23 +767,17 @@ function PaymentContent() {
 								</div>
 							)}
 
-							{/* Card: terminal info */}
+							{/* Card: Point terminal */}
 							{method === "card" && (
 								<div className="px-4 pb-4 animate-slide-down">
 									<div className="divider mb-4" />
-									<div className="flex items-center gap-4 p-4 rounded-xl border border-surface-3 bg-surface-2">
-										<div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/25 flex items-center justify-center shrink-0">
-											<Terminal className="w-6 h-6 text-blue-400" />
-										</div>
-										<div>
-											<p className="font-display text-sm font-semibold text-ink-primary">
-												Usar terminal
-											</p>
-											<p className="font-display text-xs text-ink-tertiary mt-0.5">
-												Procesá el pago con la lectora
-											</p>
-										</div>
-									</div>
+									<PointTerminal
+										orderIds={orders.map((o) => o.id)}
+										onPaid={() => {
+											setSuccess(true);
+											setTimeout(() => router.push("/waiter/tables"), 2500);
+										}}
+									/>
 								</div>
 							)}
 

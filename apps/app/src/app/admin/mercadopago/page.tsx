@@ -41,6 +41,13 @@ const FIELDS = [
 		secret: false,
 	},
 	{
+		key: "mp_device_id",
+		label: "Point Device ID",
+		placeholder: "PAX_A910__SMARTPOS...",
+		help: "ID del dispositivo Point/posnet para cobrar con tarjeta (ver Dispositivos en MP)",
+		secret: false,
+	},
+	{
 		key: "mp_webhook_secret",
 		label: "Webhook Secret",
 		placeholder: "...",

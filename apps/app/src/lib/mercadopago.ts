@@ -94,6 +94,115 @@ export async function createMpQr(
 	return (await res.json()) as MpQrResponse;
 }
 
+// ─── Point Integration API (posnet / terminal) ─────────────────────────────
+
+export async function listPointDevices(): Promise<
+	{ id: string; pos_id: number; operating_mode: string; name: string }[]
+> {
+	const settings = await getMpSettings();
+	if (!settings) throw new Error("MercadoPago no está configurado");
+
+	const res = await fetch(
+		"https://api.mercadopago.com/point/integration-api/devices",
+		{ headers: { Authorization: `Bearer ${settings.accessToken}` } },
+	);
+	if (!res.ok) throw new Error(`MP devices error ${res.status}`);
+	const data = (await res.json()) as {
+		devices: {
+			id: string;
+			pos_id: number;
+			operating_mode: string;
+			name: string;
+		}[];
+	};
+	return data.devices ?? [];
+}
+
+export interface PointPaymentIntent {
+	id: string;
+	device_id: string;
+	amount: number;
+	state:
+		| "OPEN"
+		| "ON_TERMINAL"
+		| "PROCESSING"
+		| "PROCESSED"
+		| "CANCELED"
+		| "ERROR"
+		| "FINISHED";
+	payment?: { id: number; type: string; installments: number };
+	payment_intent_id?: string;
+}
+
+export async function createPointPaymentIntent(
+	deviceId: string,
+	amount: number,
+	externalReference: string,
+	description: string,
+): Promise<PointPaymentIntent> {
+	const settings = await getMpSettings();
+	if (!settings) throw new Error("MercadoPago no está configurado");
+
+	const res = await fetch(
+		`https://api.mercadopago.com/point/integration-api/devices/${deviceId}/payment-intents`,
+		{
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${settings.accessToken}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				amount,
+				additional_info: {
+					external_reference: externalReference,
+					print_on_terminal: true,
+				},
+				description,
+			}),
+		},
+	);
+
+	if (!res.ok) {
+		const body = await res.text();
+		throw new Error(`MP Point error ${res.status}: ${body}`);
+	}
+
+	return (await res.json()) as PointPaymentIntent;
+}
+
+export async function getPointPaymentIntent(
+	intentId: string,
+): Promise<PointPaymentIntent> {
+	const settings = await getMpSettings();
+	if (!settings) throw new Error("MercadoPago no está configurado");
+
+	const res = await fetch(
+		`https://api.mercadopago.com/point/integration-api/payment-intents/${intentId}`,
+		{ headers: { Authorization: `Bearer ${settings.accessToken}` } },
+	);
+	if (!res.ok) throw new Error(`MP Point status error ${res.status}`);
+	return (await res.json()) as PointPaymentIntent;
+}
+
+export async function cancelPointPaymentIntent(
+	deviceId: string,
+	intentId: string,
+): Promise<void> {
+	const settings = await getMpSettings();
+	if (!settings) throw new Error("MercadoPago no está configurado");
+
+	const res = await fetch(
+		`https://api.mercadopago.com/point/integration-api/devices/${deviceId}/payment-intents/${intentId}`,
+		{
+			method: "DELETE",
+			headers: { Authorization: `Bearer ${settings.accessToken}` },
+		},
+	);
+	if (!res.ok && res.status !== 404) {
+		throw new Error(`MP Point cancel error ${res.status}`);
+	}
+}
+
 export async function getMpMerchantOrder(
 	merchantOrderId: string,
 ): Promise<{ status: string; external_reference: string; id: number }> {
