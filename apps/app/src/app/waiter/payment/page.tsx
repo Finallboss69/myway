@@ -233,10 +233,21 @@ function PointTerminal({
 		if (orderIds.length > 0) createIntent();
 	}, [orderIds, createIntent]);
 
-	// Poll status
+	// Poll status (5 min timeout)
+	const onPaidRef = useRef(onPaid);
+	onPaidRef.current = onPaid;
+
 	useEffect(() => {
 		if (!intentId) return;
+		let closed = false;
+		const startedAt = Date.now();
 		const check = async () => {
+			if (closed) return;
+			if (Date.now() - startedAt > 5 * 60 * 1000) {
+				if (pollRef.current) clearInterval(pollRef.current);
+				setError("Tiempo de espera agotado — intentá de nuevo");
+				return;
+			}
 			try {
 				const res = await fetch(
 					`/api/payments/point?intentId=${encodeURIComponent(intentId)}`,
@@ -246,8 +257,9 @@ function PointTerminal({
 					const data = await res.json();
 					setState(data.state);
 					if (data.state === "FINISHED" || data.state === "PROCESSED") {
+						closed = true;
 						if (pollRef.current) clearInterval(pollRef.current);
-						onPaid();
+						onPaidRef.current();
 					} else if (data.state === "CANCELED" || data.state === "ERROR") {
 						if (pollRef.current) clearInterval(pollRef.current);
 						setError(
@@ -265,7 +277,7 @@ function PointTerminal({
 		return () => {
 			if (pollRef.current) clearInterval(pollRef.current);
 		};
-	}, [intentId, onPaid]);
+	}, [intentId]);
 
 	// Cancel intent on unmount
 	useEffect(() => {

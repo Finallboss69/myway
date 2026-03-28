@@ -615,20 +615,31 @@ export default function TableDetailPage({
 			setPointIntentId(res.intentId);
 			setPointState(res.state);
 
-			// Poll status every 3 seconds
+			// Poll status every 3 seconds, timeout after 5 minutes
+			let pointClosing = false;
+			const startedAt = Date.now();
 			pointPollRef.current = setInterval(async () => {
+				if (pointClosing) return;
+				if (Date.now() - startedAt > 5 * 60 * 1000) {
+					stopPointPoll();
+					setPointError("Tiempo de espera agotado — intentá de nuevo");
+					return;
+				}
 				try {
 					const status = await apiFetch<{
 						state: string;
 						payment?: { id: number };
-					}>(`/api/payments/point?intentId=${res.intentId}`, {
-						headers: posHeaders(),
-					});
+					}>(
+						`/api/payments/point?intentId=${encodeURIComponent(res.intentId)}`,
+						{
+							headers: posHeaders(),
+						},
+					);
 					setPointState(status.state);
 
 					if (status.state === "FINISHED" || status.state === "PROCESSED") {
+						pointClosing = true;
 						stopPointPoll();
-						// Close orders
 						for (const o of activeOrders) {
 							await apiFetch(`/api/orders/${o.id}/close`, {
 								method: "POST",
